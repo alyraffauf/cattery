@@ -13,7 +13,8 @@ func TestRouteDecode(t *testing.T) {
 		{"unknown section fails", testUnknownSection},
 		{"wrong version fails", testWrongVersion},
 		{"missing version fails", testMissingVersion},
-		{"duplicate canonical fails", testDuplicateCanonical},
+		{"cross-section canonical decodes", testCrossSectionCanonical},
+		{"duplicate destination fails", testDuplicateDestination},
 		{"absolute path fails", testAbsolutePath},
 		{"dot-dot path fails", testDotDotPath},
 		{"empty path fails", testEmptyPath},
@@ -115,17 +116,33 @@ func testMissingVersion(t *testing.T) {
 	}
 }
 
-func testDuplicateCanonical(t *testing.T) {
+func testCrossSectionCanonical(t *testing.T) {
 	source := `version = 1
 
 [symlinks.all]
-"shared/target" = ["a"]
+".config/example/config" = [".example/config"]
 
 [symlinks.linux]
-"shared/target" = ["b"]
+".config/example/config" = [".local/share/example/config"]
+`
+	config, err := Decode([]byte(source))
+	if err != nil {
+		t.Fatalf("cross-section canonical must decode (plan union semantics): %v", err)
+	}
+	if len(config.Declarations) != 2 {
+		t.Fatalf("declarations = %d, want 2", len(config.Declarations))
+	}
+}
+
+func testDuplicateDestination(t *testing.T) {
+	source := `version = 1
+
+[symlinks.all]
+"first/target" = ["shared/alias"]
+"second/target" = ["shared/alias"]
 `
 	if _, err := Decode([]byte(source)); err == nil {
-		t.Fatal("expected error for duplicate canonical, got nil")
+		t.Fatal("expected error for duplicate alias destination within a section, got nil")
 	}
 }
 

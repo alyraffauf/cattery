@@ -46,7 +46,9 @@ type Config struct {
 
 // Decode parses and validates _routes.toml bytes. It rejects unknown fields,
 // unsupported or missing versions, unrecognized sections, malformed paths, and
-// any canonical target declared under more than one section.
+// a repeated alias destination within one section. A canonical target may
+// appear in more than one section: the active plan unions `all` with the host
+// platform section, so cross-section repetition is resolved at activation time.
 func Decode(data []byte) (Config, error) {
 	raw, err := decodeRaw(data)
 	if err != nil {
@@ -100,7 +102,6 @@ func byCanonical(declarations []Declaration) func(int, int) bool {
 }
 
 func collectDeclarations(syms rawSymlinks) ([]Declaration, error) {
-	seen := map[string]bool{}
 	sections := []routeSection{
 		{name: SectionAll, rows: syms.All},
 		{name: SectionDarwin, rows: syms.Darwin},
@@ -108,7 +109,7 @@ func collectDeclarations(syms rawSymlinks) ([]Declaration, error) {
 	}
 	var declarations []Declaration
 	for _, section := range sections {
-		added, err := sectionDeclarations(section, seen)
+		added, err := sectionDeclarations(section)
 		if err != nil {
 			return nil, err
 		}
@@ -122,19 +123,16 @@ type routeSection struct {
 	rows map[string][]string
 }
 
-func sectionDeclarations(section routeSection, seen map[string]bool) ([]Declaration, error) {
+func sectionDeclarations(section routeSection) ([]Declaration, error) {
+	destinations := map[string]bool{}
 	canonicals := sortedKeys(section.rows)
 	var declarations []Declaration
 	for _, canonical := range canonicals {
-		if seen[canonical] {
-			return nil, duplicateError(canonical)
-		}
-		seen[canonical] = true
-		aliases := section.rows[canonical]
 		if err := validateCanonical(canonical); err != nil {
 			return nil, err
 		}
-		if err := validateAliases(aliases); err != nil {
+		aliases := section.rows[canonical]
+		if err := validateAliases(aliases, destinations); err != nil {
 			return nil, err
 		}
 		declarations = append(declarations, newDeclaration(canonical, aliases, section.name))
@@ -146,10 +144,6 @@ func newDeclaration(canonical string, aliases []string, name Section) Declaratio
 	return Declaration{Canonical: canonical, Aliases: aliases, Section: name}
 }
 
-func duplicateError(canonical string) error {
-	return fmt.Errorf("routes: duplicate canonical %q", canonical)
-}
-
 func validateCanonical(canonical string) error {
 	if _, err := pathsafe.Segments(canonical); err != nil {
 		return fmt.Errorf("routes: %w", err)
@@ -157,11 +151,15 @@ func validateCanonical(canonical string) error {
 	return nil
 }
 
-func validateAliases(aliases []string) error {
+func validateAliases(aliases []string, destinations map[string]bool) error {
 	for _, alias := range aliases {
 		if _, err := pathsafe.Segments(alias); err != nil {
 			return fmt.Errorf("routes: %w", err)
 		}
+		if destinations[alias] {
+			return fmt.Errorf("routes: duplicate alias destination %q", alias)
+		}
+		destinations[alias] = true
 	}
 	return nil
 }
