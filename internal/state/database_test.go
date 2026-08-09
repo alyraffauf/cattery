@@ -183,14 +183,7 @@ func openTestDatabase(t *testing.T) *Database {
 
 func prepareCatteryChild(t *testing.T) string {
 	t.Helper()
-	directory := filepath.Join(t.TempDir(), catteryDirectoryName)
-	if err := os.MkdirAll(directory, stateDirectoryMode); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(directory, stateDirectoryMode); err != nil {
-		t.Fatal(err)
-	}
-	return filepath.Join(directory, stateDatabaseFileName)
+	return filepath.Join(prepareCatteryDirectory(t), stateDatabaseFileName)
 }
 
 func createFile(t *testing.T, path string, mode os.FileMode) {
