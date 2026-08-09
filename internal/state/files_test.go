@@ -53,6 +53,14 @@ func ordinaryBaseline(target, group string, fill byte) FileBaseline {
 	}
 }
 
+// secretBaseline builds a valid secret baseline with the exact secret mode.
+func secretBaseline(target, group string, fill byte) FileBaseline {
+	baseline := ordinaryBaseline(target, group, fill)
+	baseline.SourceKind = deployment.FileSecret
+	baseline.ExecutableBits = 0o600
+	return baseline
+}
+
 // seedSpec names the files a seed operation baselines for a pair.
 type seedSpec struct {
 	root, home, target, group string

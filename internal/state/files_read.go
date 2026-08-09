@@ -71,7 +71,7 @@ func applyFileBatch(transaction *sql.Tx, batch fileBatch) error {
 		return err
 	}
 	if batch.keyID != nil {
-		if err := execIn(transaction, metadataUpsertSQL, hashKeyIDMetadataKey, batch.keyID[:]); err != nil {
+		if err := commitKeyIdentifier(transaction, batch.keyID); err != nil {
 			return err
 		}
 	}
