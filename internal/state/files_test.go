@@ -145,6 +145,8 @@ func testFileValidationRejects(t *testing.T) {
 		{TargetPath: ".x", SourcePath: "s", SourceKind: deployment.FileOrdinary, Layer: deployment.LayerBase},
 		{TargetPath: ".x", SourcePath: "s", SourceKind: deployment.FileOrdinary, Layer: deployment.LayerBase, BaselineContentHash: sampleDigest(1)},
 		{TargetPath: ".x", SourcePath: "s", SourceKind: deployment.FileOrdinary, Layer: deployment.LayerBase, BaselineContentHash: sampleDigest(1), BaselineSourceHash: sampleDigest(2), ExecutableBits: 0o1000},
+		{TargetPath: ".x", SourcePath: "s", GroupName: "_private", SourceKind: deployment.FileOrdinary, Layer: deployment.LayerBase, BaselineContentHash: sampleDigest(1), BaselineSourceHash: sampleDigest(2)},
+		{TargetPath: ".x", SourcePath: "s", GroupName: "a/b", SourceKind: deployment.FileOrdinary, Layer: deployment.LayerBase, BaselineContentHash: sampleDigest(1), BaselineSourceHash: sampleDigest(2)},
 	}
 	for _, baseline := range baselines {
 		if _, err := store.UpsertFileBaseline(root, home, baseline); err == nil {

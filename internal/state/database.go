@@ -153,41 +153,6 @@ func createPrivateDirectory(directory string) error {
 	return os.Chmod(directory, stateDirectoryMode)
 }
 
-// preparePrivateFile creates the file when absent and rejects an existing entry
-// that is not a regular file with the required mode. Symlinks and special
-// entries are refused so a state file can never be redirected.
-func preparePrivateFile(path string) error {
-	info, err := os.Lstat(path)
-	if err == nil {
-		return verifyPrivateFile(path, info)
-	}
-	if !os.IsNotExist(err) {
-		return err
-	}
-	return createPrivateFile(path)
-}
-
-func verifyPrivateFile(path string, info os.FileInfo) error {
-	if !info.Mode().IsRegular() {
-		return errNotRegular(path, info.Mode())
-	}
-	if info.Mode().Perm() != stateFileMode {
-		return errWrongFileMode(path, info.Mode().Perm())
-	}
-	return nil
-}
-
-func createPrivateFile(path string) error {
-	handle, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, stateFileMode)
-	if err != nil {
-		return err
-	}
-	if err := handle.Close(); err != nil {
-		return err
-	}
-	return os.Chmod(path, stateFileMode)
-}
-
 func openConnection(path string) (*sql.DB, error) {
 	conn, err := sql.Open(sqliteDriverName, path)
 	if err != nil {

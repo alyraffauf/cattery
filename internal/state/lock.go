@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"syscall"
 
 	"github.com/gofrs/flock"
 )
@@ -86,10 +87,39 @@ func ResolveLockPath() (string, error) {
 // restores the required file mode so a restrictive umask cannot widen it.
 func writeProcessID(path string) error {
 	content := []byte(strconv.Itoa(os.Getpid()))
-	if err := os.WriteFile(path, content, stateFileMode); err != nil {
+	handle, err := os.OpenFile(path, os.O_WRONLY|syscall.O_NOFOLLOW, stateFileMode)
+	if err != nil {
 		return err
 	}
-	return os.Chmod(path, stateFileMode)
+	defer handle.Close()
+	info, err := handle.Stat()
+	if err != nil {
+		return err
+	}
+	if err := verifyPrivateFile(path, info); err != nil {
+		return err
+	}
+	if err := writePIDContent(handle, content, path); err != nil {
+		return err
+	}
+	if err := handle.Chmod(stateFileMode); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writePIDContent(handle *os.File, content []byte, path string) error {
+	if err := handle.Truncate(0); err != nil {
+		return err
+	}
+	written, err := handle.Write(content)
+	if err != nil {
+		return err
+	}
+	if written != len(content) {
+		return fmt.Errorf("state: short PID write to %q", path)
+	}
+	return nil
 }
 
 func errLockHeld(path string) error {

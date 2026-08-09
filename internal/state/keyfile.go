@@ -3,8 +3,10 @@ package state
 import (
 	"crypto/rand"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 // stateKeyFileName is the 32-byte keyed-hash secret beside the database
@@ -53,22 +55,31 @@ func (keyFile *KeyFile) Create() ([32]byte, error) {
 // Read loads the stored key after strict validation: a final regular file of
 // exactly 32 bytes with mode 0600, never a symlink or special entry.
 func (keyFile *KeyFile) Read() ([32]byte, error) {
-	info, err := os.Lstat(keyFile.path)
+	handle, err := os.OpenFile(keyFile.path, os.O_RDONLY|syscall.O_NOFOLLOW, stateFileMode)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return [32]byte{}, keyMissingError{path: keyFile.path}
 		}
 		return [32]byte{}, fmt.Errorf("state: inspect hash key %q: %w", keyFile.path, err)
 	}
+	defer handle.Close()
+	info, err := handle.Stat()
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("state: inspect hash key %q: %w", keyFile.path, err)
+	}
 	if err := verifyPrivateFile(keyFile.path, info); err != nil {
 		return [32]byte{}, err
 	}
-	contents, err := os.ReadFile(keyFile.path)
+	contents, err := io.ReadAll(handle)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("state: read hash key %q: %w", keyFile.path, err)
 	}
+	return decodeKeyContents(keyFile.path, contents)
+}
+
+func decodeKeyContents(path string, contents []byte) ([32]byte, error) {
 	if len(contents) != keyByteLength {
-		return [32]byte{}, keyMalformedError{path: keyFile.path}
+		return [32]byte{}, keyMalformedError{path: path}
 	}
 	var key [32]byte
 	copy(key[:], contents)
@@ -78,9 +89,17 @@ func (keyFile *KeyFile) Read() ([32]byte, error) {
 // createKeyHandle opens the key file with exclusive creation and forces mode
 // 0600 so an unusual umask cannot narrow it.
 func createKeyHandle(path string) (*os.File, error) {
-	handle, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, stateFileMode)
+	handle, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, stateFileMode)
 	if err != nil {
 		return nil, fmt.Errorf("state: create hash key %q: %w", path, err)
+	}
+	info, err := handle.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		_ = handle.Close()
+		if err == nil {
+			err = errNotRegular(path, info.Mode())
+		}
+		return nil, fmt.Errorf("state: validate hash key %q: %w", path, err)
 	}
 	if err := handle.Chmod(stateFileMode); err != nil {
 		_ = handle.Close()

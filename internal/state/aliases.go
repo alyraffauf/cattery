@@ -68,19 +68,13 @@ func (store *Store) UpsertAliasBaseline(root, home string, baseline AliasBaselin
 		return AliasBaseline{}, err
 	}
 	now := formatTimestamp(store.now())
-	transaction, err := store.database.conn.Begin()
-	if err != nil {
-		return AliasBaseline{}, err
-	}
 	batch := aliasBatch{root: root, home: home, now: now, baseline: baseline}
-	if err := applyAliasBatch(transaction, batch); err != nil {
-		return AliasBaseline{}, err
-	}
-	row, err := scanAndCommitAlias(transaction, aliasBaselineKey{root: root, home: home, alias: baseline.AliasPath})
-	if err != nil {
-		return AliasBaseline{}, err
-	}
-	return row, nil
+	key := aliasBaselineKey{root: root, home: home, alias: baseline.AliasPath}
+	return runStateTransaction(store.database.conn,
+		func(transaction *sql.Tx) error { return applyAliasBatch(transaction, batch) },
+		func(transaction *sql.Tx) (AliasBaseline, error) {
+			return scanAliasBaseline(transaction.QueryRow(aliasByPairPathSQL, key.root, key.home, key.alias))
+		})
 }
 
 // RetireAliasBaseline marks one active row retired in its own transaction,

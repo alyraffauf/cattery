@@ -93,19 +93,13 @@ func (store *Store) UpsertFileBaseline(root, home string, baseline FileBaseline)
 		return FileBaseline{}, err
 	}
 	now := formatTimestamp(store.now())
-	transaction, err := store.database.conn.Begin()
-	if err != nil {
-		return FileBaseline{}, err
-	}
 	batch := fileBatch{root: root, home: home, now: now, baseline: baseline, keyID: keyID}
-	if err := applyFileBatch(transaction, batch); err != nil {
-		return FileBaseline{}, err
-	}
-	fileRow, err := scanAndCommitFile(transaction, fileBaselineKey{root: root, home: home, target: baseline.TargetPath})
-	if err != nil {
-		return FileBaseline{}, err
-	}
-	return fileRow, nil
+	key := fileBaselineKey{root: root, home: home, target: baseline.TargetPath}
+	return runStateTransaction(store.database.conn,
+		func(transaction *sql.Tx) error { return applyFileBatch(transaction, batch) },
+		func(transaction *sql.Tx) (FileBaseline, error) {
+			return scanFileBaseline(transaction.QueryRow(fileByPairTargetSQL, key.root, key.home, key.target))
+		})
 }
 
 // RetireFileBaseline marks one active row retired in its own transaction,
@@ -129,18 +123,11 @@ func (store *Store) setFileStatus(key fileBaselineKey, statement string) (FileBa
 		return FileBaseline{}, fmt.Errorf("state: file target %q is not a slash-relative path", key.target)
 	}
 	now := formatTimestamp(store.now())
-	transaction, err := store.database.conn.Begin()
-	if err != nil {
-		return FileBaseline{}, err
-	}
-	if err := execIn(transaction, statement, now, repository.ID, key.target); err != nil {
-		return FileBaseline{}, err
-	}
-	fileRow, err := scanAndCommitFile(transaction, key)
-	if err != nil {
-		return FileBaseline{}, err
-	}
-	return fileRow, nil
+	return runStateTransaction(store.database.conn,
+		func(transaction *sql.Tx) error { return execIn(transaction, statement, now, repository.ID, key.target) },
+		func(transaction *sql.Tx) (FileBaseline, error) {
+			return scanFileBaseline(transaction.QueryRow(fileByPairTargetSQL, key.root, key.home, key.target))
+		})
 }
 
 // FileBaseline reads one file row of the canonical pair.

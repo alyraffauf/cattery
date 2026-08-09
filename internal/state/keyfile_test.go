@@ -17,6 +17,7 @@ func TestHashKeyFile(t *testing.T) {
 	}{
 		{"create and read round-trip", testKeyFileRoundTrip},
 		{"exclusive creation rejects a duplicate", testKeyFileExclusiveCreate},
+		{"creation rejects a symlink", testKeyFileSymlinkCreate},
 		{"concurrent creation lets one winner win", testKeyFileConcurrentCreate},
 		{"read reports a missing file", testKeyFileMissing},
 		{"read rejects malformed lengths", testKeyFileMalformedLength},
@@ -79,6 +80,28 @@ func testKeyFileExclusiveCreate(t *testing.T) {
 	requireNoError(t, err)
 	if loaded != first {
 		t.Fatal("existing key changed")
+	}
+}
+
+func testKeyFileSymlinkCreate(t *testing.T) {
+	directory := t.TempDir()
+	target := filepath.Join(directory, "target")
+	if err := os.WriteFile(target, []byte("untouched"), stateFileMode); err != nil {
+		t.Fatalf("seed target: %v", err)
+	}
+	path := filepath.Join(directory, "hash.key")
+	if err := os.Symlink(target, path); err != nil {
+		t.Skipf("symlink unsupported: %v", err)
+	}
+	if _, err := NewKeyFile(path).Create(); err == nil {
+		t.Fatal("Create followed a symlink")
+	}
+	contents, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read target: %v", err)
+	}
+	if string(contents) != "untouched" {
+		t.Fatalf("target changed to %q", contents)
 	}
 }
 

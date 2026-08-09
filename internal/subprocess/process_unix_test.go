@@ -61,13 +61,16 @@ func testDescendantsDie(t *testing.T) {
 	body := "trap 'exit 0' TERM\nsleep 30 &\necho $! > child.pid\nwait $!\n"
 	target := scriptTarget{directory: dir, name: "spawner.sh", body: body}
 	script := writeScript(t, target)
+	waitCh := make(chan outcome, 1)
 	go func() {
 		request := Request{Command: []string{script}, Directory: dir}
-		_, _ = Run(ctx, request)
+		result, err := Run(ctx, request)
+		waitCh <- outcome{result: result, err: err}
 	}()
 	childPID := waitForPIDFile(t, filepath.Join(dir, "child.pid"))
 	sleepBriefly()
 	cancel()
+	awaitResult(t, waitCh)
 	if !awaitProcessDeath(childPID, 5*time.Second) {
 		t.Fatalf("descendant %d still alive after cancel", childPID)
 	}

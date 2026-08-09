@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
+	"github.com/alyraffauf/cattery/internal/pathsafe"
 	"github.com/alyraffauf/cattery/internal/state"
 )
 
@@ -120,8 +121,10 @@ func validateFilePaths(row state.FileBaseline) error {
 	if !state.IsSlashRelative(row.SourcePath) {
 		return fmt.Errorf("reconcile: file row source %q is not a slash-relative path", row.SourcePath)
 	}
-	if row.GroupName != "" && !state.IsSlashRelative(row.GroupName) {
-		return fmt.Errorf("reconcile: file row group %q is not a slash-relative path", row.GroupName)
+	if row.GroupName != "" {
+		if err := pathsafe.GroupName(row.GroupName); err != nil {
+			return fmt.Errorf("reconcile: file row group: %w", err)
+		}
 	}
 	if !row.SourceKind.Valid() {
 		return fmt.Errorf("reconcile: file row has invalid source kind %q", row.SourceKind)
@@ -156,8 +159,10 @@ func validateAliasRow(row state.AliasBaseline) error {
 	if !state.IsSlashRelative(row.CanonicalTargetPath) {
 		return fmt.Errorf("reconcile: alias row target %q is not a slash-relative path", row.CanonicalTargetPath)
 	}
-	if row.GroupName != "" && !state.IsSlashRelative(row.GroupName) {
-		return fmt.Errorf("reconcile: alias row group %q is not a slash-relative path", row.GroupName)
+	if row.GroupName != "" {
+		if err := pathsafe.GroupName(row.GroupName); err != nil {
+			return fmt.Errorf("reconcile: alias row group: %w", err)
+		}
 	}
 	if !row.Layer.Valid() {
 		return fmt.Errorf("reconcile: alias row has invalid layer %q", row.Layer)

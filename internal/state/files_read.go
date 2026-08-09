@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
+	"github.com/alyraffauf/cattery/internal/pathsafe"
 )
 
 func prepareFileBaseline(root, home string, baseline FileBaseline) (string, string, error) {
@@ -21,15 +22,28 @@ func prepareFileBaseline(root, home string, baseline FileBaseline) (string, stri
 
 // validateFileBaseline rejects rows that cannot be stored faithfully.
 func validateFileBaseline(baseline FileBaseline) error {
+	if err := validateFilePaths(baseline); err != nil {
+		return err
+	}
+	return validateFileMetadata(baseline)
+}
+
+func validateFilePaths(baseline FileBaseline) error {
 	if !IsSlashRelative(baseline.TargetPath) {
 		return fmt.Errorf("state: file baseline target %q is not a slash-relative path", baseline.TargetPath)
 	}
 	if !IsSlashRelative(baseline.SourcePath) {
 		return fmt.Errorf("state: file baseline source %q is not a slash-relative path", baseline.SourcePath)
 	}
-	if baseline.GroupName != "" && !IsSlashRelative(baseline.GroupName) {
-		return fmt.Errorf("state: file baseline group %q is not a slash-relative path", baseline.GroupName)
+	if baseline.GroupName != "" {
+		if err := pathsafe.GroupName(baseline.GroupName); err != nil {
+			return fmt.Errorf("state: file baseline group: %w", err)
+		}
 	}
+	return nil
+}
+
+func validateFileMetadata(baseline FileBaseline) error {
 	if !baseline.SourceKind.Valid() {
 		return fmt.Errorf("state: file baseline has invalid source kind %q", baseline.SourceKind)
 	}
@@ -89,19 +103,13 @@ func (store *Store) requireRepository(root, home string) (Repository, error) {
 // scanAndCommitFile reads the row back through the transaction and commits,
 // rolling back when the read fails so no open transaction leaks.
 func scanAndCommitFile(transaction *sql.Tx, key fileBaselineKey) (FileBaseline, error) {
-	baseline, err := scanFileBaseline(transaction.QueryRow(fileByPairTargetSQL, key.root, key.home, key.target))
-	if errors.Is(err, sql.ErrNoRows) {
-		_ = transaction.Rollback()
-		return FileBaseline{}, errMissingFileBaseline(key.target)
-	}
-	if err != nil {
-		_ = transaction.Rollback()
-		return FileBaseline{}, err
-	}
-	if err := transaction.Commit(); err != nil {
-		return FileBaseline{}, err
-	}
-	return baseline, nil
+	return commitStateRead(transaction, func(transaction *sql.Tx) (FileBaseline, error) {
+		baseline, err := scanFileBaseline(transaction.QueryRow(fileByPairTargetSQL, key.root, key.home, key.target))
+		if errors.Is(err, sql.ErrNoRows) {
+			return FileBaseline{}, errMissingFileBaseline(key.target)
+		}
+		return baseline, err
+	})
 }
 
 func (store *Store) readFileBaselines(statement, root, home string) ([]FileBaseline, error) {

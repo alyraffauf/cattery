@@ -110,15 +110,28 @@ func runAndWait(ctx context.Context, handle *processHandle, start time.Time) out
 }
 
 func awaitShutdown(ctx context.Context, shutdown groupShutdown) outcome {
-	_ = terminateGroup(shutdown.handle.pid())
+	pid := shutdown.handle.pid()
+	_ = terminateGroup(pid)
 	select {
 	case <-shutdown.waitCh:
+		waitForGroupExit(pid)
 		return canceled(shutdown.elapsed, ctx.Err())
 	case <-time.After(gracePeriod):
 	}
-	_ = killGroup(shutdown.handle.pid())
+	_ = killGroup(pid)
 	<-shutdown.waitCh
+	waitForGroupExit(pid)
 	return canceled(shutdown.elapsed, ctx.Err())
+}
+
+func waitForGroupExit(pid int) {
+	for {
+		err := syscall.Kill(-pid, 0)
+		if errors.Is(err, syscall.ESRCH) {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
 
 func canceled(elapsed time.Duration, err error) outcome {

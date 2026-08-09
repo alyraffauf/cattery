@@ -84,7 +84,7 @@ func testPathForms(t *testing.T) {
 			t.Fatalf("IsSlashRelative(%q) = false, want true", path)
 		}
 	}
-	bad := []string{"", "/absolute", "back\\slash"}
+	bad := []string{"", "/absolute", "back\\slash", ".", "../escape", "a//b"}
 	for _, path := range bad {
 		if IsSlashRelative(path) {
 			t.Fatalf("IsSlashRelative(%q) = true, want false", path)

@@ -133,6 +133,7 @@ func testAliasValidationRejects(t *testing.T) {
 		{AliasPath: `a\b`},
 		{AliasPath: ".x", CanonicalTargetPath: "/abs"},
 		{AliasPath: ".x", CanonicalTargetPath: "t", GroupName: "a/b"},
+		{AliasPath: ".x", CanonicalTargetPath: "t", GroupName: "_private"},
 		{AliasPath: ".x", CanonicalTargetPath: "t", Layer: "nope"},
 	}
 	for _, baseline := range baselines {

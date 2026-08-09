@@ -7,11 +7,11 @@ package state
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
+	"github.com/alyraffauf/cattery/internal/pathsafe"
 )
 
 // SourceStatus marks a baseline row as currently deployed or historically
@@ -124,10 +124,8 @@ type AliasBaseline struct {
 // backslash. State rows store target and source paths in this form so the
 // database stays portable across platforms.
 func IsSlashRelative(path string) bool {
-	if path == "" || filepath.IsAbs(path) {
-		return false
-	}
-	return !strings.ContainsRune(path, '\\')
+	_, err := pathsafe.Segments(path)
+	return err == nil && !strings.ContainsRune(path, '\\')
 }
 
 // CloneTimestamp returns a defensive copy of when. A nil timestamp stays nil so

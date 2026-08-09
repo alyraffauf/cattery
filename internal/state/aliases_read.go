@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
+	"github.com/alyraffauf/cattery/internal/pathsafe"
 )
 
 func prepareAliasBaseline(root, home string, baseline AliasBaseline) (string, string, error) {
@@ -25,8 +27,10 @@ func validateAliasBaseline(baseline AliasBaseline) error {
 	if !IsSlashRelative(baseline.CanonicalTargetPath) {
 		return fmt.Errorf("state: alias baseline target %q is not a slash-relative path", baseline.CanonicalTargetPath)
 	}
-	if baseline.GroupName != "" && !IsSlashRelative(baseline.GroupName) {
-		return fmt.Errorf("state: alias baseline group %q is not a slash-relative path", baseline.GroupName)
+	if baseline.GroupName != "" {
+		if err := pathsafe.GroupName(baseline.GroupName); err != nil {
+			return fmt.Errorf("state: alias baseline group: %w", err)
+		}
 	}
 	if !baseline.Layer.Valid() {
 		return fmt.Errorf("state: alias baseline has invalid layer %q", baseline.Layer)
@@ -72,19 +76,13 @@ func (store *Store) setAliasStatus(key aliasBaselineKey, statement string) (Alia
 // scanAndCommitAlias reads the row back through the transaction and commits,
 // rolling back when the read fails so no open transaction leaks.
 func scanAndCommitAlias(transaction *sql.Tx, key aliasBaselineKey) (AliasBaseline, error) {
-	baseline, err := scanAliasBaseline(transaction.QueryRow(aliasByPairPathSQL, key.root, key.home, key.alias))
-	if errors.Is(err, sql.ErrNoRows) {
-		_ = transaction.Rollback()
-		return AliasBaseline{}, errMissingAliasBaseline(key.alias)
-	}
-	if err != nil {
-		_ = transaction.Rollback()
-		return AliasBaseline{}, err
-	}
-	if err := transaction.Commit(); err != nil {
-		return AliasBaseline{}, err
-	}
-	return baseline, nil
+	return commitStateRead(transaction, func(transaction *sql.Tx) (AliasBaseline, error) {
+		baseline, err := scanAliasBaseline(transaction.QueryRow(aliasByPairPathSQL, key.root, key.home, key.alias))
+		if errors.Is(err, sql.ErrNoRows) {
+			return AliasBaseline{}, errMissingAliasBaseline(key.alias)
+		}
+		return baseline, err
+	})
 }
 
 func (store *Store) readAliasBaselines(statement, root, home string) ([]AliasBaseline, error) {
