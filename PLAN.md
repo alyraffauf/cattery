@@ -1164,6 +1164,8 @@ internal/state/files.go
 internal/state/files_read.go
 internal/state/files_decode.go
 internal/state/aliases.go
+internal/state/aliases_read.go
+internal/state/aliases_decode.go
 internal/state/transitions.go
 
 internal/repository/controls.go
