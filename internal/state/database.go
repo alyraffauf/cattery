@@ -19,9 +19,9 @@ import (
 // (PLAN.md Section 8.1). The directory is private to the owning user; the
 // database and lock files are read-write but never searchable by others.
 const (
-	catteryDirectoryName  = "cattery"
-	stateDatabaseFileName = "state.db"
-	stateLockFileName     = "cattery.lock"
+	catteryDirectoryName              = "cattery"
+	stateDatabaseFileName             = "state.db"
+	stateLockFileName                 = "cattery.lock"
 	stateDirectoryMode    os.FileMode = 0o700
 	stateFileMode         os.FileMode = 0o600
 )

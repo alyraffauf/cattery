@@ -47,11 +47,11 @@ func generatedMarker(line string) bool {
 }
 
 const (
-	nolintFragment       = "nolint"
-	lintIgnoreFragment   = "lint:ignore"
-	reviveFragment       = "revive:disable"
-	editFragment         = "EDIT"
-	generatedFragment    = "generated"
+	nolintFragment     = "nolint"
+	lintIgnoreFragment = "lint:ignore"
+	reviveFragment     = "revive:disable"
+	editFragment       = "EDIT"
+	generatedFragment  = "generated"
 )
 
 // forbiddenIdentName flags the local abbreviations Section 12.1 bans. Short
