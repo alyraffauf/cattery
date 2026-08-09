@@ -1161,6 +1161,8 @@ internal/state/keyfile.go
 internal/state/keyid.go
 internal/state/recovery.go
 internal/state/files.go
+internal/state/files_read.go
+internal/state/files_decode.go
 internal/state/aliases.go
 internal/state/transitions.go
 
@@ -1180,6 +1182,10 @@ internal/secrets/decrypt.go
 internal/secrets/candidate.go
 
 internal/filesystem/precondition.go
+internal/filesystem/target.go
+internal/filesystem/source.go
+internal/filesystem/freeze.go
+internal/filesystem/parents.go
 internal/filesystem/sync.go
 internal/filesystem/replace.go
 internal/filesystem/mode.go
@@ -2424,7 +2430,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 7, 12, 14.
 
-**Owns:** `internal/filesystem/precondition.go`, `internal/filesystem/precondition_test.go`.
+**Owns:** `internal/filesystem/precondition.go`, `internal/filesystem/target.go`, `internal/filesystem/source.go`, `internal/filesystem/freeze.go`, `internal/filesystem/parents.go`, plus `internal/filesystem/precondition_test.go`, `internal/filesystem/revalidate_test.go`, `internal/filesystem/source_test.go`, `internal/filesystem/helpers_test.go`.
 
 **Deliverable:** Define and revalidate immutable source/target/parent identity, type, content, mode, and alias-payload tokens.
 
