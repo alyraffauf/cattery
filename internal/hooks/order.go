@@ -17,12 +17,12 @@ import (
 // lexically, then names bytewise. After hooks keep their relative order.
 func SortBefore(hooks []deployment.Hook) {
 	sort.SliceStable(hooks, func(first, second int) bool {
-		a, b := hooks[first], hooks[second]
-		if a.Phase != b.Phase {
-			return a.Phase == deployment.HookBefore
+		firstHook, secondHook := hooks[first], hooks[second]
+		if firstHook.Phase != secondHook.Phase {
+			return firstHook.Phase == deployment.HookBefore
 		}
-		if a.Phase == deployment.HookBefore {
-			return LessBefore(a, b)
+		if firstHook.Phase == deployment.HookBefore {
+			return LessBefore(firstHook, secondHook)
 		}
 		return false
 	})
@@ -32,12 +32,12 @@ func SortBefore(hooks []deployment.Hook) {
 // last, then names bytewise. Before hooks keep their relative order.
 func SortAfter(hooks []deployment.Hook) {
 	sort.SliceStable(hooks, func(first, second int) bool {
-		a, b := hooks[first], hooks[second]
-		if a.Phase != b.Phase {
-			return a.Phase == deployment.HookBefore
+		firstHook, secondHook := hooks[first], hooks[second]
+		if firstHook.Phase != secondHook.Phase {
+			return firstHook.Phase == deployment.HookBefore
 		}
-		if a.Phase == deployment.HookAfter {
-			return LessAfter(a, b)
+		if firstHook.Phase == deployment.HookAfter {
+			return LessAfter(firstHook, secondHook)
 		}
 		return false
 	})

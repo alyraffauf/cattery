@@ -21,6 +21,7 @@ func TestSOPSClient(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{"missing executable", testMissingExecutable},
+		{"negative stdout limit", testNegativeStdoutLimit},
 		{"nonzero exit", testNonzeroExit},
 		{"large stderr", testLargeStderr},
 		{"stdout over limit", testStdoutOverLimit},
@@ -51,6 +52,22 @@ func testMissingExecutable(t *testing.T) {
 	expectKind(t, err, failure.Dependency)
 	if output != nil || !strings.Contains(err.Error(), "sops") {
 		t.Fatalf("output = %v, err = %q", output, err.Error())
+	}
+}
+
+func testNegativeStdoutLimit(t *testing.T) {
+	executable := sops.Build(t)
+	repository := t.TempDir()
+	client, environment := newTestClient(t, clientTarget{executable: executable, repository: repository})
+	request := basicRequest("encrypt", "app/token")
+	request.StdoutLimit = -1
+	output, err := client.Run(context.Background(), request)
+	expectKind(t, err, failure.Operational)
+	if output != nil {
+		t.Fatalf("output = %v, want none", output)
+	}
+	if _, recorded := peekRecord(envValue(environment, "FAKE_SOPS_RECORD")); recorded {
+		t.Fatal("fixture was launched")
 	}
 }
 

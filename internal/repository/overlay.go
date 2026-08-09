@@ -10,21 +10,21 @@ import (
 )
 
 // ResolvePlatform merges the base scan with the platform layer tree.
-func ResolvePlatform(root string, base ScanResult, platform deployment.Layer) ([]deployment.ManagedFile, error) {
-	if !platform.Valid() {
-		return nil, fmt.Errorf("repository: unknown platform layer %q", platform)
+func ResolvePlatform(root string, baseScan ScanResult, platformLayer deployment.Layer) ([]deployment.ManagedFile, error) {
+	if !platformLayer.Valid() {
+		return nil, fmt.Errorf("repository: unknown platform layer %q", platformLayer)
 	}
-	r := resolver{root: root, base: base, platform: platform}
-	rootView, err := scanLayerTree(root, deployment.NewScope(""), platform)
+	platformResolver := resolver{root: root, base: baseScan, platform: platformLayer}
+	platformRootView, err := scanLayerTree(root, deployment.NewScope(""), platformLayer)
 	if err != nil {
 		return nil, err
 	}
-	records, err := resolveScopeFiles(r.base, deployment.NewScope(""), rootView)
+	records, err := resolveScopeFiles(platformResolver.base, deployment.NewScope(""), platformRootView)
 	if err != nil {
 		return nil, err
 	}
-	for _, group := range base.Groups {
-		groupRecords, err := r.resolveScope(deployment.NewScope(group), rootView)
+	for _, group := range baseScan.Groups {
+		groupRecords, err := platformResolver.resolveScope(deployment.NewScope(group), platformRootView)
 		if err != nil {
 			return nil, err
 		}
@@ -41,15 +41,15 @@ type resolver struct {
 }
 
 // resolveScope merges one group scope, skipping groups replaced by files.
-func (r *resolver) resolveScope(scope deployment.Scope, rootView layerView) ([]deployment.ManagedFile, error) {
-	if _, replaced := rootView.files[scope.Group]; replaced {
+func (resolver *resolver) resolveScope(scope deployment.Scope, platformRootView layerView) ([]deployment.ManagedFile, error) {
+	if _, replaced := platformRootView.files[scope.Group]; replaced {
 		return nil, nil
 	}
-	view, err := scanLayerTree(r.root, scope, r.platform)
+	platformView, err := scanLayerTree(resolver.root, scope, resolver.platform)
 	if err != nil {
 		return nil, err
 	}
-	return resolveScopeFiles(r.base, scope, view)
+	return resolveScopeFiles(resolver.base, scope, platformView)
 }
 
 type layerView struct {
@@ -58,14 +58,14 @@ type layerView struct {
 }
 
 // covers reports whether the platform layer replaces a base target.
-func (v layerView) covers(target string) bool {
-	if _, ok := v.files[target]; ok || v.dirs[target] {
+func (view layerView) covers(target string) bool {
+	if _, ok := view.files[target]; ok || view.dirs[target] {
 		return true
 	}
 	segments := strings.Split(target, "/")
 	for length := 1; length < len(segments); length++ {
 		prefix := strings.Join(segments[:length], "/")
-		if _, ok := v.files[prefix]; ok {
+		if _, ok := view.files[prefix]; ok {
 			return true
 		}
 	}
@@ -163,20 +163,20 @@ type layerWalker struct {
 	view     layerView
 }
 
-func (w *layerWalker) walk(relative string, kind deployment.FileKind) error {
-	entries, err := os.ReadDir(filepath.Join(w.absolute, relative))
+func (walker *layerWalker) walk(relativePath string, fileKind deployment.FileKind) error {
+	entries, err := os.ReadDir(filepath.Join(walker.absolute, relativePath))
 	if err != nil {
 		return err
 	}
 	for _, entry := range entries {
-		entryKind, skip, err := classifyEntry(relative, entry, kind)
+		entryKind, skip, err := classifyEntry(relativePath, entry, fileKind)
 		if err != nil {
 			return err
 		}
 		if skip {
 			continue
 		}
-		if err := w.visit(filepath.Join(relative, entry.Name()), entry, entryKind); err != nil {
+		if err := walker.visit(filepath.Join(relativePath, entry.Name()), entry, entryKind); err != nil {
 			return err
 		}
 	}
@@ -201,41 +201,41 @@ func classifyEntry(relative string, entry os.DirEntry, kind deployment.FileKind)
 	}
 }
 
-func (w *layerWalker) visit(path string, entry os.DirEntry, kind deployment.FileKind) error {
-	target, err := w.target(path, kind)
+func (walker *layerWalker) visit(path string, entry os.DirEntry, kind deployment.FileKind) error {
+	target, err := walker.target(path, kind)
 	if err != nil {
 		return err
 	}
 	if entry.IsDir() {
-		w.view.dirs[target] = target != ""
-		return w.walk(path, kind)
+		walker.view.dirs[target] = target != ""
+		return walker.walk(path, kind)
 	}
 	if !entry.Type().IsRegular() {
-		return fmt.Errorf("repository: non-regular source entry %q", filepath.Join(w.relative, path))
+		return fmt.Errorf("repository: non-regular source entry %q", filepath.Join(walker.relative, path))
 	}
 	info, err := entry.Info()
 	if err != nil {
 		return err
 	}
 	candidate := Candidate{
-		Scope: w.scope, Layer: w.layer, Kind: kind,
-		SourceRepoPath: filepath.Join(w.relative, path), SourceAbsPath: filepath.Join(w.absolute, path),
+		Scope: walker.scope, Layer: walker.layer, Kind: kind,
+		SourceRepoPath: filepath.Join(walker.relative, path), SourceAbsPath: filepath.Join(walker.absolute, path),
 		ExecutableBits: info.Mode() & 0o111,
 	}
-	existing, ok := w.view.files[target]
+	existing, ok := walker.view.files[target]
 	if ok && existing.Kind != kind {
 		return fmt.Errorf("repository: ordinary and secret sources collide at %q", target)
 	}
-	w.view.files[target] = candidate
+	walker.view.files[target] = candidate
 	return nil
 }
 
-func (w *layerWalker) target(path string, kind deployment.FileKind) (string, error) {
+func (walker *layerWalker) target(path string, kind deployment.FileKind) (string, error) {
 	if kind != deployment.FileSecret {
 		return path, nil
 	}
 	target := strings.TrimPrefix(strings.TrimPrefix(path, "_secrets"), "/")
-	if w.scope.IsRoot() {
+	if walker.scope.IsRoot() {
 		first := strings.Split(target, "/")[0]
 		representable := strings.HasPrefix(first, ".") ||
 			(!strings.Contains(target, "/") && !strings.HasPrefix(first, "_"))

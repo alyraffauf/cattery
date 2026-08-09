@@ -109,12 +109,12 @@ func (s *scopeScanner) beginGroup(entry os.DirEntry) error {
 		return err
 	}
 	s.groups = append(s.groups, name)
-	root, scope := s.scopeRoot, s.scope
+	previousScopeRoot, previousScope := s.scopeRoot, s.scope
 	s.scopeRoot = filepath.Join(s.scopeRoot, name)
 	s.scope = deployment.NewScope(name)
 	s.rootTree = false
 	err := s.scanScopeRoot()
-	s.scopeRoot, s.scope, s.rootTree = root, scope, true
+	s.scopeRoot, s.scope, s.rootTree = previousScopeRoot, previousScope, true
 	return err
 }
 

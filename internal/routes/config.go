@@ -50,45 +50,45 @@ type Config struct {
 // appear in more than one section: the active plan unions `all` with the host
 // platform section, so cross-section repetition is resolved at activation time.
 func Decode(data []byte) (Config, error) {
-	raw, err := decodeRaw(data)
+	decoded, err := decodeRouteInput(data)
 	if err != nil {
 		return Config{}, err
 	}
-	if raw.Version != routeVersion {
-		return Config{}, versionError(raw.Version)
+	if decoded.Version != routeVersion {
+		return Config{}, versionError(decoded.Version)
 	}
-	return buildConfig(raw)
+	return buildConfig(decoded)
 }
 
 func versionError(version int) error {
 	return fmt.Errorf("routes: unsupported version %d", version)
 }
 
-type rawConfig struct {
-	Version  int         `toml:"version"`
-	Symlinks rawSymlinks `toml:"symlinks"`
+type routeInput struct {
+	Version  int             `toml:"version"`
+	Symlinks symlinkSections `toml:"symlinks"`
 }
 
-type rawSymlinks struct {
+type symlinkSections struct {
 	All    map[string][]string `toml:"all"`
 	Darwin map[string][]string `toml:"darwin"`
 	Linux  map[string][]string `toml:"linux"`
 }
 
-func decodeRaw(data []byte) (rawConfig, error) {
-	var raw rawConfig
+func decodeRouteInput(data []byte) (routeInput, error) {
+	var decoded routeInput
 	reader := bytes.NewReader(data)
-	err := toml.NewDecoder(reader).DisallowUnknownFields().Decode(&raw)
-	return raw, err
+	err := toml.NewDecoder(reader).DisallowUnknownFields().Decode(&decoded)
+	return decoded, err
 }
 
-func buildConfig(raw rawConfig) (Config, error) {
-	declarations, err := collectDeclarations(raw.Symlinks)
+func buildConfig(decoded routeInput) (Config, error) {
+	declarations, err := collectDeclarations(decoded.Symlinks)
 	if err != nil {
 		return Config{}, err
 	}
 	sortDeclarations(declarations)
-	return Config{Version: raw.Version, Declarations: declarations}, nil
+	return Config{Version: decoded.Version, Declarations: declarations}, nil
 }
 
 func sortDeclarations(declarations []Declaration) {
@@ -101,14 +101,14 @@ func byCanonical(declarations []Declaration) func(int, int) bool {
 	}
 }
 
-func collectDeclarations(syms rawSymlinks) ([]Declaration, error) {
-	sections := []routeSection{
-		{name: SectionAll, rows: syms.All},
-		{name: SectionDarwin, rows: syms.Darwin},
-		{name: SectionLinux, rows: syms.Linux},
+func collectDeclarations(decodedSymlinkSections symlinkSections) ([]Declaration, error) {
+	sectionList := []routeSection{
+		{name: SectionAll, rows: decodedSymlinkSections.All},
+		{name: SectionDarwin, rows: decodedSymlinkSections.Darwin},
+		{name: SectionLinux, rows: decodedSymlinkSections.Linux},
 	}
 	var declarations []Declaration
-	for _, section := range sections {
+	for _, section := range sectionList {
 		added, err := sectionDeclarations(section)
 		if err != nil {
 			return nil, err

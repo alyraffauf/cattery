@@ -54,6 +54,9 @@ type Request struct {
 // caller-owned; on every other path it is zeroed and discarded, and the error
 // carries only the operation, safe source path, and exit status.
 func (client *Client) Run(ctx context.Context, request Request) ([]byte, error) {
+	if request.StdoutLimit < 0 {
+		return nil, failure.New(failure.Operational, "sops output limit must not be negative", nil)
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	stdout := newBounded(request.StdoutLimit, cancel)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -20,6 +21,7 @@ func TestSOPSExecutableFixture(t *testing.T) {
 		{"large output", testLargeOutput},
 		{"descendant dies with group", testDescendantDiesWithGroup},
 		{"cleanup removes the binary", testCleanupRemovesBinary},
+		{"record path creation failure", testRecordPathCreationFailure},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
@@ -91,6 +93,14 @@ func testCleanupRemovesBinary(t *testing.T) {
 	}
 }
 
+func testRecordPathCreationFailure(t *testing.T) {
+	directory := t.TempDir()
+	_, err := uniquePath(filepath.Join(directory, "missing"), "record")
+	if err == nil {
+		t.Fatal("missing record directory was accepted")
+	}
+}
+
 func waitForChild(t *testing.T, cmd *exec.Cmd) int {
 	t.Helper()
 	path := recordPath(cmd)
@@ -106,7 +116,7 @@ func waitForChild(t *testing.T, cmd *exec.Cmd) int {
 }
 
 func recordPath(cmd *exec.Cmd) string {
-	prefix := recordEnv + "="
+	prefix := invocationRecordEnvironment + "="
 	for _, entry := range cmd.Env {
 		if strings.HasPrefix(entry, prefix) {
 			return strings.TrimPrefix(entry, prefix)
@@ -120,11 +130,11 @@ func childPidOf(path string) int {
 	if err != nil {
 		return 0
 	}
-	var rec struct{ ChildPid int }
-	if err := json.Unmarshal(data, &rec); err != nil {
+	var invocationRecord struct{ ChildPid int }
+	if err := json.Unmarshal(data, &invocationRecord); err != nil {
 		return 0
 	}
-	return rec.ChildPid
+	return invocationRecord.ChildPid
 }
 
 func killGroup(t *testing.T, pid int) {

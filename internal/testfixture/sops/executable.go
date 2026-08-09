@@ -18,12 +18,11 @@ import (
 	"time"
 )
 
-// specEnv and recordEnv name the contract between Command and the compiled
-// fake: the behavior spec path and the metadata log path.
+// These environment variables connect Command to the compiled fake.
 const (
-	specEnv   = "FAKE_SOPS_SPEC"
-	recordEnv = "FAKE_SOPS_RECORD"
-	childEnv  = "FAKE_SOPS_CHILD"
+	behaviorSpecEnvironment     = "FAKE_SOPS_SPEC"
+	invocationRecordEnvironment = "FAKE_SOPS_RECORD"
+	fixtureChildEnvironment     = "FAKE_SOPS_CHILD"
 )
 
 // Executable is a handle to the compiled fake binary.
@@ -54,16 +53,20 @@ func Build(t *testing.T) *Executable {
 }
 
 // Command returns an *exec.Cmd wired to run the fake with the given behavior.
-// The behavior is serialized to a spec file; the fake reads it via specEnv.
+// The behavior is serialized to a spec file; the fake reads it via the
+// behaviorSpecEnvironment variable.
 func (executable *Executable) Command(behavior Behavior) (*exec.Cmd, error) {
 	directory := filepath.Dir(executable.Path)
-	spec, err := writeSpec(directory, behavior)
+	behaviorSpecPath, err := writeSpec(directory, behavior)
 	if err != nil {
 		return nil, err
 	}
-	record := uniquePath(directory, "record")
+	record, err := uniquePath(directory, "record")
+	if err != nil {
+		return nil, err
+	}
 	cmd := exec.Command(executable.Path)
-	cmd.Env = append(os.Environ(), specEnv+"="+spec, recordEnv+"="+record)
+	cmd.Env = append(os.Environ(), behaviorSpecEnvironment+"="+behaviorSpecPath, invocationRecordEnvironment+"="+record)
 	return cmd, nil
 }
 
@@ -103,14 +106,16 @@ func writeSpec(directory string, behavior Behavior) (string, error) {
 	return file.Name(), nil
 }
 
-func uniquePath(directory, prefix string) string {
+func uniquePath(directory, prefix string) (string, error) {
 	file, err := os.CreateTemp(directory, prefix+"-*.json")
 	if err != nil {
-		return ""
+		return "", err
 	}
 	path := file.Name()
-	file.Close()
-	return path
+	if err := file.Close(); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 // fakeSource is the standalone program compiled into the fixture binary. It
@@ -129,7 +134,7 @@ import (
 	"time"
 )
 
-type spec struct {
+type behaviorSpec struct {
 	Stdout    []byte
 	Stderr    []byte
 	ExitCode  int
@@ -154,42 +159,42 @@ func main() {
 }
 
 func run() {
-	current := loadSpec()
+	behavior := loadBehavior()
 	stdin, _ := io.ReadAll(os.Stdin)
-	rec := record{Argv: os.Args, Cwd: cwd(), Stdin: stdin, Pid: os.Getpid()}
-	if current.Sleep > 0 {
-		rec.ChildPid = spawnChild()
+	invocationRecord := record{Argv: os.Args, Cwd: currentWorkingDirectory(), Stdin: stdin, Pid: os.Getpid()}
+	if behavior.Sleep > 0 {
+		invocationRecord.ChildPid = spawnChild()
 	}
-	writeRecord(rec)
-	os.Stderr.Write(current.Stderr)
-	os.Stdout.Write(current.Stdout)
-	if current.EchoStdin {
+	writeRecord(invocationRecord)
+	os.Stderr.Write(behavior.Stderr)
+	os.Stdout.Write(behavior.Stdout)
+	if behavior.EchoStdin {
 		os.Stdout.Write(stdin)
 	}
-	if current.Sleep > 0 {
-		time.Sleep(current.Sleep)
+	if behavior.Sleep > 0 {
+		time.Sleep(behavior.Sleep)
 	}
-	os.Exit(current.ExitCode)
+	os.Exit(behavior.ExitCode)
 }
 
-func loadSpec() spec {
+func loadBehavior() behaviorSpec {
 	data, err := os.ReadFile(os.Getenv("FAKE_SOPS_SPEC"))
 	if err != nil {
 		os.Exit(2)
 	}
-	var current spec
-	if err := json.Unmarshal(data, &current); err != nil {
+	var behavior behaviorSpec
+	if err := json.Unmarshal(data, &behavior); err != nil {
 		os.Exit(2)
 	}
-	return current
+	return behavior
 }
 
-func writeRecord(rec record) {
+func writeRecord(invocationRecord record) {
 	path := os.Getenv("FAKE_SOPS_RECORD")
 	if path == "" {
 		return
 	}
-	data, err := json.Marshal(rec)
+	data, err := json.Marshal(invocationRecord)
 	if err != nil {
 		return
 	}
@@ -197,19 +202,19 @@ func writeRecord(rec record) {
 }
 
 func spawnChild() int {
-	exe, err := os.Executable()
+	executablePath, err := os.Executable()
 	if err != nil {
 		return 0
 	}
-	cmd := exec.Command(exe)
-	cmd.Env = append(os.Environ(), "FAKE_SOPS_CHILD=1")
-	if err := cmd.Start(); err != nil {
+	childProcess := exec.Command(executablePath)
+	childProcess.Env = append(os.Environ(), "FAKE_SOPS_CHILD=1")
+	if err := childProcess.Start(); err != nil {
 		return 0
 	}
-	return cmd.Process.Pid
+	return childProcess.Process.Pid
 }
 
-func cwd() string {
+func currentWorkingDirectory() string {
 	dir, err := os.Getwd()
 	if err != nil {
 		return ""
