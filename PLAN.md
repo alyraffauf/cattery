@@ -1196,6 +1196,7 @@ internal/reconcile/types.go
 internal/reconcile/source_snapshot.go
 internal/reconcile/target_snapshot.go
 internal/reconcile/state_snapshot.go
+internal/reconcile/state_records.go
 internal/reconcile/snapshot.go
 internal/reconcile/classify_file.go
 internal/reconcile/classify_alias.go
@@ -2560,7 +2561,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 25, 46.
 
-**Owns:** `internal/reconcile/state_snapshot.go`, `internal/reconcile/state_snapshot_test.go`.
+**Owns:** `internal/reconcile/state_snapshot.go`, `internal/reconcile/state_records.go`, `internal/reconcile/state_snapshot_test.go`.
 
 **Deliverable:** Convert active/retired/state-only file and alias rows into immutable evaluation records and reject cross-table corruption.
 
