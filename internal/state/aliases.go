@@ -8,14 +8,16 @@ import (
 
 const aliasColumns = "repository_id, alias_path, canonical_target_path, group_name, layer, status, applied_at, retired_at"
 
-// aliasUpsertSQL realizes one active alias row, reactivating any retired row at
-// the same path and refreshing its payload.
+// aliasUpsertSQL registers one active alias row, reactivating any retired row
+// at the same alias path and refreshing its payload.
 const aliasUpsertSQL = `
 INSERT INTO aliases (repository_id, alias_path, canonical_target_path, group_name, layer, status, applied_at)
-VALUES ((SELECT id FROM repositories WHERE root_path = ? AND home_path = ?), ?, ?, ?, ?, 'active', ?)
+VALUES ((SELECT id FROM repositories WHERE root_path = ? AND home_path = ?),
+        ?, ?, ?, ?, 'active', ?)
 ON CONFLICT(repository_id, alias_path) DO UPDATE SET
-    canonical_target_path = excluded.canonical_target_path, group_name = excluded.group_name,
-    layer = excluded.layer, status = 'active', applied_at = excluded.applied_at, retired_at = NULL`
+    canonical_target_path = excluded.canonical_target_path,
+    group_name = excluded.group_name, layer = excluded.layer,
+    status = 'active', applied_at = excluded.applied_at, retired_at = NULL`
 
 const aliasRetireSQL = "UPDATE aliases SET status = 'retired', retired_at = ? WHERE repository_id = ? AND alias_path = ?"
 
@@ -58,7 +60,7 @@ type aliasBatch struct {
 	baseline        AliasBaseline
 }
 
-// UpsertAliasBaseline registers the canonical pair if needed and realizes one
+// UpsertAliasBaseline registers the canonical pair if needed and upserts one
 // active alias row in a short transaction, stamping applied_at from the clock.
 func (store *Store) UpsertAliasBaseline(root, home string, baseline AliasBaseline) (AliasBaseline, error) {
 	root, home, err := prepareAliasBaseline(root, home, baseline)
@@ -70,55 +72,41 @@ func (store *Store) UpsertAliasBaseline(root, home string, baseline AliasBaselin
 	if err != nil {
 		return AliasBaseline{}, err
 	}
-	if err := applyAliasBatch(transaction, aliasBatch{root: root, home: home, now: now, baseline: baseline}); err != nil {
+	batch := aliasBatch{root: root, home: home, now: now, baseline: baseline}
+	if err := applyAliasBatch(transaction, batch); err != nil {
 		return AliasBaseline{}, err
 	}
-	return scanAndCommitAlias(transaction, aliasBaselineKey{root: root, home: home, alias: baseline.AliasPath})
+	row, err := scanAndCommitAlias(transaction, aliasBaselineKey{root: root, home: home, alias: baseline.AliasPath})
+	if err != nil {
+		return AliasBaseline{}, err
+	}
+	return row, nil
 }
 
 // RetireAliasBaseline marks one active row retired in its own transaction,
 // retaining the payload for diagnostics and reactivation.
-func (store *Store) RetireAliasBaseline(root, home, alias string) (AliasBaseline, error) {
-	return store.setAliasStatus(aliasBaselineKey{root: root, home: home, alias: alias}, aliasRetireSQL)
+func (store *Store) RetireAliasBaseline(root, home, aliasPath string) (AliasBaseline, error) {
+	return store.setAliasStatus(aliasBaselineKey{root: root, home: home, alias: aliasPath}, aliasRetireSQL)
 }
 
-// ReactivateAliasBaseline restores a retired row to active without touching its
-// retained payload, which the caller reconciles against.
-func (store *Store) ReactivateAliasBaseline(root, home, alias string) (AliasBaseline, error) {
-	return store.setAliasStatus(aliasBaselineKey{root: root, home: home, alias: alias}, aliasReactivateSQL)
-}
-
-func (store *Store) setAliasStatus(key aliasBaselineKey, statement string) (AliasBaseline, error) {
-	repository, err := store.requireRepository(key.root, key.home)
-	if err != nil {
-		return AliasBaseline{}, err
-	}
-	if !IsSlashRelative(key.alias) {
-		return AliasBaseline{}, fmt.Errorf("state: alias path %q is not a slash-relative path", key.alias)
-	}
-	now := formatTimestamp(store.clock.Now())
-	transaction, err := store.database.conn.Begin()
-	if err != nil {
-		return AliasBaseline{}, err
-	}
-	if err := execIn(transaction, statement, now, repository.ID, key.alias); err != nil {
-		return AliasBaseline{}, err
-	}
-	return scanAndCommitAlias(transaction, key)
+// ReactivateAliasBaseline restores a retired row to active without touching
+// its retained payload, which the caller reconciles against.
+func (store *Store) ReactivateAliasBaseline(root, home, aliasPath string) (AliasBaseline, error) {
+	return store.setAliasStatus(aliasBaselineKey{root: root, home: home, alias: aliasPath}, aliasReactivateSQL)
 }
 
 // AliasBaseline reads one alias row of the canonical pair.
-func (store *Store) AliasBaseline(root, home, alias string) (AliasBaseline, error) {
+func (store *Store) AliasBaseline(root, home, aliasPath string) (AliasBaseline, error) {
 	root, home, err := canonicalRepositoryPair(root, home)
 	if err != nil {
 		return AliasBaseline{}, err
 	}
-	if !IsSlashRelative(alias) {
-		return AliasBaseline{}, fmt.Errorf("state: alias path %q is not a slash-relative path", alias)
+	if !IsSlashRelative(aliasPath) {
+		return AliasBaseline{}, fmt.Errorf("state: alias path %q is not a slash-relative path", aliasPath)
 	}
-	baseline, err := scanAliasBaseline(store.database.conn.QueryRow(aliasByPairPathSQL, root, home, alias))
+	baseline, err := scanAliasBaseline(store.database.conn.QueryRow(aliasByPairPathSQL, root, home, aliasPath))
 	if errors.Is(err, sql.ErrNoRows) {
-		return AliasBaseline{}, errMissingAliasBaseline(alias)
+		return AliasBaseline{}, errMissingAliasBaseline(aliasPath)
 	}
 	if err != nil {
 		return AliasBaseline{}, err
@@ -145,8 +133,8 @@ func (store *Store) ActiveAliasBaselines(root, home string) ([]AliasBaseline, er
 	return store.readAliasBaselines(activeAliasBaselinesSQL, root, home)
 }
 
-// AliasGroups lists the distinct group names of any alias row, so an explicitly
-// selected retired-only group remains valid.
+// AliasGroups lists the distinct group names of any alias row, so an
+// explicitly selected retired-only group remains valid.
 func (store *Store) AliasGroups(root, home string) ([]string, error) {
 	root, home, err := canonicalRepositoryPair(root, home)
 	if err != nil {
@@ -155,8 +143,8 @@ func (store *Store) AliasGroups(root, home string) ([]string, error) {
 	return store.readAliasGroups(allAliasGroupsSQL, root, home)
 }
 
-// ActiveAliasGroups lists the distinct group names with an active alias row, so
-// no-argument selection can exclude retired-only groups.
+// ActiveAliasGroups lists the distinct group names with an active alias row,
+// so no-argument selection can exclude retired-only groups.
 func (store *Store) ActiveAliasGroups(root, home string) ([]string, error) {
 	root, home, err := canonicalRepositoryPair(root, home)
 	if err != nil {

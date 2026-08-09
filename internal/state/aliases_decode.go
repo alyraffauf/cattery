@@ -19,7 +19,7 @@ func scanAliasBaseline(source scanner) (AliasBaseline, error) {
 	return baseline, nil
 }
 
-// aliasRawRow carries the stored text/byte form of one aliases row.
+// aliasRawRow carries the stored text form of one aliases row.
 type aliasRawRow struct {
 	layer, status, applied string
 	retired                *string
@@ -47,8 +47,4 @@ func decodeAliasBaseline(baseline *AliasBaseline, raw aliasRawRow) error {
 	baseline.AppliedAt = appliedAt
 	baseline.RetiredAt = retiredAt
 	return nil
-}
-
-func errMissingAliasBaseline(alias string) error {
-	return fmt.Errorf("state: no alias baseline for alias %q", alias)
 }

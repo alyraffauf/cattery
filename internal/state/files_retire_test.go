@@ -12,9 +12,7 @@ func testFileSecretBaseline(t *testing.T) {
 	store := openStore(t, tempDependencies(t))
 	root := t.TempDir()
 	home := t.TempDir()
-	baseline := ordinaryBaseline(".secret", "secrets", 0x22)
-	baseline.SourceKind = deployment.FileSecret
-	baseline.ExecutableBits = 0o600
+	baseline := secretBaseline(".secret", "secrets", 0x22)
 	stored, err := store.UpsertFileBaseline(root, home, baseline)
 	requireNoError(t, err)
 	if stored.SourceKind != deployment.FileSecret || stored.ExecutableBits != 0o600 {

@@ -20,19 +20,16 @@ func prepareAliasBaseline(root, home string, baseline AliasBaseline) (string, st
 // validateAliasBaseline rejects rows that cannot be stored faithfully.
 func validateAliasBaseline(baseline AliasBaseline) error {
 	if !IsSlashRelative(baseline.AliasPath) {
-		return fmt.Errorf("state: alias path %q is not a slash-relative path", baseline.AliasPath)
+		return fmt.Errorf("state: alias baseline path %q is not a slash-relative path", baseline.AliasPath)
 	}
 	if !IsSlashRelative(baseline.CanonicalTargetPath) {
-		return fmt.Errorf("state: alias canonical target %q is not a slash-relative path", baseline.CanonicalTargetPath)
-	}
-	if baseline.AliasPath == baseline.CanonicalTargetPath {
-		return fmt.Errorf("state: alias %q resolves to itself", baseline.AliasPath)
+		return fmt.Errorf("state: alias baseline target %q is not a slash-relative path", baseline.CanonicalTargetPath)
 	}
 	if baseline.GroupName != "" && !IsSlashRelative(baseline.GroupName) {
-		return fmt.Errorf("state: alias group %q is not a slash-relative path", baseline.GroupName)
+		return fmt.Errorf("state: alias baseline group %q is not a slash-relative path", baseline.GroupName)
 	}
 	if !baseline.Layer.Valid() {
-		return fmt.Errorf("state: alias has invalid layer %q", baseline.Layer)
+		return fmt.Errorf("state: alias baseline has invalid layer %q", baseline.Layer)
 	}
 	return nil
 }
@@ -47,6 +44,29 @@ func applyAliasBatch(transaction *sql.Tx, batch aliasBatch) error {
 		return err
 	}
 	return nil
+}
+
+func (store *Store) setAliasStatus(key aliasBaselineKey, statement string) (AliasBaseline, error) {
+	repository, err := store.requireRepository(key.root, key.home)
+	if err != nil {
+		return AliasBaseline{}, err
+	}
+	if !IsSlashRelative(key.alias) {
+		return AliasBaseline{}, fmt.Errorf("state: alias path %q is not a slash-relative path", key.alias)
+	}
+	now := formatTimestamp(store.clock.Now())
+	transaction, err := store.database.conn.Begin()
+	if err != nil {
+		return AliasBaseline{}, err
+	}
+	if err := execIn(transaction, statement, now, repository.ID, key.alias); err != nil {
+		return AliasBaseline{}, err
+	}
+	row, err := scanAndCommitAlias(transaction, key)
+	if err != nil {
+		return AliasBaseline{}, err
+	}
+	return row, nil
 }
 
 // scanAndCommitAlias reads the row back through the transaction and commits,
@@ -108,4 +128,8 @@ func (store *Store) readAliasGroups(statement, root, home string) ([]string, err
 		return nil, fmt.Errorf("state: list alias groups: %w", err)
 	}
 	return groups, nil
+}
+
+func errMissingAliasBaseline(aliasPath string) error {
+	return fmt.Errorf("state: no alias baseline for path %q", aliasPath)
 }
