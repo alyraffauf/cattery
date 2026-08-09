@@ -1436,7 +1436,7 @@ The diagram describes policy flow, not permission for bootstrap to move behavior
 | `buildinfo`, `deployment`, `failure`, `pathsafe`, `subprocess` | none |
 | `routes` | `deployment`, `pathsafe` |
 | `state` | `deployment`, `pathsafe` |
-| `secrets` | `subprocess` |
+| `secrets` | `failure`, `subprocess` |
 | `hooks` | `deployment`, `subprocess` |
 | `filesystem` | `deployment`, `pathsafe` |
 | `repository` | `deployment`, `hooks`, `pathsafe`, `routes` |
@@ -1455,7 +1455,7 @@ The diagram describes policy flow, not permission for bootstrap to move behavior
 | `testfixture/filesystem`, `testfixture/sops`, `quality` | none |
 | `testfixture/database` | `state` |
 
-Non-fixture production packages never import `internal/testfixture` or `internal/quality`. Tests beside one package may import that package's narrow test fixture; the `integration` test package may import production packages explicitly because its purpose is cross-package verification. The allowlist is directional: a listed lower package never imports an application, CLI, bootstrap, or command package.
+Non-fixture production packages never import `internal/testfixture` or `internal/quality`. Tests beside one package may import that package's narrow test fixture; the `integration` test package may import production packages explicitly because its purpose is cross-package verification. The architecture test exempts `_test.go` files from the fixture-import restriction so each package's tests may import its narrow `testfixture/` family (e.g. `repository` tests import `testfixture/filesystem`, `secrets` tests import `testfixture/sops`, `state` tests import `testfixture/database`); production files never receive that exemption. The allowlist is directional: a listed lower package never imports an application, CLI, bootstrap, or command package.
 
 Third-party imports are similarly exclusive: Cobra and `x/term` belong to `internal/cli`; SQLite, XDG, and flock to `internal/state`; TOML to `internal/routes`; BLAKE3 to `internal/deployment`; `x/text` to `internal/pathsafe`; and go-difflib to `internal/diff`. `pflag` and `mousetrap` remain indirect and are imported nowhere. No third-party concrete type may appear in an exported Cattery signature; `internal/quality/architecture_test.go` verifies exported signatures with `go/types`, package imports with `go/parser`, and the file-level purity rules in Section 12.1. The quality suite also checks that every external GitHub Actions `uses:` entry equals one of Section 13's full immutable commits; floating tags are forbidden.
 
