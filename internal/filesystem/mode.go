@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
-	"syscall"
 )
 
 // OrdinaryTargetMode derives the mode for an ordinary target: read/write
@@ -28,10 +26,9 @@ func SecretTargetMode(sourceExec fs.FileMode) fs.FileMode {
 	return 0o600
 }
 
-// ApplyMode adjusts an existing regular target to the desired mode without
-// ever mutating an unmanaged inode alias: a singly linked target is chmod'd
-// in place, while a multiply linked target is replaced by a fresh
-// same-content entry carrying the desired mode.
+// ApplyMode rematerializes the target even when it has one link. This avoids a
+// chmod race and makes mode-only corrections obey the same identity and atomic
+// publication rules as content changes.
 func (r *Replacer) ApplyMode(ctx context.Context, precondition Precondition, desired fs.FileMode) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -39,49 +36,11 @@ func (r *Replacer) ApplyMode(ctx context.Context, precondition Precondition, des
 	if err := precondition.Revalidate(); err != nil {
 		return err
 	}
-	path := targetPath(precondition.Destination())
-	links, err := linkCount(path)
-	if err != nil {
-		return err
-	}
-	if links <= 1 {
-		if err := applyChmod(path, desired); err != nil {
-			return err
-		}
-		return r.syncer.Sync(ctx, filepath.Dir(path))
-	}
-	return r.replaceLinkedTarget(ctx, precondition, desired)
-}
-
-// replaceLinkedTarget rewrites a multiply linked target with the same bytes
-// and the desired mode so no other link is mutated.
-func (r *Replacer) replaceLinkedTarget(ctx context.Context, precondition Precondition, desired fs.FileMode) error {
 	content, err := readTargetContent(targetPath(precondition.Destination()))
 	if err != nil {
 		return err
 	}
 	return r.Replace(ctx, precondition, ReplacementSpec{Content: content, Mode: desired})
-}
-
-// applyChmod applies the desired mode to the target in place.
-func applyChmod(path string, mode fs.FileMode) error {
-	if err := os.Chmod(path, mode); err != nil {
-		return fmt.Errorf("filesystem: mode target %s: %w", path, err)
-	}
-	return nil
-}
-
-// linkCount reports how many hard links name the entry; one means no alias.
-func linkCount(path string) (uint64, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return 0, fmt.Errorf("filesystem: stat links %s: %w", path, err)
-	}
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return 0, fmt.Errorf("filesystem: unsupported stat layout for %s", path)
-	}
-	return uint64(stat.Nlink), nil
 }
 
 func readTargetContent(path string) ([]byte, error) {

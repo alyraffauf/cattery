@@ -79,6 +79,9 @@ func testSyncFailure(t *testing.T) {
 	if syncErr.Op != "sync" || syncErr.Unsupported {
 		t.Fatalf("op = %q, unsupported = %v, want sync failure", syncErr.Op, syncErr.Unsupported)
 	}
+	if !syncErr.Result.Opened || syncErr.Result.Synced || !syncErr.Result.Closed {
+		t.Fatalf("sync result = %+v, want opened/closed without sync", syncErr.Result)
+	}
 	if !handle.closed {
 		t.Fatal("failed sync must still close the handle")
 	}

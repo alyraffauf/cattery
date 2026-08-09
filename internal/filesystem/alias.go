@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/alyraffauf/cattery/internal/pathsafe"
 )
 
 // AliasSpec is the desired relative payload of one alias and whether the
@@ -12,6 +14,11 @@ import (
 type AliasSpec struct {
 	Payload   string
 	Overwrite bool
+}
+
+type aliasDecision struct {
+	spec    AliasSpec
+	outcome aliasOutcome
 }
 
 // AliasRealization names the outcome of one alias operation.
@@ -54,11 +61,7 @@ func classifyAlias(precondition Precondition, spec AliasSpec) (aliasOutcome, err
 	case KindAbsent:
 		return outcomeCreate, nil
 	case KindSymlink:
-		live, err := readLinkPayload(targetPath(precondition.Destination()))
-		if err != nil {
-			return 0, err
-		}
-		if live == spec.Payload {
+		if precondition.Target().Payload() == spec.Payload {
 			return outcomeExact, nil
 		}
 		return outcomeOccupied, nil
@@ -76,6 +79,9 @@ func classifyAlias(precondition Precondition, spec AliasSpec) (aliasOutcome, err
 // atomically; directories and special entries fail with manual
 // intervention.
 func (r *Replacer) RealizeAlias(ctx context.Context, precondition Precondition, spec AliasSpec) (AliasRealization, error) {
+	if err := validateAliasPayload(spec.Payload); err != nil {
+		return 0, err
+	}
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
@@ -86,13 +92,20 @@ func (r *Replacer) RealizeAlias(ctx context.Context, precondition Precondition, 
 	if err != nil {
 		return 0, err
 	}
-	switch outcome {
+	return r.realizeOutcome(ctx, precondition, aliasDecision{spec: spec, outcome: outcome})
+}
+
+func (r *Replacer) realizeOutcome(ctx context.Context, precondition Precondition, decision aliasDecision) (AliasRealization, error) {
+	switch decision.outcome {
 	case outcomeCreate:
-		return AliasCreated, r.commitAlias(ctx, precondition, spec.Payload)
+		return AliasCreated, r.commitAlias(ctx, precondition, decision.spec.Payload)
 	case outcomeExact:
+		if err := precondition.Revalidate(); err != nil {
+			return 0, err
+		}
 		return AliasExact, nil
 	case outcomeOccupied:
-		return r.replaceOccupied(ctx, precondition, spec)
+		return r.replaceOccupied(ctx, precondition, decision.spec)
 	default:
 		return 0, fmt.Errorf("filesystem: alias path %s requires manual intervention", targetPath(precondition.Destination()))
 	}
@@ -116,6 +129,9 @@ func (r *Replacer) replaceOccupied(ctx context.Context, precondition Preconditio
 // durable. Only the rename or a barrier failure can publish a partial
 // result (PLAN.md Section 7.2 steps 10-11).
 func (r *Replacer) commitAlias(ctx context.Context, precondition Precondition, payload string) error {
+	if err := r.prepareAliasParent(precondition); err != nil {
+		return err
+	}
 	temp, err := prepareAliasLink(filepath.Dir(targetPath(precondition.Destination())), payload)
 	if err != nil {
 		return err
@@ -124,13 +140,37 @@ func (r *Replacer) commitAlias(ctx context.Context, precondition Precondition, p
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	return r.publishAlias(ctx, temp, precondition)
+}
+
+func (r *Replacer) publishAlias(ctx context.Context, temp string, precondition Precondition) error {
 	if err := precondition.Revalidate(); err != nil {
+		return err
+	}
+	if err := walkParentsValid(precondition.Destination().Root, precondition.Destination().Relative); err != nil {
 		return err
 	}
 	if err := r.rename(temp, targetPath(precondition.Destination())); err != nil {
 		return err
 	}
 	return r.syncer.Sync(ctx, filepath.Dir(targetPath(precondition.Destination())))
+}
+
+func (r *Replacer) prepareAliasParent(precondition Precondition) error {
+	destination := precondition.Destination()
+	if err := ensureParents(destination.Root, destination.Relative); err != nil {
+		return err
+	}
+	return walkParentsValid(destination.Root, destination.Relative)
+}
+
+// validateAliasPayload accepts only the exact lexical form that may be stored
+// in a symlink. In particular, cleaned or absolute paths are not equivalent.
+func validateAliasPayload(payload string) error {
+	if _, err := pathsafe.Segments(payload); err != nil {
+		return fmt.Errorf("filesystem: invalid alias payload: %w", err)
+	}
+	return nil
 }
 
 // prepareAliasLink reserves a unique name in dir, then creates a relative

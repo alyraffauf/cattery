@@ -85,8 +85,14 @@ func testModeOnlyChmod(t *testing.T) {
 	replacer := NewReplacer()
 	must(t, replacer.ApplyMode(context.Background(), precondition, 0o755))
 	after := mustCapture(t, target)
-	if !pathsafe.SameIdentity(before.Identity(), after.Identity()) {
-		t.Fatal("mode-only correction must preserve the target identity")
+	if before.Identity().Path() != after.Identity().Path() {
+		t.Fatal("mode-only correction changed the destination path")
+	}
+	if before.Identity().Path() == "" {
+		t.Fatal("mode-only correction lost the target identity")
+	}
+	if pathsafe.SameIdentity(before.Identity(), after.Identity()) {
+		t.Fatal("mode-only correction must rematerialize the target")
 	}
 	if after.Mode() != 0o755 {
 		t.Fatalf("mode = %04o, want 0755", after.Mode())

@@ -42,6 +42,48 @@ func walkParentsValid(root, relative string) error {
 	return nil
 }
 
+// ensureParents creates only missing parent components.  Mkdir is deliberately
+// followed by a complete walk: an EEXIST result may mean that another process
+// installed a symlink instead of the directory we need.
+func ensureParents(root, relative string) error {
+	segments, err := pathsafe.Segments(relative)
+	if err != nil {
+		return err
+	}
+	if err := requireDir(root); err != nil {
+		return err
+	}
+	current := root
+	for _, segment := range segments[:len(segments)-1] {
+		current = filepath.Join(current, segment)
+		if err := ensureParent(root, relative, current); err != nil {
+			return err
+		}
+	}
+	return walkParentsValid(root, relative)
+}
+
+func ensureParent(root, relative, current string) error {
+	info, err := os.Lstat(current)
+	if errors.Is(err, fs.ErrNotExist) {
+		if err := createParent(current); err != nil {
+			return err
+		}
+		return walkParentsValid(root, relative)
+	}
+	if err != nil {
+		return err
+	}
+	return requireDirEntry(current, info)
+}
+
+func createParent(path string) error {
+	if err := os.Mkdir(path, 0o755); err != nil && !errors.Is(err, fs.ErrExist) {
+		return fmt.Errorf("filesystem: create parent %s: %w", path, err)
+	}
+	return nil
+}
+
 func requireDir(path string) error {
 	info, err := os.Lstat(path)
 	if err != nil {

@@ -15,6 +15,15 @@ type SyncHandle interface {
 	Close() error
 }
 
+// SyncResult records which durability steps completed. It remains useful when
+// the operation returns an error: a rename can be known to have happened even
+// when its directory barrier failed.
+type SyncResult struct {
+	Opened bool
+	Synced bool
+	Closed bool
+}
+
 // CommitFile makes a still-open temporary file durable: sync while open so
 // bytes and final mode precede the barrier, then close. It always closes so
 // no descriptor leaks; a sync failure is reported because the write is not
@@ -39,6 +48,7 @@ func CommitFile(ctx context.Context, handle SyncHandle) error {
 // report as a partial operation rather than a racing mutation
 // (PLAN.md Section 7.2 step 11).
 type SyncError struct {
+	Result      SyncResult
 	Unsupported bool
 	Op          string
 	Cause       error
@@ -76,21 +86,35 @@ func NewDirectorySyncer() *DirectorySyncer {
 // sync, close. Any failure returns *SyncError; an unsupported sync
 // (EINVAL/ENOTSUP/EOPNOTSUPP) is flagged separately for diagnostics.
 func (s *DirectorySyncer) Sync(ctx context.Context, path string) error {
+	_, err := s.SyncResult(ctx, path)
+	return err
+}
+
+// SyncResult opens, syncs, and closes a directory while returning the facts of
+// the lifecycle. The name is intentionally distinct from Sync for callers that
+// still use the original error-only seam.
+func (s *DirectorySyncer) SyncResult(ctx context.Context, path string) (SyncResult, error) {
+	var result SyncResult
 	if err := ctx.Err(); err != nil {
-		return err
+		return result, err
 	}
 	handle, err := s.open(path)
 	if err != nil {
-		return &SyncError{Op: "open", Cause: err}
+		return result, &SyncError{Op: "open", Cause: err}
 	}
+	result.Opened = true
 	if err := handle.Sync(); err != nil {
 		_ = handle.Close()
-		return &SyncError{Op: "sync", Unsupported: unsupportedSync(err), Cause: err}
+		result.Closed = true
+		return result, &SyncError{Result: result, Op: "sync", Unsupported: unsupportedSync(err), Cause: err}
 	}
+	result.Synced = true
 	if err := handle.Close(); err != nil {
-		return &SyncError{Op: "close", Cause: err}
+		result.Closed = true
+		return result, &SyncError{Result: result, Op: "close", Cause: err}
 	}
-	return nil
+	result.Closed = true
+	return result, nil
 }
 
 // unsupportedSync classifies filesystems that refuse directory fsync, which

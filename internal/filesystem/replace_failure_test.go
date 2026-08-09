@@ -173,6 +173,10 @@ func testDirectoryBarrierPartial(t *testing.T) {
 	if !errors.As(err, &syncErr) || !errors.Is(syncErr, syscall.EIO) {
 		t.Fatalf("err = %v, want *SyncError wrapping EIO", err)
 	}
+	var partial *ReplaceError
+	if !errors.As(err, &partial) || !partial.Result.Renamed || partial.Result.DirectorySynced {
+		t.Fatalf("result = %+v, want renamed but unsynced", partial.Result)
+	}
 	if content := readFile(t, target); content != "new" {
 		t.Fatalf("target = %q, want renamed content", content)
 	}

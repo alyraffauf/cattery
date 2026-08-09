@@ -80,6 +80,8 @@ func TestAtomicReplace(t *testing.T) {
 		{"preserves the old target on sync failure", testSyncFailurePreservesOldTarget},
 		{"preserves the old target on rename failure", testRenameFailurePreservesOldTarget},
 		{"reports a partial result on directory barrier failure", testDirectoryBarrierPartial},
+		{"revalidates the destination immediately before rename", testDestinationRaceBeforeRename},
+		{"rejects a parent changed to a symlink", testMissingParentSymlinkRace},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
