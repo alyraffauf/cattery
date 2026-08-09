@@ -2,7 +2,7 @@ package pathsafe
 
 import "testing"
 
-func TestEquivalence(t *testing.T) {
+func TestPortableEquivalence(t *testing.T) {
 	scenarios := []struct {
 		name string
 		run  func(*testing.T)

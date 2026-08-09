@@ -3,6 +3,7 @@ package pathsafe
 import (
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 )
 
@@ -13,8 +14,10 @@ func TestAncestorWalk(t *testing.T) {
 	}{
 		{"walks clean directory tree", testWalksCleanTree},
 		{"walks single segment parent", testWalksSingleSegment},
-		{"rejects symlink component", testWalkRejectsSymlink},
+		{"rejects internal symlink component", testWalkRejectsSymlink},
+		{"rejects escaping symlink component", testWalkRejectsEscapingSymlink},
 		{"rejects file component", testWalkRejectsFile},
+		{"rejects special component", testWalkRejectsSpecial},
 		{"rejects missing parent", testWalkRejectsMissing},
 		{"rejects dot-dot escape", testWalkRejectsDotDot},
 	}
@@ -51,6 +54,17 @@ func testWalkRejectsSymlink(t *testing.T) {
 	}
 }
 
+func testWalkRejectsEscapingSymlink(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(root, "escape")); err != nil {
+		t.Skipf("symlink unsupported: %v", err)
+	}
+	if err := AncestorWalk(root, "escape/file"); err == nil {
+		t.Fatal("symlink escaping the root must be rejected")
+	}
+}
+
 func testWalkRejectsFile(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "blocker"), []byte("x"), 0o600); err != nil {
@@ -58,6 +72,17 @@ func testWalkRejectsFile(t *testing.T) {
 	}
 	if err := AncestorWalk(root, "blocker/file"); err == nil {
 		t.Fatal("file component must be rejected")
+	}
+}
+
+func testWalkRejectsSpecial(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "pipe")
+	if err := syscall.Mkfifo(path, 0o600); err != nil {
+		t.Skipf("FIFO unsupported: %v", err)
+	}
+	if err := AncestorWalk(root, "pipe/file"); err == nil {
+		t.Fatal("special parent component must be rejected")
 	}
 }
 
