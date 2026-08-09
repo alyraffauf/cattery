@@ -2464,7 +2464,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 41, 42.
 
-**Owns:** `internal/filesystem/replace.go`, `internal/filesystem/replace_test.go`.
+**Owns:** `internal/filesystem/replace.go`, `internal/filesystem/replace_test.go`, `internal/filesystem/replace_failure_test.go`.
 
 **Deliverable:** Perform same-directory create/write/mode/file-sync/close/revalidate/rename/directory-sync with cancellation cleanup.
 
