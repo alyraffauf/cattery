@@ -111,6 +111,14 @@ func (c DecisionChoice) Valid() bool { return c >= ChoiceOverwrite && c <= Choic
 // DecisionSpec is one immutable, ordered resolution request: the target path,
 // the action and reason that produced it, and the choices the user may pick.
 type DecisionSpec struct {
+	targetPath string
+	action     Action
+	reason     Reason
+	choices    []DecisionChoice
+}
+
+// DecisionSpecInput is the mutable input accepted by NewDecisionSpec.
+type DecisionSpecInput struct {
 	TargetPath string
 	Action     Action
 	Reason     Reason
@@ -119,31 +127,34 @@ type DecisionSpec struct {
 
 // NewDecisionSpec validates candidate and returns a spec whose choice slice
 // is a defensive copy, so caller-owned slices never mutate the spec.
-func NewDecisionSpec(candidate DecisionSpec) (DecisionSpec, error) {
-	if !state.IsSlashRelative(candidate.TargetPath) {
-		return DecisionSpec{}, fmt.Errorf("reconcile: decision target %q is not a slash-relative path", candidate.TargetPath)
+func NewDecisionSpec(input DecisionSpecInput) (DecisionSpec, error) {
+	if !state.IsSlashRelative(input.TargetPath) {
+		return DecisionSpec{}, fmt.Errorf("reconcile: decision target %q is not a slash-relative path", input.TargetPath)
 	}
-	if !candidate.Action.Valid() {
-		return DecisionSpec{}, fmt.Errorf("reconcile: decision spec has invalid action %d", candidate.Action)
+	if !input.Action.Valid() {
+		return DecisionSpec{}, fmt.Errorf("reconcile: decision spec has invalid action %d", input.Action)
 	}
-	if !candidate.Reason.Valid() {
-		return DecisionSpec{}, fmt.Errorf("reconcile: decision spec has invalid reason %d", candidate.Reason)
+	if !input.Reason.Valid() {
+		return DecisionSpec{}, fmt.Errorf("reconcile: decision spec has invalid reason %d", input.Reason)
 	}
-	if len(candidate.Choices) == 0 {
-		return DecisionSpec{}, fmt.Errorf("reconcile: decision spec for %q has no choices", candidate.TargetPath)
+	if len(input.Choices) == 0 {
+		return DecisionSpec{}, fmt.Errorf("reconcile: decision spec for %q has no choices", input.TargetPath)
 	}
-	for _, choice := range candidate.Choices {
+	for _, choice := range input.Choices {
 		if !choice.Valid() {
-			return DecisionSpec{}, fmt.Errorf("reconcile: decision spec for %q has invalid choice %d", candidate.TargetPath, choice)
+			return DecisionSpec{}, fmt.Errorf("reconcile: decision spec for %q has invalid choice %d", input.TargetPath, choice)
 		}
 	}
-	candidate.Choices = append([]DecisionChoice(nil), candidate.Choices...)
-	return candidate, nil
+	return DecisionSpec{targetPath: input.TargetPath, action: input.Action, reason: input.Reason, choices: append([]DecisionChoice(nil), input.Choices...)}, nil
 }
+
+func (s DecisionSpec) TargetPath() string { return s.targetPath }
+func (s DecisionSpec) Action() Action     { return s.action }
+func (s DecisionSpec) Reason() Reason     { return s.reason }
 
 // AllChoices returns a defensive copy of the resolution choices.
 func (s DecisionSpec) AllChoices() []DecisionChoice {
-	return append([]DecisionChoice(nil), s.Choices...)
+	return append([]DecisionChoice(nil), s.choices...)
 }
 
 // SourceSnapshot freezes the immutable facts of one deployment source.
@@ -189,61 +200,42 @@ func (t TargetSnapshot) Payload() string             { return t.payload }
 
 // FileState is one immutable evaluation record of a persisted file row.
 type FileState struct {
-	TargetPath      string
-	GroupName       string
-	SourcePath      string
-	SourceKind      deployment.FileKind
-	Layer           deployment.Layer
-	BaselineContent deployment.Digest
-	BaselineSource  deployment.Digest
-	ExecutableBits  fs.FileMode
-	Active          bool
-	RetiredAt       *time.Time
+	targetPath      string
+	groupName       string
+	sourcePath      string
+	sourceKind      deployment.FileKind
+	layer           deployment.Layer
+	baselineContent deployment.Digest
+	baselineSource  deployment.Digest
+	executableBits  fs.FileMode
+	active          bool
+	retiredAt       *time.Time
 }
+
+func (s FileState) TargetPath() string                 { return s.targetPath }
+func (s FileState) GroupName() string                  { return s.groupName }
+func (s FileState) SourcePath() string                 { return s.sourcePath }
+func (s FileState) SourceKind() deployment.FileKind    { return s.sourceKind }
+func (s FileState) Layer() deployment.Layer            { return s.layer }
+func (s FileState) BaselineContent() deployment.Digest { return s.baselineContent }
+func (s FileState) BaselineSource() deployment.Digest  { return s.baselineSource }
+func (s FileState) ExecutableBits() fs.FileMode        { return s.executableBits }
+func (s FileState) Active() bool                       { return s.active }
+func (s FileState) RetiredAt() *time.Time              { return state.CloneTimestamp(s.retiredAt) }
 
 // AliasState is one immutable evaluation record of a persisted alias row.
 type AliasState struct {
-	AliasPath           string
-	CanonicalTargetPath string
-	GroupName           string
-	Layer               state.AliasLayer
-	Active              bool
-	RetiredAt           *time.Time
+	aliasPath           string
+	canonicalTargetPath string
+	groupName           string
+	layer               state.AliasLayer
+	active              bool
+	retiredAt           *time.Time
 }
 
-// StateSnapshot is the immutable evaluation snapshot of every file and alias
-// row of one canonical repository pair.
-type StateSnapshot struct {
-	RepositoryRoot string
-	HomePath       string
-	Files          []FileState
-	Aliases        []AliasState
-}
-
-// cloneRecords returns a defensive copy of rows, cloning retirement
-// timestamps so callers cannot mutate state-owned pointers.
-func cloneRecords[T any](rows []T, clone func(*T)) []T {
-	if rows == nil {
-		return nil
-	}
-	out := make([]T, len(rows))
-	copy(out, rows)
-	for index := range out {
-		clone(&out[index])
-	}
-	return out
-}
-
-// AllFiles returns a defensive copy of the file records.
-func (s StateSnapshot) AllFiles() []FileState {
-	return cloneRecords(s.Files, func(record *FileState) {
-		record.RetiredAt = state.CloneTimestamp(record.RetiredAt)
-	})
-}
-
-// AllAliases returns a defensive copy of the alias records.
-func (s StateSnapshot) AllAliases() []AliasState {
-	return cloneRecords(s.Aliases, func(record *AliasState) {
-		record.RetiredAt = state.CloneTimestamp(record.RetiredAt)
-	})
-}
+func (s AliasState) AliasPath() string           { return s.aliasPath }
+func (s AliasState) CanonicalTargetPath() string { return s.canonicalTargetPath }
+func (s AliasState) GroupName() string           { return s.groupName }
+func (s AliasState) Layer() state.AliasLayer     { return s.layer }
+func (s AliasState) Active() bool                { return s.active }
+func (s AliasState) RetiredAt() *time.Time       { return state.CloneTimestamp(s.retiredAt) }

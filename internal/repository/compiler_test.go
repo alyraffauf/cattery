@@ -27,6 +27,7 @@ func TestPlanCompilation(t *testing.T) {
 	}{
 		{"linux and darwin golden values", testPlanGolden},
 		{"determinism permutations", testPlanDeterminism},
+		{"route payload determinism", testPlanPayloadDeterminism},
 		{"selection filters scopes", testPlanSelection},
 		{"invalid unselected scopes", testPlanInvalidUnselected},
 	}

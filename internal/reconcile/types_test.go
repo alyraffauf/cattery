@@ -112,45 +112,43 @@ func testContentToken(t *testing.T) {
 }
 
 func testDecisionSpecCopy(t *testing.T) {
-	candidate := DecisionSpec{
-		TargetPath: ".config/app/config",
-		Action:     ActionNeedsDecision,
-		Reason:     ReasonTargetDrift,
-		Choices:    []DecisionChoice{ChoiceOverwrite, ChoiceSkip, ChoiceAbort, ChoiceDiff},
-	}
-	spec, err := NewDecisionSpec(candidate)
+	choices := []DecisionChoice{ChoiceOverwrite, ChoiceSkip, ChoiceAbort, ChoiceDiff}
+	spec, err := NewDecisionSpec(DecisionSpecInput{
+		TargetPath: ".config/app/config", Action: ActionNeedsDecision,
+		Reason: ReasonTargetDrift, Choices: choices,
+	})
 	if err != nil {
 		t.Fatalf("NewDecisionSpec: %v", err)
 	}
-	candidate.Choices[0] = ChoiceDiff
-	if len(spec.Choices) != 4 || spec.Choices[0] != ChoiceOverwrite {
+	choices[0] = ChoiceDiff
+	if len(spec.AllChoices()) != 4 || spec.AllChoices()[0] != ChoiceOverwrite {
 		t.Fatal("spec must copy its choice slice defensively")
 	}
-	choices := spec.AllChoices()
-	choices[0] = ChoiceAbort
-	if spec.Choices[0] != ChoiceOverwrite {
+	returned := spec.AllChoices()
+	returned[0] = ChoiceAbort
+	if spec.AllChoices()[0] != ChoiceOverwrite {
 		t.Fatal("AllChoices must return an independent copy")
 	}
 }
 
 func testStateSnapshotCopy(t *testing.T) {
 	when := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
-	files := []FileState{{TargetPath: "git/config", Active: true, RetiredAt: &when}}
-	aliases := []AliasState{{AliasPath: "bin/x", Active: true, RetiredAt: &when}}
-	snapshot := StateSnapshot{RepositoryRoot: "/repo", HomePath: "/home", Files: files, Aliases: aliases}
+	files := []FileState{{targetPath: "git/config", active: true, retiredAt: &when}}
+	aliases := []AliasState{{aliasPath: "bin/x", active: true, retiredAt: &when}}
+	snapshot := StateSnapshot{repositoryRoot: "/repo", homePath: "/home", files: files, aliases: aliases}
 	copiedFiles := snapshot.AllFiles()
-	copiedFiles[0].TargetPath = "moved"
-	*copiedFiles[0].RetiredAt = time.Time{}
+	copiedFiles[0].targetPath = "moved"
+	*copiedFiles[0].retiredAt = time.Time{}
 	copiedAliases := snapshot.AllAliases()
-	copiedAliases[0].AliasPath = "moved"
-	*copiedAliases[0].RetiredAt = time.Time{}
-	if files[0].TargetPath != "git/config" || !files[0].RetiredAt.Equal(when) {
+	copiedAliases[0].aliasPath = "moved"
+	*copiedAliases[0].retiredAt = time.Time{}
+	if files[0].targetPath != "git/config" || !files[0].retiredAt.Equal(when) {
 		t.Fatal("source file record mutated through its defensive copy")
 	}
-	if aliases[0].AliasPath != "bin/x" || !aliases[0].RetiredAt.Equal(when) {
+	if aliases[0].aliasPath != "bin/x" || !aliases[0].retiredAt.Equal(when) {
 		t.Fatal("source alias record mutated through its defensive copy")
 	}
-	if len(snapshot.Files) != 1 || len(snapshot.Aliases) != 1 {
+	if len(snapshot.files) != 1 || len(snapshot.aliases) != 1 {
 		t.Fatal("snapshot records must survive copying")
 	}
 	if (StateSnapshot{}).AllFiles() != nil || (StateSnapshot{}).AllAliases() != nil {

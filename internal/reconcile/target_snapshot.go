@@ -3,6 +3,7 @@ package reconcile
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -105,13 +106,61 @@ func captureEntry(destination Destination, parent pathsafe.Identity) (TargetSnap
 // captureFileFacts hashes the exact bytes of a regular target into the
 // content token and semantic digest without retaining them.
 func captureFileFacts(path string, snapshot TargetSnapshot) (TargetSnapshot, error) {
-	content, err := os.ReadFile(path)
+	content, err := readTargetContent(path, snapshot)
 	if err != nil {
-		return TargetSnapshot{}, fmt.Errorf("reconcile: read target %s: %w", path, err)
+		return TargetSnapshot{}, err
+	}
+	live, err := pathsafe.FilesystemIdentity(path)
+	if err != nil {
+		return TargetSnapshot{}, fmt.Errorf("reconcile: stat target after read %s: %w", path, err)
+	}
+	if !pathsafe.SameIdentity(snapshot.identity, live) || live.Mode().Perm() != snapshot.mode {
+		return TargetSnapshot{}, fmt.Errorf("reconcile: target changed while reading %s", path)
 	}
 	snapshot.token = TokenOfContent(content)
 	snapshot.digest = deployment.Ordinary(content)
 	return snapshot, nil
+}
+
+func readTargetContent(path string, snapshot TargetSnapshot) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("reconcile: read target %s: %w", path, err)
+	}
+	defer file.Close()
+	return readValidatedContent(file, snapshot, path)
+}
+
+func readValidatedContent(file *os.File, snapshot TargetSnapshot, path string) ([]byte, error) {
+	opened, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("reconcile: stat opened target %s: %w", path, err)
+	}
+	if err := validateOpenedFile(snapshot, opened); err != nil {
+		return nil, err
+	}
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("reconcile: read target %s: %w", path, err)
+	}
+	readAgain, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("reconcile: stat target after read %s: %w", path, err)
+	}
+	if err := validateOpenedFile(snapshot, readAgain); err != nil {
+		return nil, err
+	}
+	return content, nil
+}
+
+func validateOpenedFile(snapshot TargetSnapshot, info os.FileInfo) error {
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("reconcile: target changed to non-regular file %s", snapshot.identity.Path())
+	}
+	if !snapshot.identity.SameFileInfo(info) || info.Mode().Perm() != snapshot.mode {
+		return fmt.Errorf("reconcile: target identity or mode changed while reading %s", snapshot.identity.Path())
+	}
+	return nil
 }
 
 // requireDirectory rejects a root that is missing or not a real directory.

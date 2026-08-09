@@ -60,3 +60,12 @@ func SameIdentity(a, b Identity) bool {
 	}
 	return os.SameFile(a.info, b.info)
 }
+
+// SameFileInfo reports whether info names the same object as the captured
+// identity. It is used when a path is opened after an Lstat snapshot.
+func (i Identity) SameFileInfo(info os.FileInfo) bool {
+	if i.info == nil || info == nil {
+		return false
+	}
+	return os.SameFile(i.info, info)
+}

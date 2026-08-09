@@ -3,6 +3,7 @@ package reconcile
 import (
 	"fmt"
 	"io/fs"
+	"time"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/state"
@@ -47,10 +48,10 @@ func NewStateSnapshot(rows StateRows) (StateSnapshot, error) {
 		aliasRecords[index] = record
 	}
 	return StateSnapshot{
-		RepositoryRoot: rows.RepositoryRoot,
-		HomePath:       rows.HomePath,
-		Files:          fileRecords,
-		Aliases:        aliasRecords,
+		repositoryRoot: rows.RepositoryRoot,
+		homePath:       rows.HomePath,
+		files:          fileRecords,
+		aliases:        aliasRecords,
 	}, nil
 }
 
@@ -78,16 +79,16 @@ func convertFileRow(row state.FileBaseline) (FileState, error) {
 		return FileState{}, err
 	}
 	return FileState{
-		TargetPath:      row.TargetPath,
-		GroupName:       row.GroupName,
-		SourcePath:      row.SourcePath,
-		SourceKind:      row.SourceKind,
-		Layer:           row.Layer,
-		BaselineContent: row.BaselineContentHash,
-		BaselineSource:  row.BaselineSourceHash,
-		ExecutableBits:  fs.FileMode(row.ExecutableBits),
-		Active:          row.Status == state.StatusActive,
-		RetiredAt:       state.CloneTimestamp(row.RetiredAt),
+		targetPath:      row.TargetPath,
+		groupName:       row.GroupName,
+		sourcePath:      row.SourcePath,
+		sourceKind:      row.SourceKind,
+		layer:           row.Layer,
+		baselineContent: row.BaselineContentHash,
+		baselineSource:  row.BaselineSourceHash,
+		executableBits:  fs.FileMode(row.ExecutableBits),
+		active:          row.Status == state.StatusActive,
+		retiredAt:       state.CloneTimestamp(row.RetiredAt),
 	}, nil
 }
 
@@ -104,6 +105,9 @@ func validateFileRow(row state.FileBaseline) error {
 	}
 	if !row.Status.Valid() {
 		return fmt.Errorf("reconcile: file row %q has invalid status %q", row.TargetPath, row.Status)
+	}
+	if err := validateRetirement(row.Status, row.RetiredAt); err != nil {
+		return fmt.Errorf("reconcile: file row %q %w", row.TargetPath, err)
 	}
 	return nil
 }
@@ -135,12 +139,12 @@ func convertAliasRow(row state.AliasBaseline) (AliasState, error) {
 		return AliasState{}, err
 	}
 	return AliasState{
-		AliasPath:           row.AliasPath,
-		CanonicalTargetPath: row.CanonicalTargetPath,
-		GroupName:           row.GroupName,
-		Layer:               row.Layer,
-		Active:              row.Status == state.StatusActive,
-		RetiredAt:           state.CloneTimestamp(row.RetiredAt),
+		aliasPath:           row.AliasPath,
+		canonicalTargetPath: row.CanonicalTargetPath,
+		groupName:           row.GroupName,
+		layer:               row.Layer,
+		active:              row.Status == state.StatusActive,
+		retiredAt:           state.CloneTimestamp(row.RetiredAt),
 	}, nil
 }
 
@@ -160,6 +164,19 @@ func validateAliasRow(row state.AliasBaseline) error {
 	}
 	if !row.Status.Valid() {
 		return fmt.Errorf("reconcile: alias row %q has invalid status %q", row.AliasPath, row.Status)
+	}
+	if err := validateRetirement(row.Status, row.RetiredAt); err != nil {
+		return fmt.Errorf("reconcile: alias row %q %w", row.AliasPath, err)
+	}
+	return nil
+}
+
+func validateRetirement(status state.SourceStatus, retiredAt *time.Time) error {
+	if status == state.StatusActive && retiredAt != nil {
+		return fmt.Errorf("has retirement time while active")
+	}
+	if status == state.StatusRetired && (retiredAt == nil || retiredAt.IsZero()) {
+		return fmt.Errorf("is retired without a valid retirement time")
 	}
 	return nil
 }

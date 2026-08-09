@@ -22,6 +22,7 @@ func TestSnapshotPrecondition(t *testing.T) {
 		{"absent to present", testPreconditionAbsentTransition},
 		{"mode change", testPreconditionModeChange},
 		{"object replacement", testPreconditionIdentityReplacement},
+		{"replacement by symlink", testPreconditionSymlinkReplacement},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
@@ -138,5 +139,22 @@ func testPreconditionIdentityReplacement(t *testing.T) {
 	second := captureAt(t, root, "file")
 	if pathsafe.SameIdentity(first.Identity(), second.Identity()) {
 		t.Fatal("an identical-content replacement must still expose a new object identity")
+	}
+}
+
+func testPreconditionSymlinkReplacement(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "file")
+	mustTargetFile(t, path, []byte("x"))
+	first := captureAt(t, root, "file")
+	if err := os.Remove(path); err != nil {
+		t.Fatalf("remove target: %v", err)
+	}
+	if err := os.Symlink("elsewhere", path); err != nil {
+		t.Fatalf("replace target with symlink: %v", err)
+	}
+	second := captureAt(t, root, "file")
+	if first.Kind() != KindFile || second.Kind() != KindSymlink || second.Payload() != "elsewhere" {
+		t.Fatal("replacement by symlink must not be read as regular content")
 	}
 }
