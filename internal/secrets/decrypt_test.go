@@ -21,6 +21,7 @@ func TestSOPSDecrypt(t *testing.T) {
 		{"binary plaintext", testDecryptBinaryPlaintext},
 		{"empty plaintext", testDecryptEmptyPlaintext},
 		{"wrong json failure", testDecryptWrongJSON},
+		{"launch failure", testDecryptLaunchFailure},
 		{"cancellation", testDecryptCancellation},
 		{"caller-owned plaintext", testDecryptOwnership},
 	}
@@ -94,6 +95,15 @@ func testDecryptWrongJSON(t *testing.T) {
 	}
 	if !strings.Contains(message, "app/token exited with status 1") {
 		t.Fatalf("diagnostic missing context: %q", message)
+	}
+}
+func testDecryptLaunchFailure(t *testing.T) {
+	repository := t.TempDir()
+	client := NewClient("sops-does-not-exist", repository, []string{})
+	plaintext, err := client.Decrypt(context.Background(), []byte(`{"data":"x"}`), "app/token")
+	expectKind(t, err, failure.Dependency)
+	if plaintext != nil {
+		t.Fatalf("plaintext = %d bytes, want none", len(plaintext))
 	}
 }
 func testDecryptCancellation(t *testing.T) {

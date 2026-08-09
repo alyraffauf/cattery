@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/subprocess"
@@ -32,7 +33,7 @@ type Client struct {
 // NewClient builds a client pinned to one executable, one repository working
 // directory, and one environment policy.
 func NewClient(executable string, directory string, environment []string) *Client {
-	return &Client{executable: executable, directory: directory, environment: environment}
+	return &Client{executable: executable, directory: directory, environment: slices.Clone(environment)}
 }
 
 // Request describes one SOPS invocation. Operation and SourcePath appear only

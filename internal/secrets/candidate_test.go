@@ -42,12 +42,16 @@ func testCandidateEquality(t *testing.T) {
 	if !bytes.Equal(adopted, candidate) {
 		t.Fatalf("candidate not adopted exactly")
 	}
+	if !bytes.Equal(plaintext, []byte("token=sekrit\n")) {
+		t.Fatal("caller-owned plaintext was modified")
+	}
 }
 func testCandidateMismatch(t *testing.T) {
 	executable := sops.Build(t)
 	repository := t.TempDir()
 	client, _ := newTestClient(t, clientTarget{executable: executable, repository: repository, behavior: sops.Behavior{Stdout: []byte("different-plaintext")}})
-	adopted, err := client.ValidateCandidate(context.Background(), Candidate{Plaintext: []byte("original-plaintext"), Ciphertext: []byte(`{"data":"x"}`), SourcePath: "app/token"})
+	plaintext := []byte("original-plaintext")
+	adopted, err := client.ValidateCandidate(context.Background(), Candidate{Plaintext: plaintext, Ciphertext: []byte(`{"data":"x"}`), SourcePath: "app/token"})
 	expectKind(t, err, failure.Operational)
 	if adopted != nil {
 		t.Fatalf("mismatching candidate adopted")
@@ -55,6 +59,9 @@ func testCandidateMismatch(t *testing.T) {
 	message := err.Error()
 	if strings.Contains(message, "original-plaintext") || strings.Contains(message, "different-plaintext") {
 		t.Fatalf("plaintext leaked into error: %q", message)
+	}
+	if !bytes.Equal(plaintext, []byte("original-plaintext")) {
+		t.Fatal("caller-owned plaintext was modified on mismatch")
 	}
 }
 func testCandidateEmptyPlaintext(t *testing.T) {

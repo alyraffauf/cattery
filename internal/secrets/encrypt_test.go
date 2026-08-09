@@ -60,7 +60,7 @@ func testEncryptBinaryInput(t *testing.T) {
 	repository := t.TempDir()
 	plaintext := []byte{0x00, 0xff, 'a', 0x00, 0x01, 0xfe}
 	output := []byte(`{"data":"aGVsbG8g","more":true}`)
-	client, _ := newTestClient(t, clientTarget{executable: executable, repository: repository, behavior: sops.Behavior{Stdout: output}})
+	client, env := newTestClient(t, clientTarget{executable: executable, repository: repository, behavior: sops.Behavior{Stdout: output}})
 	got, err := client.Encrypt(context.Background(), plaintext, "app/token")
 	if err != nil {
 		t.Fatalf("err = %v", err)
@@ -70,6 +70,9 @@ func testEncryptBinaryInput(t *testing.T) {
 	}
 	if !json.Valid(got) {
 		t.Fatalf("output is not valid json")
+	}
+	if rec := readRecord(t, env); !bytes.Equal(rec.Stdin, plaintext) {
+		t.Fatalf("stdin = %v, want %v", rec.Stdin, plaintext)
 	}
 }
 func testEncryptMalformedOutput(t *testing.T) {

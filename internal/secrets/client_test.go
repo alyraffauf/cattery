@@ -22,9 +22,11 @@ func TestSOPSClient(t *testing.T) {
 	}{
 		{"missing executable", testMissingExecutable},
 		{"nonzero exit", testNonzeroExit},
+		{"large stderr", testLargeStderr},
 		{"stdout over limit", testStdoutOverLimit},
 		{"working directory", testWorkingDirectory},
 		{"environment", testEnvironment},
+		{"environment copy", testEnvironmentCopy},
 		{"descendants", testDescendants},
 		{"buffer zeroing", testBufferZeroing},
 		{"drain capture", testDrainCapture},
@@ -136,37 +138,6 @@ func testDescendants(t *testing.T) {
 		t.Fatal("descendant survived cancellation")
 	}
 }
-func testBufferZeroing(t *testing.T) {
-	data := []byte("sensitive-buffer")
-	zeroBytes(data)
-	if len(bytes.Trim(data, "\x00")) != 0 {
-		t.Fatal("zeroBytes left non-zero data")
-	}
-	overflowed := false
-	capture := newBounded(4, func() { overflowed = true })
-	capture.Write([]byte("abcd"))
-	if overflowed {
-		t.Fatal("overflow flagged before the limit")
-	}
-	capture.Write([]byte("xyz"))
-	if !overflowed {
-		t.Fatal("overflow not flagged past the limit")
-	}
-	if string(capture.buf) != "abcd" {
-		t.Fatalf("captured %q, want abcd", capture.buf)
-	}
-	capture.clear()
-	if capture.buf != nil {
-		t.Fatal("clear left a buffer")
-	}
-}
-func testDrainCapture(t *testing.T) {
-	drain := newDrain(8)
-	drain.Write([]byte("abcdefghijklmnop"))
-	if len(drain.buf) != 8 {
-		t.Fatalf("drain kept %d bytes, want 8", len(drain.buf))
-	}
-}
 
 type clientTarget struct {
 	executable *sops.Executable
@@ -186,6 +157,7 @@ func newTestClient(t *testing.T, target clientTarget) (*Client, []string) {
 type fixtureRecord struct {
 	Argv     []string
 	Cwd      string
+	Stdin    []byte
 	ChildPid int
 }
 

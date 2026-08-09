@@ -140,6 +140,7 @@ type spec struct {
 type record struct {
 	Argv     []string
 	Cwd      string
+	Stdin    []byte
 	Pid      int
 	ChildPid int
 }
@@ -154,7 +155,8 @@ func main() {
 
 func run() {
 	current := loadSpec()
-	rec := record{Argv: os.Args, Cwd: cwd(), Pid: os.Getpid()}
+	stdin, _ := io.ReadAll(os.Stdin)
+	rec := record{Argv: os.Args, Cwd: cwd(), Stdin: stdin, Pid: os.Getpid()}
 	if current.Sleep > 0 {
 		rec.ChildPid = spawnChild()
 	}
@@ -162,7 +164,7 @@ func run() {
 	os.Stderr.Write(current.Stderr)
 	os.Stdout.Write(current.Stdout)
 	if current.EchoStdin {
-		io.Copy(os.Stdout, os.Stdin)
+		os.Stdout.Write(stdin)
 	}
 	if current.Sleep > 0 {
 		time.Sleep(current.Sleep)

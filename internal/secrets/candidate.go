@@ -8,8 +8,9 @@ import (
 	"github.com/alyraffauf/cattery/internal/failure"
 )
 
-// Candidate pairs the original plaintext with its candidate ciphertext for
-// adoption validation.
+// Candidate pairs caller-owned plaintext with candidate ciphertext for
+// adoption validation. ValidateCandidate never clears or retains Plaintext;
+// the caller remains responsible for clearing it after this call.
 type Candidate struct {
 	Plaintext  []byte
 	Ciphertext []byte
@@ -19,8 +20,9 @@ type Candidate struct {
 // ValidateCandidate round-trips candidate ciphertext through Decrypt and
 // requires byte-exact equality with the original plaintext before the
 // candidate may be adopted as repository content. The candidate must be
-// nonempty valid JSON. Every plaintext buffer the round trip creates is
-// zeroed on every path, and only the validated ciphertext returns.
+// nonempty valid JSON. Every plaintext buffer created by the round trip is
+// zeroed before return or error, and only the validated ciphertext returns.
+// The caller-owned Candidate.Plaintext is not modified.
 func (client *Client) ValidateCandidate(ctx context.Context, candidate Candidate) ([]byte, error) {
 	if len(candidate.Ciphertext) == 0 || !json.Valid(candidate.Ciphertext) {
 		return nil, failure.New(failure.Operational, "sops encrypt "+candidate.SourcePath+" produced invalid candidate", nil)
