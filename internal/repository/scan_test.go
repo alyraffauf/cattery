@@ -185,7 +185,6 @@ func testScanGroupCollisions(t *testing.T) {
 	}
 }
 
-// wantFile describes one expected base candidate compactly.
 type wantFile struct {
 	scope    deployment.Scope
 	repoPath string
@@ -193,7 +192,6 @@ type wantFile struct {
 	secret   bool
 }
 
-// newCandidate builds the expected Candidate for a repo-relative path.
 func newCandidate(root string, want wantFile) Candidate {
 	kind := deployment.FileOrdinary
 	if want.secret {

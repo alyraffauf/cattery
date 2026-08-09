@@ -1,10 +1,3 @@
-// This file orders validated hook descriptors into the two execution
-// sequences the apply orchestrator uses (PLAN.md Section 12.2): before hooks
-// run repository scope first, then groups lexically; after hooks run groups
-// lexically first, then repository scope last. Within one phase, names sort
-// bytewise. Each sort moves only its own phase, leaving the other phase's
-// hooks in stable order, so the two sequences are independent and compose
-// into the Section 10.3 order without a rescan.
 package hooks
 
 import (

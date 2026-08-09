@@ -1,9 +1,3 @@
-// This file validates one scope's _hooks tree into immutable hook
-// descriptors (PLAN.md Section 10.2). Discovery is read-only: it uses
-// os.Lstat and os.ReadDir only, never executes a hook, imports a process
-// helper, or inspects the target tree. A hooks root or phase path that is
-// not a real directory, and any direct child that is not an executable
-// regular file, is a validation error rather than a silent skip.
 package hooks
 
 import (
@@ -43,7 +37,6 @@ func Discover(root string, scope deployment.Scope) ([]deployment.Hook, error) {
 	return discovered, nil
 }
 
-// discoverPhase validates one before/after directory beneath the hooks root.
 func discoverPhase(hooksRoot string, scope deployment.Scope, phase deployment.HookPhase) ([]deployment.Hook, error) {
 	phasePath := filepath.Join(hooksRoot, string(phase))
 	info, err := os.Lstat(phasePath)
@@ -71,8 +64,6 @@ func discoverPhase(hooksRoot string, scope deployment.Scope, phase deployment.Ho
 	return discovered, nil
 }
 
-// discoverEntry validates one direct child and builds its descriptor. A
-// directory, symlink, special entry, or non-executable file is rejected.
 func discoverEntry(scope deployment.Scope, phasePath string, entry os.DirEntry) (deployment.Hook, error) {
 	phase := deployment.HookPhase(filepath.Base(phasePath))
 	full := filepath.Join(phasePath, entry.Name())

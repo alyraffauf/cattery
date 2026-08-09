@@ -22,7 +22,6 @@ func scanFileBaseline(source scanner) (FileBaseline, error) {
 	return baseline, nil
 }
 
-// fileRawRow carries the stored text/byte form of one files row.
 type fileRawRow struct {
 	kind, layer, status, applied string
 	retired                      *string

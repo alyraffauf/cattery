@@ -1,9 +1,3 @@
-// This file implements the pure global collision engine for one compiled
-// platform plan (PLAN.md Section 6.3): file/file, file/alias, and alias/alias
-// equality and parent/child overlaps under bytewise and portable case/NFC
-// equivalence, across scopes, and against protected trees beneath HOME. The
-// engine inspects only its arguments; target identity and temporal races are
-// runtime preflight concerns.
 package repository
 
 import (
@@ -40,7 +34,6 @@ func CheckCollisions(files []deployment.ManagedFile, aliases []deployment.Alias,
 	return protectedTreeCollisions(files, aliases, scope)
 }
 
-// fileCollisions rejects equivalent or ancestor-related file target pairs.
 func fileCollisions(files []deployment.ManagedFile) error {
 	targets := fileTargets(files)
 	for first := 0; first < len(files); first++ {
@@ -70,7 +63,6 @@ func conflictIndex(destinations []string, first int) (int, error) {
 	return -1, nil
 }
 
-// fileTargets projects the file targets into one slice.
 func fileTargets(files []deployment.ManagedFile) []string {
 	targets := make([]string, len(files))
 	for index := range files {
@@ -79,7 +71,6 @@ func fileTargets(files []deployment.ManagedFile) []string {
 	return targets
 }
 
-// aliasDestinations projects the alias destinations into one slice.
 func aliasDestinations(aliases []deployment.Alias) []string {
 	destinations := make([]string, len(aliases))
 	for index := range aliases {
@@ -88,8 +79,6 @@ func aliasDestinations(aliases []deployment.Alias) []string {
 	return destinations
 }
 
-// destinationsCollide reports whether two HOME-relative paths are portably
-// equivalent or one is a portable strict ancestor of the other.
 func destinationsCollide(first, second string) (bool, error) {
 	firstSegments, err := pathsafe.Segments(first)
 	if err != nil {
@@ -141,9 +130,6 @@ func aliasFileConflictIndex(alias deployment.Alias, files []deployment.ManagedFi
 	return -1, nil
 }
 
-// aliasFileCollide reports whether the alias destination collides with the
-// file target, exempting the intended identity between an alias and its own
-// canonical target (PLAN.md Section 6.2).
 func aliasFileCollide(alias deployment.Alias, file deployment.ManagedFile) (bool, error) {
 	destination, err := pathsafe.Segments(alias.AliasRelativePath)
 	if err != nil {

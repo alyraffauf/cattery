@@ -32,7 +32,6 @@ func TestTargetSnapshot(t *testing.T) {
 	}
 }
 
-// captureAt captures one destination and fails the test on any error.
 func captureAt(t *testing.T, root, relative string) TargetSnapshot {
 	t.Helper()
 	snapshot, err := CaptureTarget(Destination{Root: root, Relative: relative})
@@ -42,7 +41,6 @@ func captureAt(t *testing.T, root, relative string) TargetSnapshot {
 	return snapshot
 }
 
-// mustTargetFile writes a regular file and fails the test on any error.
 func mustTargetFile(t *testing.T, path string, content []byte) {
 	t.Helper()
 	if err := os.WriteFile(path, content, 0o644); err != nil {
@@ -50,7 +48,6 @@ func mustTargetFile(t *testing.T, path string, content []byte) {
 	}
 }
 
-// mustTargetMkdir creates a directory and fails the test on any error.
 func mustTargetMkdir(t *testing.T, path string) {
 	t.Helper()
 	if err := os.Mkdir(path, 0o700); err != nil {

@@ -14,9 +14,6 @@ func targetPath(destination Destination) string {
 	return filepath.Join(destination.Root, filepath.FromSlash(destination.Relative))
 }
 
-// walkParentsValid checks every existing component from root through the
-// parent of relative; each must be a real directory. Missing components are
-// tolerated because a replacement may create them.
 func walkParentsValid(root, relative string) error {
 	segments, err := pathsafe.Segments(relative)
 	if err != nil {

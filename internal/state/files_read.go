@@ -20,7 +20,6 @@ func prepareFileBaseline(root, home string, baseline FileBaseline) (string, stri
 	return root, home, nil
 }
 
-// validateFileBaseline rejects rows that cannot be stored faithfully.
 func validateFileBaseline(baseline FileBaseline) error {
 	if err := validateFilePaths(baseline); err != nil {
 		return err
@@ -59,8 +58,6 @@ func validateFileMetadata(baseline FileBaseline) error {
 	return nil
 }
 
-// ensureKeyID recovers the hash key for secret rows so the transaction can
-// commit its identifier; ordinary rows need no key.
 func (store *Store) ensureKeyID(kind deployment.FileKind) (*deployment.Digest, error) {
 	if kind != deployment.FileSecret {
 		return nil, nil
@@ -100,8 +97,6 @@ func (store *Store) requireRepository(root, home string) (Repository, error) {
 	return store.LookupRepository(root, home)
 }
 
-// scanAndCommitFile reads the row back through the transaction and commits,
-// rolling back when the read fails so no open transaction leaks.
 func scanAndCommitFile(transaction *sql.Tx, key fileBaselineKey) (FileBaseline, error) {
 	return commitStateRead(transaction, func(transaction *sql.Tx) (FileBaseline, error) {
 		baseline, err := scanFileBaseline(transaction.QueryRow(fileByPairTargetSQL, key.root, key.home, key.target))
@@ -135,8 +130,6 @@ func (store *Store) readFileBaselines(statement, root, home string) ([]FileBasel
 	return CopyFileBaselines(baselines), nil
 }
 
-// checkRepresentationCorruption rejects a snapshot whose repository has paths
-// active in both tables, per PLAN.md Section 8.4.
 func (store *Store) checkRepresentationCorruption(root, home string) error {
 	rows, err := store.database.conn.Query(dualActiveByPairSQL, root, home)
 	if err != nil {

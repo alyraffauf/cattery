@@ -40,7 +40,6 @@ type resolver struct {
 	platform deployment.Layer
 }
 
-// resolveScope merges one group scope, skipping groups replaced by files.
 func (resolver *resolver) resolveScope(scope deployment.Scope, platformRootView layerView) ([]deployment.ManagedFile, error) {
 	if _, replaced := platformRootView.files[scope.Group]; replaced {
 		return nil, nil
@@ -57,7 +56,6 @@ type layerView struct {
 	dirs  map[string]bool
 }
 
-// covers reports whether the platform layer replaces a base target.
 func (view layerView) covers(target string) bool {
 	if _, ok := view.files[target]; ok || view.dirs[target] {
 		return true
@@ -183,7 +181,6 @@ func (walker *layerWalker) walk(relativePath string, fileKind deployment.FileKin
 	return nil
 }
 
-// classifyEntry returns the storage kind for one layer entry.
 func classifyEntry(relative string, entry os.DirEntry, kind deployment.FileKind) (deployment.FileKind, bool, error) {
 	if relative != "" {
 		return kind, false, nil

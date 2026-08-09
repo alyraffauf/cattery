@@ -1,6 +1,3 @@
-// This file composes the nine Section 12.3 phases into the immutable plan
-// for one platform: scan/overlay (1-4), routes (5), hooks (6), paths (7),
-// collisions (8), sorting (9). Read-only: no targets, state, SOPS, hooks.
 package repository
 
 import (
@@ -27,7 +24,6 @@ type CompileInput struct {
 	Selected       []string
 }
 
-// compiled holds the validated phase outputs of one compilation.
 type compiled struct {
 	groups  []string
 	files   []deployment.ManagedFile
@@ -50,7 +46,6 @@ func Compile(input CompileInput) (deployment.Plan, error) {
 	return finalize(input, records)
 }
 
-// compileRepository runs phases 1-7: scan, overlay, routes, hooks, paths.
 func compileRepository(input CompileInput) (compiled, error) {
 	base, err := scanAndSelect(input)
 	if err != nil {
@@ -74,7 +69,6 @@ func compileRepository(input CompileInput) (compiled, error) {
 	return compiled{groups: base.Groups, files: files, aliases: aliases, hooks: hookRecords}, nil
 }
 
-// scanAndSelect scans the repository and validates the selection.
 func scanAndSelect(input CompileInput) (ScanResult, error) {
 	base, err := Scan(input.RepositoryRoot)
 	if err != nil {
@@ -86,7 +80,6 @@ func scanAndSelect(input CompileInput) (ScanResult, error) {
 	return base, nil
 }
 
-// finalize filters to the selection, sorts, and wraps the immutable plan.
 func finalize(input CompileInput, records compiled) (deployment.Plan, error) {
 	selected := input.Selected
 	groups := records.groups
@@ -113,7 +106,6 @@ func finalize(input CompileInput, records compiled) (deployment.Plan, error) {
 	})
 }
 
-// selectRecords keeps the records the predicate accepts.
 func selectRecords[T any](records []T, selected []string, kept func(T) bool) []T {
 	filtered := make([]T, 0, len(records))
 	for _, record := range records {
@@ -124,12 +116,10 @@ func selectRecords[T any](records []T, selected []string, kept func(T) bool) []T
 	return filtered
 }
 
-// scopeKept keeps records of a selected scope.
 func scopeKept(group string, selected []string) bool {
 	return len(selected) == 0 || slices.Contains(selected, group)
 }
 
-// hookKept keeps repository hooks always and group hooks on selection.
 func hookKept(scope deployment.Scope, selected []string) bool {
 	if scope.Group == "" {
 		return true
@@ -137,7 +127,6 @@ func hookKept(scope deployment.Scope, selected []string) bool {
 	return scopeKept(scope.Group, selected)
 }
 
-// validateSelection rejects groups the repository does not contain.
 func validateSelection(groups, selected []string) error {
 	for _, name := range selected {
 		if !slices.Contains(groups, name) {
@@ -147,7 +136,6 @@ func validateSelection(groups, selected []string) error {
 	return nil
 }
 
-// activateRoutes activates every scope's route manifest.
 func activateRoutes(input CompileInput, records compiled) ([]deployment.Alias, error) {
 	var activated []deployment.Alias
 	for _, scope := range scopesOf(records.groups) {
@@ -160,7 +148,6 @@ func activateRoutes(input CompileInput, records compiled) ([]deployment.Alias, e
 	return activated, nil
 }
 
-// activateScope activates one scope's declarations and stamps its scope.
 func activateScope(input CompileInput, scope deployment.Scope, files []deployment.ManagedFile) ([]deployment.Alias, error) {
 	config, err := loadRoutes(input.RepositoryRoot, scope)
 	if err != nil {
@@ -186,7 +173,6 @@ func activateScope(input CompileInput, scope deployment.Scope, files []deploymen
 	return activated, nil
 }
 
-// loadRoutes decodes the scope's _routes.toml; missing yields no config.
 func loadRoutes(root string, scope deployment.Scope) (routes.Config, error) {
 	path := filepath.Join(root, scope.Group, "_routes.toml")
 	data, err := os.ReadFile(path)
@@ -199,7 +185,6 @@ func loadRoutes(root string, scope deployment.Scope) (routes.Config, error) {
 	return routes.Decode(data)
 }
 
-// discoverHooks validates the hook trees of every scope.
 func discoverHooks(input CompileInput, groups []string) ([]deployment.Hook, error) {
 	var hookRecords []deployment.Hook
 	for _, scope := range scopesOf(groups) {
@@ -212,7 +197,6 @@ func discoverHooks(input CompileInput, groups []string) ([]deployment.Hook, erro
 	return hookRecords, nil
 }
 
-// validateDestinations revalidates every compiled path (phase 7).
 func validateDestinations(files []deployment.ManagedFile, aliases []deployment.Alias) error {
 	for _, file := range files {
 		if err := validateTarget(file.TargetRelativePath); err != nil {
@@ -230,7 +214,6 @@ func validateDestinations(files []deployment.ManagedFile, aliases []deployment.A
 	return nil
 }
 
-// validateTarget wraps a lexical path rejection with repository context.
 func validateTarget(path string) error {
 	if _, err := pathsafe.Segments(path); err != nil {
 		return fmt.Errorf("repository: %w", err)
@@ -238,7 +221,6 @@ func validateTarget(path string) error {
 	return nil
 }
 
-// scopesOf returns the root scope followed by one scope per group.
 func scopesOf(groups []string) []deployment.Scope {
 	scopes := make([]deployment.Scope, 0, len(groups)+1)
 	scopes = append(scopes, deployment.NewScope(""))

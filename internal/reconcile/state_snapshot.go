@@ -56,8 +56,6 @@ func NewStateSnapshot(rows StateRows) (StateSnapshot, error) {
 	}, nil
 }
 
-// rejectDualActive rejects a path that is active in both the file and alias
-// tables of one repository pair, per PLAN.md Section 8.4.
 func rejectDualActive(files []state.FileBaseline, aliases []state.AliasBaseline) error {
 	active := make(map[string]bool, len(files))
 	for _, row := range files {
@@ -73,8 +71,6 @@ func rejectDualActive(files []state.FileBaseline, aliases []state.AliasBaseline)
 	return nil
 }
 
-// convertFileRow projects one file baseline into its immutable evaluation
-// record, cloning the retirement timestamp and validating every field.
 func convertFileRow(row state.FileBaseline) (FileState, error) {
 	if err := validateFileRow(row); err != nil {
 		return FileState{}, err
@@ -93,7 +89,6 @@ func convertFileRow(row state.FileBaseline) (FileState, error) {
 	}, nil
 }
 
-// validateFileRow rejects a row that could not have been stored faithfully.
 func validateFileRow(row state.FileBaseline) error {
 	if err := validateFilePaths(row); err != nil {
 		return err
@@ -113,7 +108,6 @@ func validateFileRow(row state.FileBaseline) error {
 	return nil
 }
 
-// validateFilePaths rejects malformed path and enum fields of a file row.
 func validateFilePaths(row state.FileBaseline) error {
 	if !state.IsSlashRelative(row.TargetPath) {
 		return fmt.Errorf("reconcile: file row target %q is not a slash-relative path", row.TargetPath)
@@ -135,8 +129,6 @@ func validateFilePaths(row state.FileBaseline) error {
 	return nil
 }
 
-// convertAliasRow projects one alias baseline into its immutable evaluation
-// record, cloning the retirement timestamp and validating every field.
 func convertAliasRow(row state.AliasBaseline) (AliasState, error) {
 	if err := validateAliasRow(row); err != nil {
 		return AliasState{}, err
@@ -151,7 +143,6 @@ func convertAliasRow(row state.AliasBaseline) (AliasState, error) {
 	}, nil
 }
 
-// validateAliasRow rejects a row that could not have been stored faithfully.
 func validateAliasRow(row state.AliasBaseline) error {
 	if !state.IsSlashRelative(row.AliasPath) {
 		return fmt.Errorf("reconcile: alias row path %q is not a slash-relative path", row.AliasPath)

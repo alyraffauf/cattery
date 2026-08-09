@@ -83,14 +83,11 @@ func Run(ctx context.Context, request Request) (Result, error) {
 	return observed.result, observed.err
 }
 
-// outcome bundles a Result with its error so helpers stay under three params.
 type outcome struct {
 	result Result
 	err    error
 }
 
-// groupShutdown bundles the inputs needed by awaitShutdown so it stays under
-// the three-parameter limit.
 type groupShutdown struct {
 	handle  *processHandle
 	waitCh  chan error

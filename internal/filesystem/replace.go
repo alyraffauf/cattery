@@ -43,8 +43,6 @@ type ReplaceError struct {
 func (e *ReplaceError) Error() string { return e.Cause.Error() }
 func (e *ReplaceError) Unwrap() error { return e.Cause }
 
-// temporaryFile pairs the write path with the sync/close lifecycle of one
-// open replacement entry.
 type temporaryFile struct {
 	temp   TempFile
 	handle SyncHandle
@@ -67,8 +65,6 @@ func (file *temporaryFile) prepare(ctx context.Context, spec ReplacementSpec) er
 	return validateReplacement(file.temp.Name(), TokenOfContent(spec.Content), spec.Mode)
 }
 
-// validateReplacement re-checks the on-disk temporary entry: it must be a
-// regular file carrying exactly the intended bytes and mode.
 func validateReplacement(name string, token ContentToken, mode fs.FileMode) error {
 	facts, err := CaptureTarget(name)
 	if err != nil {

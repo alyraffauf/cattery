@@ -1,14 +1,5 @@
 // Package repository classifies scope-root entries that govern how the
 // repository deploys.
-//
-// This file performs pure lexical classification of a single name at a scope
-// root: it does no directory traversal and no platform resolution. Known
-// controls, ignored unknown underscore entries, and repository-root metadata
-// are recognized; every other name is an ordinary deployable entry.
-//
-// Underscore-prefixed names INSIDE an ordinary target tree are literal and
-// deployable (PLAN 2.2). That nested case is out of scope for this lexical
-// classifier, which only inspects names at a scope root.
 package repository
 
 import "strings"

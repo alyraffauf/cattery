@@ -1,12 +1,3 @@
-// This file resolves group selections for the repository-using commands
-// (PLAN.md Sections 8.5, 11.2, and 11.5). CompiledOnly serves validate, whose
-// explicit names must be current compiled groups; CompiledAndPersisted serves
-// status, diff, and apply, whose explicit names may also come from persisted
-// rows so a deleted group stays inspectable. Both reject unknown and
-// duplicate arguments and return sorted typed selections. Selection is pure:
-// the caller supplies the compiled group names and the persisted group names
-// read from state, so no compiler execution, state read, or mutation occurs
-// here.
 package selection
 
 import (
@@ -69,7 +60,6 @@ func CompiledAndPersisted(current []string, persisted PersistedGroups, arguments
 	return Selection{Groups: sortedUnique(arguments)}, nil
 }
 
-// rejectUnknown fails when an argument is not among the known groups.
 func rejectUnknown(arguments, known []string) error {
 	for _, argument := range arguments {
 		if !slices.Contains(known, argument) {
@@ -79,7 +69,6 @@ func rejectUnknown(arguments, known []string) error {
 	return nil
 }
 
-// rejectDuplicates fails when an argument repeats.
 func rejectDuplicates(arguments []string) error {
 	seen := make(map[string]bool, len(arguments))
 	for _, argument := range arguments {
@@ -91,12 +80,10 @@ func rejectDuplicates(arguments []string) error {
 	return nil
 }
 
-// union returns the combined members of both lists.
 func union(first, second []string) []string {
 	return append(append([]string(nil), first...), second...)
 }
 
-// sortedUnique returns the sorted unique members of items, or nil when empty.
 func sortedUnique(items []string) []string {
 	if len(items) == 0 {
 		return nil

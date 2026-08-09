@@ -31,16 +31,12 @@ func TestRepositorySelection(t *testing.T) {
 	}
 }
 
-// newFixtureResolver builds a resolver over a fresh isolated store whose
-// canonical home is also the resolver home.
 func newFixtureResolver(t *testing.T) (*RepositoryResolver, *database.Fixture) {
 	t.Helper()
 	fixture := database.New(t)
 	return NewRepositoryResolver(fixture.Home, fixture.Store), fixture
 }
 
-// resolveSelection resolves without explicit or environment inputs and
-// fails the test on any error.
 func resolveSelection(t *testing.T, resolver *RepositoryResolver) state.Repository {
 	t.Helper()
 	result, err := resolver.Resolve(RepositoryRequest{WorkingDir: t.TempDir()})

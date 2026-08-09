@@ -10,7 +10,6 @@ import (
 	"github.com/alyraffauf/cattery/internal/deployment"
 )
 
-// routesFixture is the repository manifest used by the plan fixtures.
 const routesFixture = `version = 1
 
 [symlinks.all]
@@ -36,7 +35,6 @@ func TestPlanCompilation(t *testing.T) {
 	}
 }
 
-// goldenScenario describes one platform's expected plan records.
 type goldenScenario struct {
 	platform deployment.Layer
 	files    []deployment.ManagedFile
@@ -76,7 +74,6 @@ func testPlanGolden(t *testing.T) {
 	}
 }
 
-// goldenWant builds the expected plan for one golden scenario.
 func goldenWant(root string, scenario goldenScenario) deployment.Plan {
 	return mustPlan(deployment.PlanInput{
 		RepositoryRoot: root,
@@ -156,8 +153,6 @@ func testPlanInvalidUnselected(t *testing.T) {
 	}
 }
 
-// compileFixture materializes a two-group repository with platform overlays,
-// a route manifest, and executable hooks.
 func compileFixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -182,7 +177,6 @@ func writeRoutes(t *testing.T, root string, content string) {
 	}
 }
 
-// assertPlan fails when the compiled plan differs from the expectation.
 func assertPlan(t *testing.T, got deployment.Plan, want deployment.Plan) {
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {
@@ -198,7 +192,6 @@ func mustPlan(input deployment.PlanInput) deployment.Plan {
 	return plan
 }
 
-// fileWant describes one expected managed file record.
 type fileWant struct {
 	scope    deployment.Scope
 	layer    deployment.Layer
@@ -207,7 +200,6 @@ type fileWant struct {
 	exec     fs.FileMode
 }
 
-// expectFile builds the expected managed file record.
 func expectFile(root string, want fileWant) deployment.ManagedFile {
 	return deployment.ManagedFile{
 		Scope: want.scope, Layer: want.layer, Kind: deployment.FileOrdinary,
@@ -216,7 +208,6 @@ func expectFile(root string, want fileWant) deployment.ManagedFile {
 	}
 }
 
-// aliasWant describes one expected alias record.
 type aliasWant struct {
 	scope       deployment.Scope
 	platform    string
@@ -224,7 +215,6 @@ type aliasWant struct {
 	canonical   string
 }
 
-// expectAlias builds the expected alias record.
 func expectAlias(want aliasWant) deployment.Alias {
 	return deployment.Alias{
 		Scope: want.scope, Platform: want.platform,
@@ -232,14 +222,12 @@ func expectAlias(want aliasWant) deployment.Alias {
 	}
 }
 
-// hookWant describes one expected hook record.
 type hookWant struct {
 	scope deployment.Scope
 	phase deployment.HookPhase
 	name  string
 }
 
-// expectHook builds the expected hook record beneath root.
 func expectHook(root string, want hookWant) deployment.Hook {
 	return deployment.Hook{
 		Scope: want.scope, Phase: want.phase, Name: want.name,

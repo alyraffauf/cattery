@@ -1,5 +1,3 @@
-// This file scans repository trees into base-layer candidates and raw hook
-// candidates (PLAN Task 28); overlay and route work belong to later phases.
 package repository
 
 import (
@@ -56,7 +54,6 @@ func Scan(root string) (ScanResult, error) {
 	return ScanResult{Groups: scanner.groups, Files: scanner.files, Hooks: scanner.hooks}, nil
 }
 
-// scopeScanner accumulates candidates while scanning one scope root.
 type scopeScanner struct {
 	repoRoot  string
 	scopeRoot string
@@ -80,7 +77,6 @@ func (s *scopeScanner) scanScopeRoot() error {
 	return nil
 }
 
-// scanEntry dispatches one scope-root entry.
 func (s *scopeScanner) scanEntry(entry os.DirEntry) error {
 	control := ClassifyRoot(entry.Name())
 	switch {
@@ -102,7 +98,6 @@ func (s *scopeScanner) scanEntry(entry os.DirEntry) error {
 	}
 }
 
-// beginGroup validates a group name and scans its scope.
 func (s *scopeScanner) beginGroup(entry os.DirEntry) error {
 	name := entry.Name()
 	if err := pathsafe.GroupName(name); err != nil {
@@ -171,7 +166,6 @@ func (s *scopeScanner) scanHookPhase(hooks string, phase deployment.HookPhase) e
 	return nil
 }
 
-// walkTree visits a literal subtree beneath relative.
 func (s *scopeScanner) walkTree(relative string, kind deployment.FileKind) error {
 	entries, err := os.ReadDir(filepath.Join(s.repoRoot, s.scopeRoot, relative))
 	if err != nil {
@@ -228,7 +222,6 @@ func (s *scopeScanner) nonRegular(relative string) error {
 	return fmt.Errorf("repository: non-regular source entry %q", filepath.Join(s.scopeRoot, relative))
 }
 
-// checkGroupCollisions rejects group names equivalent under PLAN 2.1, 6.3.
 func checkGroupCollisions(groups []string) error {
 	for first := 0; first < len(groups); first++ {
 		if match := duplicateGroupIndex(groups, first); match >= 0 {
@@ -238,8 +231,6 @@ func checkGroupCollisions(groups []string) error {
 	return nil
 }
 
-// duplicateGroupIndex returns the first later group index equivalent to
-// groups[first], or -1.
 func duplicateGroupIndex(groups []string, first int) int {
 	for second := first + 1; second < len(groups); second++ {
 		if pathsafe.SegmentsEquivalent(groups[first], groups[second]) {

@@ -77,8 +77,6 @@ func SortGroups(groups []string) []string {
 	return compactStrings(sorted)
 }
 
-// indexLess adapts a bytewise element comparator into the index-based callback
-// shape that sort.SliceStable expects, for any slice element type.
 func indexLess[T any](items []T, less func(a, b T) bool) func(int, int) bool {
 	return func(i, j int) bool {
 		return less(items[i], items[j])

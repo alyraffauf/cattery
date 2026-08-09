@@ -1,11 +1,3 @@
-// This file executes ordered hook descriptors with the PLAN.md Section 10.4
-// runtime: repository-root working directory, inherited streams, a CATTERY_*
-// environment appended after the inherited one, and process-group
-// cancellation through internal/subprocess. The caller supplies one phase's
-// sequence built with the Section 12.2 comparators; before hooks stop at the
-// first failure, after hooks attempt every hook and aggregate failures.
-// Dry-run and no-hooks execute nothing. No secret-specific environment or
-// captured-stream policy enters hooks.
 package hooks
 
 import (
@@ -60,8 +52,6 @@ func Execute(ctx context.Context, input ExecuteInput, ordered []deployment.Hook)
 	return errors.Join(failures...)
 }
 
-// runHook executes one hook, wrapping launch and cancellation errors and
-// translating a nonzero exit into a hook failure error.
 func runHook(ctx context.Context, input ExecuteInput, hook deployment.Hook) error {
 	environment := append(os.Environ(), hookEnvironment(input, hook)...)
 	result, err := subprocess.Run(ctx, subprocess.Request{
@@ -81,9 +71,6 @@ func runHook(ctx context.Context, input ExecuteInput, hook deployment.Hook) erro
 	return nil
 }
 
-// hookEnvironment builds the Section 10.4 CATTERY_* variables for one hook.
-// os/exec keeps the later duplicate of a variable, so appending after the
-// inherited environment guarantees the canonical values win.
 func hookEnvironment(input ExecuteInput, hook deployment.Hook) []string {
 	return []string{
 		"CATTERY_REPO=" + input.RepositoryRoot,
@@ -95,7 +82,6 @@ func hookEnvironment(input ExecuteInput, hook deployment.Hook) []string {
 	}
 }
 
-// inheritReader defaults a nil stdin to the caller process stream.
 func inheritReader(reader io.Reader) io.Reader {
 	if reader == nil {
 		return os.Stdin
@@ -103,7 +89,6 @@ func inheritReader(reader io.Reader) io.Reader {
 	return reader
 }
 
-// inheritStdout defaults a nil stdout to the caller process stream.
 func inheritStdout(writer io.Writer) io.Writer {
 	if writer == nil {
 		return os.Stdout
@@ -111,7 +96,6 @@ func inheritStdout(writer io.Writer) io.Writer {
 	return writer
 }
 
-// inheritStderr defaults a nil stderr to the caller process stream.
 func inheritStderr(writer io.Writer) io.Writer {
 	if writer == nil {
 		return os.Stderr

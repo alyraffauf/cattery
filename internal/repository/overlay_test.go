@@ -169,7 +169,6 @@ func testOverlayMalformed(t *testing.T) {
 	}
 }
 
-// resolvePaths materializes files beneath root, scans, and resolves platform.
 func resolvePaths(root string, platform deployment.Layer, paths ...string) ([]deployment.ManagedFile, error) {
 	for _, path := range paths {
 		if err := os.MkdirAll(filepath.Dir(filepath.Join(root, path)), 0o755); err != nil {
@@ -186,7 +185,6 @@ func resolvePaths(root string, platform deployment.Layer, paths ...string) ([]de
 	return ResolvePlatform(root, result, platform)
 }
 
-// wantRecord describes one expected managed-file record compactly.
 type wantRecord struct {
 	scope    deployment.Scope
 	layer    deployment.Layer
@@ -196,7 +194,6 @@ type wantRecord struct {
 	exec     fs.FileMode
 }
 
-// newRecord builds the expected record for a repo-relative path.
 func newRecord(root string, want wantRecord) deployment.ManagedFile {
 	layer := want.layer
 	if layer == "" {
@@ -215,13 +212,11 @@ func newRecord(root string, want wantRecord) deployment.ManagedFile {
 	}
 }
 
-// wantRecords bundles the expected records with their repository root.
 type wantRecords struct {
 	root    string
 	records []wantRecord
 }
 
-// assertRecords verifies got against the expected records.
 func assertRecords(t *testing.T, got []deployment.ManagedFile, want wantRecords) {
 	t.Helper()
 	if len(got) != len(want.records) {

@@ -167,7 +167,6 @@ func testExecuteMissingExecutable(t *testing.T) {
 	}
 }
 
-// hookSpec bundles one test hook script's identity and body.
 type hookSpec struct {
 	name  string
 	group string
@@ -175,7 +174,6 @@ type hookSpec struct {
 	body  string
 }
 
-// writeTestHook writes an executable script for spec beneath dir.
 func writeTestHook(t *testing.T, dir string, spec hookSpec) deployment.Hook {
 	t.Helper()
 	path := filepath.Join(dir, spec.name)
@@ -188,13 +186,11 @@ func writeTestHook(t *testing.T, dir string, spec hookSpec) deployment.Hook {
 	}
 }
 
-// recordingHook writes a hook that appends its name to order.txt.
 func recordingHook(t *testing.T, dir string, spec hookSpec) deployment.Hook {
 	spec.body = fmt.Sprintf("echo %s >> order.txt", spec.name)
 	return writeTestHook(t, dir, spec)
 }
 
-// sequenceHooks writes the scrambled hooks and sorts them by phase.
 func sequenceHooks(t *testing.T, dir string, phase deployment.HookPhase) []deployment.Hook {
 	specs := []hookSpec{
 		{name: "zsh-b.sh", group: "zsh"},
@@ -217,7 +213,6 @@ func sequenceHooks(t *testing.T, dir string, phase deployment.HookPhase) []deplo
 	return ordered
 }
 
-// executeInput builds a base input bound to root as both repository and HOME.
 func executeInput(root string, phase deployment.HookPhase, result string) ExecuteInput {
 	return ExecuteInput{
 		RepositoryRoot: root,
@@ -228,13 +223,11 @@ func executeInput(root string, phase deployment.HookPhase, result string) Execut
 	}
 }
 
-// fileExists reports whether path is present.
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// assertExecutionOrder fails unless dir/order.txt lists want in order.
 func assertExecutionOrder(t *testing.T, dir string, want []string) {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(dir, "order.txt"))

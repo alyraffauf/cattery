@@ -85,8 +85,6 @@ func testMissingExecutable(t *testing.T) {
 	}
 }
 
-// scriptTarget bundles the inputs needed by writeScript so the helper stays
-// under the three-parameter limit. directory is created fresh when empty.
 type scriptTarget struct {
 	directory string
 	name      string
