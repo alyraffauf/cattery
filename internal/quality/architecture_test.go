@@ -26,22 +26,22 @@ func modulePath(root string) string {
 // allowedFamilies is the Section 12.5 internal import allowlist. Families not
 // present may import no internal package.
 var allowedFamilies = map[string][]string{
-	"routes":                {"deployment", "pathsafe"},
-	"state":                 {"deployment", "pathsafe"},
-	"secrets":               {"subprocess"},
-	"hooks":                 {"deployment", "subprocess"},
-	"filesystem":            {"deployment", "pathsafe"},
-	"repository":            {"deployment", "hooks", "pathsafe", "routes"},
-	"reconcile":             {"deployment", "pathsafe", "state", "secrets"},
-	"diff":                  {"deployment", "reconcile"},
-	"selection":             {"deployment", "pathsafe", "state"},
+	"routes":                 {"deployment", "pathsafe"},
+	"state":                  {"deployment", "pathsafe"},
+	"secrets":                {"failure", "subprocess"},
+	"hooks":                  {"deployment", "subprocess"},
+	"filesystem":             {"deployment", "pathsafe"},
+	"repository":             {"deployment", "hooks", "pathsafe", "routes"},
+	"reconcile":              {"deployment", "pathsafe", "state", "secrets"},
+	"diff":                   {"deployment", "reconcile"},
+	"selection":              {"deployment", "pathsafe", "state"},
 	"application/initialize": {"failure", "pathsafe", "state"},
-	"application/validate":  {"deployment", "failure", "repository", "selection"},
-	"application/inspect":   {"deployment", "diff", "failure", "reconcile", "repository", "secrets", "selection", "state"},
-	"application/apply":     {"deployment", "diff", "failure", "filesystem", "hooks", "reconcile", "repository", "secrets", "selection", "state"},
-	"application/add":       {"deployment", "failure", "filesystem", "pathsafe", "reconcile", "repository", "secrets", "selection", "state"},
-	"application/version":   {"buildinfo"},
-	"cmd/cattery":           {"bootstrap", "cli", "failure"},
+	"application/validate":   {"deployment", "failure", "repository", "selection"},
+	"application/inspect":    {"deployment", "diff", "failure", "reconcile", "repository", "secrets", "selection", "state"},
+	"application/apply":      {"deployment", "diff", "failure", "filesystem", "hooks", "reconcile", "repository", "secrets", "selection", "state"},
+	"application/add":        {"deployment", "failure", "filesystem", "pathsafe", "reconcile", "repository", "secrets", "selection", "state"},
+	"application/version":    {"buildinfo"},
+	"cmd/cattery":            {"bootstrap", "cli", "failure"},
 }
 
 // familyFromRelative maps an internal relative path to its DAG family key.
@@ -132,8 +132,9 @@ func fileDagViolations(root, module, path string) []violation {
 	}
 	context := edgeContext{family: family, module: module, path: path}
 	var breaches []violation
+	testFile := strings.HasSuffix(path, "_test.go")
 	for _, spec := range file.Imports {
-		breaches = append(breaches, importEdgeViolations(context, spec)...)
+		breaches = append(breaches, importEdgeViolations(context, spec, testFile)...)
 	}
 	breaches = append(breaches, cliFilePurity(family, file, path)...)
 	return breaches
@@ -145,9 +146,12 @@ type edgeContext struct {
 	path   string
 }
 
-func importEdgeViolations(context edgeContext, spec *ast.ImportSpec) []violation {
+func importEdgeViolations(context edgeContext, spec *ast.ImportSpec, testFile bool) []violation {
 	candidate, internal := importFamily(strings.Trim(spec.Path.Value, "\""), context.module)
 	if !internal || isAllowed(context.family, candidate) {
+		return nil
+	}
+	if testFile && strings.HasPrefix(candidate, "testfixture/") {
 		return nil
 	}
 	return []violation{{file: context.path, rule: context.family + " forbidden import " + candidate}}
@@ -185,6 +189,7 @@ func TestArchitectureChecker(t *testing.T) {
 			{"deployment imports repository", "deployment", "repository"},
 			{"cli imports state backend", "cli", "state"},
 			{"application imports cli upward", "application/version", "cli"},
+			{"repository imports filesystem fixture", "repository", "testfixture/filesystem"},
 		}
 		for _, scenario := range scenarios {
 			t.Run(scenario.name, func(t *testing.T) { assertEdgeScenario(t, scenario) })
@@ -194,6 +199,24 @@ func TestArchitectureChecker(t *testing.T) {
 	t.Run("live DAG is clean", func(t *testing.T) {
 		root := repositoryRoot(t)
 		failOn(t, "live DAG violations", dagViolations(root, modulePath(root)))
+	})
+
+	t.Run("test files may import narrow fixtures", func(t *testing.T) {
+		const module = "example.com/test"
+		root := t.TempDir()
+		writeModule(t, root, module)
+		directory := filepath.Join(root, "internal", "repository")
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		source := "package repository\nimport _ \"" + module + "/internal/testfixture/filesystem\"\n"
+		path := filepath.Join(directory, "f_test.go")
+		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if violations := dagViolations(root, module); len(violations) != 0 {
+			t.Fatalf("expected no DAG violation for a test-file fixture import, got %v", violations)
+		}
 	})
 }
 
