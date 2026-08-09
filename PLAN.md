@@ -2136,7 +2136,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 20, 22.
 
-**Owns:** `internal/state/files.go`, `internal/state/files_test.go`.
+**Owns:** `internal/state/files.go`, `internal/state/files_read.go`, `internal/state/files_decode.go`, plus `internal/state/files_test.go`, `internal/state/files_retire_test.go`.
 
 **Deliverable:** Implement active/retired file reads, ordinary/keyed-secret baselines, raw storage hashes, modes, reactivation, state-only scopes, and per-file transactions.
 
