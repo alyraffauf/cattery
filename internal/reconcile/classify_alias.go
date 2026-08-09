@@ -86,7 +86,7 @@ func classifyAliasToFile(record Evaluation) AliasClassification {
 	case KindDirectory, KindSpecial:
 		return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonRepresentationDrift, Rejected), record)
 	case KindSymlink:
-		if record.Target.Payload() == payloadFor(record.AliasState.CanonicalTargetPath, record.AliasState.AliasPath) {
+		if record.Target.Payload() == payloadFor(record.AliasState.CanonicalTargetPath(), record.AliasState.AliasPath()) {
 			return aliasWithPath(aliasOutcome(ActionWriteSourceToTarget, ReasonRepresentationIntact, ActionPending), record)
 		}
 	}
@@ -99,27 +99,27 @@ func classifyAliasToFile(record Evaluation) AliasClassification {
 // forced 0600/0700 mode for secrets (PLAN.md Section 9.5).
 func representationIntact(record Evaluation, semantics FileSemantics) bool {
 	row := record.FileState
-	if record.Target.Kind() != KindFile || semantics.Target != row.BaselineContent {
+	if record.Target.Kind() != KindFile || semantics.Target != row.BaselineContent() {
 		return false
 	}
-	if row.SourceKind == deployment.FileSecret {
+	if row.SourceKind() == deployment.FileSecret {
 		expected := fs.FileMode(0o600)
-		if row.ExecutableBits != 0 {
+		if row.ExecutableBits() != 0 {
 			expected = 0o700
 		}
 		return record.Target.Mode() == expected
 	}
-	return record.Target.Mode()&0o111 == row.ExecutableBits
+	return record.Target.Mode()&0o111 == row.ExecutableBits()
 }
 
 // activeFileRow reports whether the record carries an active file row.
 func activeFileRow(record Evaluation) bool {
-	return record.FileState != nil && record.FileState.Active
+	return record.FileState != nil && record.FileState.Active()
 }
 
 // activeAliasRow reports whether the record carries an active alias row.
 func activeAliasRow(record Evaluation) bool {
-	return record.AliasState != nil && record.AliasState.Active
+	return record.AliasState != nil && record.AliasState.Active()
 }
 
 // payloadFor returns the exact relative payload the alias at alias must carry

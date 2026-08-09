@@ -77,12 +77,12 @@ func classifyUnbaselined(record Evaluation, semantics FileSemantics) FileClassif
 // source change only when the keyed plaintext digest also differs, so a
 // SOPS re-encryption with unchanged plaintext stays converged (Section 8.3).
 func classifyBaselined(record Evaluation, row *FileState, semantics FileSemantics) FileClassification {
-	sourceChanged := semantics.Source != row.BaselineSource
-	if row.SourceKind == deployment.FileSecret {
-		rawUnchanged := record.Source.Snapshot().Storage() == row.BaselineSource
-		sourceChanged = !rawUnchanged && semantics.Source != row.BaselineContent
+	sourceChanged := semantics.Source != row.BaselineSource()
+	if row.SourceKind() == deployment.FileSecret {
+		rawUnchanged := record.Source.Snapshot().Storage() == row.BaselineSource()
+		sourceChanged = !rawUnchanged && semantics.Source != row.BaselineContent()
 	}
-	targetChanged := semantics.Target != row.BaselineContent
+	targetChanged := semantics.Target != row.BaselineContent()
 	switch {
 	case !sourceChanged && !targetChanged:
 		return withPath(settle(outcome(ActionNoOp, ReasonNoChange, Converged), record), record)
@@ -136,7 +136,7 @@ func modeMismatch(record Evaluation, kind deployment.FileKind) bool {
 // decides for baselined rows, the plan entry for unbaselined ones.
 func sourceKind(record Evaluation) deployment.FileKind {
 	if record.FileState != nil {
-		return record.FileState.SourceKind
+		return record.FileState.SourceKind()
 	}
 	return record.File.Kind
 }

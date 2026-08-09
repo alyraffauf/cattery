@@ -6,7 +6,6 @@ import (
 
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/secrets"
-	"github.com/alyraffauf/cattery/internal/state"
 )
 
 // PlanEntryKind names the representation one plan entry produces at a path.
@@ -61,7 +60,7 @@ func Assemble(plan deployment.Plan, state StateSnapshot, client *secrets.Client)
 	if err != nil {
 		return EvaluationSnapshot{}, err
 	}
-	input := joinInput{home: state.HomePath, files: files, aliases: aliases,
+	input := joinInput{home: state.HomePath(), files: files, aliases: aliases,
 		fileRows: byFileState(state.AllFiles()), aliasRows: byAliasState(state.AllAliases()), client: client}
 	records, err := joinedRecords(input)
 	if err != nil {
@@ -70,17 +69,17 @@ func Assemble(plan deployment.Plan, state StateSnapshot, client *secrets.Client)
 	sort.SliceStable(records, func(first, second int) bool {
 		return records[first].TargetPath < records[second].TargetPath
 	})
-	return EvaluationSnapshot{RepositoryRoot: plan.RepositoryRoot, HomePath: state.HomePath,
+	return EvaluationSnapshot{RepositoryRoot: plan.RepositoryRoot, HomePath: state.HomePath(),
 		Platform: plan.Platform, records: records}, nil
 }
 
 // requireAssemblyPlan rejects a plan that cannot describe the state pair.
 func requireAssemblyPlan(plan deployment.Plan, state StateSnapshot) error {
-	if plan.RepositoryRoot == "" || state.HomePath == "" {
+	if plan.RepositoryRoot == "" || state.HomePath() == "" {
 		return fmt.Errorf("reconcile: snapshot assembly requires canonical repository and home paths")
 	}
-	if plan.RepositoryRoot != state.RepositoryRoot {
-		return fmt.Errorf("reconcile: plan repository %q does not match state repository %q", plan.RepositoryRoot, state.RepositoryRoot)
+	if plan.RepositoryRoot != state.RepositoryRoot() {
+		return fmt.Errorf("reconcile: plan repository %q does not match state repository %q", plan.RepositoryRoot, state.RepositoryRoot())
 	}
 	if plan.Platform == "" {
 		return fmt.Errorf("reconcile: snapshot assembly requires a selected platform")
@@ -186,7 +185,7 @@ func recordFor(path string, input joinInput) (Evaluation, error) {
 func byFileState(rows []FileState) map[string]*FileState {
 	index := make(map[string]*FileState, len(rows))
 	for number := range rows {
-		index[rows[number].TargetPath] = &rows[number]
+		index[rows[number].TargetPath()] = &rows[number]
 	}
 	return index
 }
@@ -195,7 +194,7 @@ func byFileState(rows []FileState) map[string]*FileState {
 func byAliasState(rows []AliasState) map[string]*AliasState {
 	index := make(map[string]*AliasState, len(rows))
 	for number := range rows {
-		index[rows[number].AliasPath] = &rows[number]
+		index[rows[number].AliasPath()] = &rows[number]
 	}
 	return index
 }
@@ -206,7 +205,6 @@ func cloneFileRecord(record *FileState) *FileState {
 		return nil
 	}
 	copyRecord := *record
-	copyRecord.RetiredAt = state.CloneTimestamp(record.RetiredAt)
 	return &copyRecord
 }
 
@@ -216,7 +214,6 @@ func cloneAliasRecord(record *AliasState) *AliasState {
 		return nil
 	}
 	copyRecord := *record
-	copyRecord.RetiredAt = state.CloneTimestamp(record.RetiredAt)
 	return &copyRecord
 }
 

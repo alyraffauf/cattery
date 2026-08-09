@@ -144,12 +144,12 @@ var decisionOrderCases = []orderCase{
 
 // specOf builds one decision spec over the fixed file path.
 func specOf(reason Reason, choices []DecisionChoice) DecisionSpec {
-	return DecisionSpec{TargetPath: decisionPath, Action: ActionNeedsDecision, Reason: reason, Choices: choices}
+	return DecisionSpec{targetPath: decisionPath, action: ActionNeedsDecision, reason: reason, choices: choices}
 }
 
 // orderSpec builds one ordinary drift spec at path.
 func orderSpec(path string) DecisionSpec {
-	return DecisionSpec{TargetPath: path, Action: ActionNeedsDecision, Reason: ReasonTargetDrift, Choices: diffOverwriteSkipAbort}
+	return DecisionSpec{targetPath: path, action: ActionNeedsDecision, reason: ReasonTargetDrift, choices: diffOverwriteSkipAbort}
 }
 
 // checkDecisionSpec produces one spec from its row and compares the result.
@@ -165,7 +165,7 @@ func checkDecisionSpec(t *testing.T, row specCase) {
 	if err != nil {
 		t.Fatalf("spec %s: %v", row.name, err)
 	}
-	want := DecisionSpec{TargetPath: row.path, Action: row.action, Reason: row.reason, Choices: row.want}
+	want := DecisionSpec{targetPath: row.path, action: row.action, reason: row.reason, choices: row.want}
 	if !reflect.DeepEqual(spec, want) {
 		t.Fatalf("spec = %+v, want %+v", spec, want)
 	}
@@ -184,10 +184,10 @@ func checkInvalidDecision(t *testing.T, row invalidCase) {
 	t.Helper()
 	err := ValidateDecisionSpec(row.spec, row.kind)
 	if row.wantErr && err == nil {
-		t.Fatalf("choices for %d must be rejected", row.spec.Reason)
+		t.Fatalf("choices for %d must be rejected", row.spec.Reason())
 	}
 	if !row.wantErr && err != nil {
-		t.Fatalf("choices for %d rejected: %v", row.spec.Reason, err)
+		t.Fatalf("choices for %d rejected: %v", row.spec.Reason(), err)
 	}
 }
 
@@ -208,7 +208,7 @@ func checkDecisionOrder(t *testing.T, row orderCase) {
 func pathsOf(specs []DecisionSpec) []string {
 	paths := make([]string, len(specs))
 	for index, spec := range specs {
-		paths[index] = spec.TargetPath
+		paths[index] = spec.TargetPath()
 	}
 	return paths
 }

@@ -160,12 +160,12 @@ func want(action Action, reason Reason, convergence Convergence) AliasClassifica
 
 // aliasStateActive is the retained row of a successfully realized alias.
 func aliasStateActive() *AliasState {
-	return &AliasState{AliasPath: aliasPath, CanonicalTargetPath: canonicalPath, Active: true}
+	return &AliasState{aliasPath: aliasPath, canonicalTargetPath: canonicalPath, active: true}
 }
 
 // aliasStateRetired is an inactive copy of the alias row.
 func aliasStateRetired() *AliasState {
 	row := aliasStateActive()
-	row.Active = false
+	row.active = false
 	return row
 }

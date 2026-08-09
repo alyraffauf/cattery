@@ -156,25 +156,25 @@ func platformAt(row retirementCase) string {
 
 // fileRowState is one active ordinary file row on the given layer.
 func fileRowState(layer deployment.Layer) *FileState {
-	return &FileState{TargetPath: retirementPath, GroupName: "apps", SourceKind: deployment.FileOrdinary, Layer: layer, Active: true}
+	return &FileState{targetPath: retirementPath, groupName: "apps", sourceKind: deployment.FileOrdinary, layer: layer, active: true}
 }
 
 // retiredFileRow is an inactive copy of an ordinary file row.
 func retiredFileRow(layer deployment.Layer) *FileState {
 	row := fileRowState(layer)
-	row.Active = false
+	row.active = false
 	return row
 }
 
 // aliasRowState is one active alias row on the given layer.
 func aliasRowState(layer state.AliasLayer) *AliasState {
-	return &AliasState{AliasPath: "bin/gone", CanonicalTargetPath: "files/gone", GroupName: "apps", Layer: layer, Active: true}
+	return &AliasState{aliasPath: "bin/gone", canonicalTargetPath: "files/gone", groupName: "apps", layer: layer, active: true}
 }
 
 // retiredAliasRow is an inactive copy of an alias row.
 func retiredAliasRow(layer state.AliasLayer) *AliasState {
 	row := aliasRowState(layer)
-	row.Active = false
+	row.active = false
 	return row
 }
 

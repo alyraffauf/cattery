@@ -60,7 +60,7 @@ func DecisionSpecForFile(classification FileClassification, kind deployment.File
 	if classification.Convergence != DecisionRequired {
 		return DecisionSpec{}, fmt.Errorf("reconcile: file %q does not require a decision", classification.TargetPath)
 	}
-	return NewDecisionSpec(DecisionSpec{
+	return NewDecisionSpec(DecisionSpecInput{
 		TargetPath: classification.TargetPath, Action: classification.Action,
 		Reason:  classification.Reason,
 		Choices: AllowedChoices(classification.Action, classification.Reason, kind),
@@ -76,7 +76,7 @@ func DecisionSpecForAlias(classification AliasClassification) (DecisionSpec, err
 	if classification.Convergence != DecisionRequired {
 		return DecisionSpec{}, fmt.Errorf("reconcile: alias %q does not require a decision", classification.TargetPath)
 	}
-	return NewDecisionSpec(DecisionSpec{
+	return NewDecisionSpec(DecisionSpecInput{
 		TargetPath: classification.TargetPath, Action: classification.Action,
 		Reason:  classification.Reason,
 		Choices: AllowedChoices(classification.Action, classification.Reason, deployment.FileOrdinary),
@@ -87,13 +87,13 @@ func DecisionSpecForAlias(classification AliasClassification) (DecisionSpec, err
 // prompt or whose choices are not exactly the allowed set for its action,
 // reason, and source kind (PLAN.md Section 9.4).
 func ValidateDecisionSpec(spec DecisionSpec, kind deployment.FileKind) error {
-	allowed := AllowedChoices(spec.Action, spec.Reason, kind)
+	allowed := AllowedChoices(spec.Action(), spec.Reason(), kind)
 	if len(allowed) == 0 {
 		return fmt.Errorf("reconcile: decision for %q is not allowed for action %d and reason %d",
-			spec.TargetPath, spec.Action, spec.Reason)
+			spec.TargetPath(), spec.Action(), spec.Reason())
 	}
-	if !equalChoices(spec.Choices, allowed) {
-		return fmt.Errorf("reconcile: decision for %q does not offer exactly the allowed choices", spec.TargetPath)
+	if !equalChoices(spec.AllChoices(), allowed) {
+		return fmt.Errorf("reconcile: decision for %q does not offer exactly the allowed choices", spec.TargetPath())
 	}
 	return nil
 }
@@ -117,7 +117,7 @@ func equalChoices(actual, allowed []DecisionChoice) bool {
 func OrderedDecisionSpecs(specs []DecisionSpec) []DecisionSpec {
 	ordered := append([]DecisionSpec(nil), specs...)
 	sort.SliceStable(ordered, func(first, second int) bool {
-		return ordered[first].TargetPath < ordered[second].TargetPath
+		return ordered[first].TargetPath() < ordered[second].TargetPath()
 	})
 	return ordered
 }

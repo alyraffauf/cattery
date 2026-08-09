@@ -25,9 +25,9 @@ func ClassifyRetirement(record Evaluation, platform string) RetirementClassifica
 	}
 	row, alias := record.FileState, record.AliasState
 	switch {
-	case row != nil && row.Active:
+	case row != nil && row.Active():
 		return fileRetirement(record, platform)
-	case alias != nil && alias.Active:
+	case alias != nil && alias.Active():
 		return aliasRetirement(record, platform)
 	case row == nil && alias == nil:
 		return base
@@ -39,7 +39,7 @@ func ClassifyRetirement(record Evaluation, platform string) RetirementClassifica
 // retirement on the current platform, no action on an inactive platform
 // layer.
 func fileRetirement(record Evaluation, platform string) RetirementClassification {
-	if rowLayerInactive(string(record.FileState.Layer), platform) {
+	if rowLayerInactive(string(record.FileState.Layer()), platform) {
 		return withRetirementPath(retirementOutcome(ActionNoOp, ReasonInactivePlatform, Converged), record)
 	}
 	return withRetirementPath(retirementOutcome(ActionRetireState, ReasonSourceRemoved, ActionPending), record)
@@ -47,7 +47,7 @@ func fileRetirement(record Evaluation, platform string) RetirementClassification
 
 // aliasRetirement classifies one active alias row without a producer.
 func aliasRetirement(record Evaluation, platform string) RetirementClassification {
-	if rowLayerInactive(string(record.AliasState.Layer), platform) {
+	if rowLayerInactive(string(record.AliasState.Layer()), platform) {
 		return withRetirementPath(retirementOutcome(ActionNoOp, ReasonInactivePlatform, Converged), record)
 	}
 	return withRetirementPath(retirementOutcome(ActionRetireAliasState, ReasonSourceRemoved, ActionPending), record)

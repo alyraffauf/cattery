@@ -169,21 +169,21 @@ func secretSource(cipher []byte, executable fs.FileMode) SourceObservation {
 
 // stateAt builds one active ordinary file baseline over exact byte digests.
 func stateAt(content, source []byte, bits fs.FileMode) *FileState {
-	return &FileState{TargetPath: "a.conf", SourceKind: deployment.FileOrdinary,
-		BaselineContent: digestOf(content), BaselineSource: digestOf(source), ExecutableBits: bits, Active: true}
+	return &FileState{targetPath: "a.conf", sourceKind: deployment.FileOrdinary,
+		baselineContent: digestOf(content), baselineSource: digestOf(source), executableBits: bits, active: true}
 }
 
 // secretStateAt builds one active secret baseline: keyed plaintext content
 // fingerprint and unkeyed ciphertext storage fingerprint.
 func secretStateAt(plain, cipher []byte, bits fs.FileMode) *FileState {
-	return &FileState{TargetPath: "a.conf", SourceKind: deployment.FileSecret,
-		BaselineContent: keyed(plain), BaselineSource: deployment.RawStorage(cipher), ExecutableBits: bits, Active: true}
+	return &FileState{targetPath: "a.conf", sourceKind: deployment.FileSecret,
+		baselineContent: keyed(plain), baselineSource: deployment.RawStorage(cipher), executableBits: bits, active: true}
 }
 
 // retired returns an inactive copy of a state row.
 func retired(row *FileState) *FileState {
 	copy := *row
-	copy.Active = false
+	copy.active = false
 	return &copy
 }
 
