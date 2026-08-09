@@ -1164,6 +1164,8 @@ internal/state/files.go
 internal/state/files_read.go
 internal/state/files_decode.go
 internal/state/aliases.go
+internal/state/aliases_read.go
+internal/state/aliases_decode.go
 internal/state/transitions.go
 
 internal/repository/controls.go
@@ -2158,7 +2160,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 20, 23.
 
-**Owns:** `internal/state/aliases.go`, `internal/state/aliases_test.go`.
+**Owns:** `internal/state/aliases.go`, `internal/state/aliases_read.go`, `internal/state/aliases_decode.go`, plus `internal/state/aliases_test.go`.
 
 **Deliverable:** Implement alias realization, retirement, reactivation, deterministic diagnostics, and corruption checks within the alias table.
 
