@@ -46,7 +46,7 @@ func (service *Service) Validate(ctx context.Context, request Request) (Result, 
 	if err != nil {
 		return Result{}, err
 	}
-	chosen, err := selection.CompiledOnly(linux.AllGroups(), request.Groups)
+	chosen, err := selection.CompiledOnly(linux.Groups(), request.Groups)
 	if err != nil {
 		return Result{}, failure.New(failure.InvalidInput, "validate: select groups", err)
 	}
@@ -136,7 +136,7 @@ func (service *Service) checkSecretShapes(plans ...deployment.Plan) error {
 
 // checkPlanShapes requires every secret source of one plan to be valid.
 func (service *Service) checkPlanShapes(plan deployment.Plan) error {
-	for _, file := range plan.AllFiles() {
+	for _, file := range plan.Files() {
 		if file.Kind != deployment.FileSecret {
 			continue
 		}
@@ -171,12 +171,12 @@ func platformCounts(linux, darwin deployment.Plan) []PlatformCount {
 // platformRecord counts the selected scopes of one platform plan.
 func platformRecord(plan deployment.Plan) PlatformCount {
 	record := PlatformCount{
-		Platform: plan.Platform,
-		Files:    len(plan.AllFiles()),
-		Aliases:  len(plan.AllAliases()),
-		Groups:   len(plan.AllGroups()),
+		Platform: plan.Platform(),
+		Files:    len(plan.Files()),
+		Aliases:  len(plan.Aliases()),
+		Groups:   len(plan.Groups()),
 	}
-	for _, file := range plan.AllFiles() {
+	for _, file := range plan.Files() {
 		if file.Kind == deployment.FileSecret {
 			record.Secrets++
 		}
