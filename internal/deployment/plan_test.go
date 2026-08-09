@@ -11,6 +11,7 @@ func TestPlanContract(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{"constructor copies caller slices", testPlanCopiesInputs},
+		{"constructor validates input", testPlanValidatesInput},
 		{"accessor copy cannot mutate plan", testAccessorCopyIsolation},
 		{"zero plan yields nil accessors", testZeroPlanAccessors},
 	}
@@ -19,8 +20,8 @@ func TestPlanContract(t *testing.T) {
 	}
 }
 
-func samplePlanCandidate() Plan {
-	return Plan{
+func samplePlanCandidate() PlanInput {
+	return PlanInput{
 		RepositoryRoot: "/repo",
 		Platform:       "linux",
 		Groups:         []string{"atuin", "zsh"},
@@ -52,62 +53,78 @@ func testPlanCopiesInputs(t *testing.T) {
 	files := candidate.Files
 	aliases := candidate.Aliases
 	hooks := candidate.Hooks
-	plan := NewPlan(candidate)
+	plan := mustPlan(candidate)
 	groups = append(groups, " mutated")
 	files = append(files, ManagedFile{TargetRelativePath: "x"})
 	aliases = append(aliases, Alias{AliasRelativePath: "x"})
 	hooks = append(hooks, Hook{Name: "x"})
-	if len(plan.AllGroups()) != 2 {
-		t.Fatalf("groups leaked: %v", plan.AllGroups())
+	if len(plan.Groups()) != 2 {
+		t.Fatalf("groups leaked: %v", plan.Groups())
 	}
-	if len(plan.AllFiles()) != 1 {
-		t.Fatalf("files leaked: %v", plan.AllFiles())
+	if len(plan.Files()) != 1 {
+		t.Fatalf("files leaked: %v", plan.Files())
 	}
-	if len(plan.AllAliases()) != 1 {
-		t.Fatalf("aliases leaked: %v", plan.AllAliases())
+	if len(plan.Aliases()) != 1 {
+		t.Fatalf("aliases leaked: %v", plan.Aliases())
 	}
-	if len(plan.AllHooks()) != 1 {
-		t.Fatalf("hooks leaked: %v", plan.AllHooks())
+	if len(plan.Hooks()) != 1 {
+		t.Fatalf("hooks leaked: %v", plan.Hooks())
+	}
+}
+
+func testPlanValidatesInput(t *testing.T) {
+	candidate := samplePlanCandidate()
+	candidate.Files[0].Kind = "invalid"
+	if _, err := NewPlan(candidate); err == nil {
+		t.Fatal("invalid managed file must be rejected")
 	}
 }
 
 func testAccessorCopyIsolation(t *testing.T) {
-	plan := NewPlan(samplePlanCandidate())
-	groups := plan.AllGroups()
-	files := plan.AllFiles()
-	aliases := plan.AllAliases()
-	hooks := plan.AllHooks()
+	plan := mustPlan(samplePlanCandidate())
+	groups := plan.Groups()
+	files := plan.Files()
+	aliases := plan.Aliases()
+	hooks := plan.Hooks()
 	groups[0] = "corrupted"
 	files[0] = ManagedFile{TargetRelativePath: "corrupted"}
 	aliases[0] = Alias{AliasRelativePath: "corrupted"}
 	hooks[0] = Hook{Name: "corrupted"}
-	again := NewPlan(samplePlanCandidate())
-	if plan.AllGroups()[0] == "corrupted" || again.AllGroups()[0] == "corrupted" {
+	again := mustPlan(samplePlanCandidate())
+	if plan.Groups()[0] == "corrupted" || again.Groups()[0] == "corrupted" {
 		t.Fatal("accessor copy leaked into plan")
 	}
-	if plan.AllFiles()[0].TargetRelativePath == "corrupted" {
+	if plan.Files()[0].TargetRelativePath == "corrupted" {
 		t.Fatal("file accessor copy leaked into plan")
 	}
-	if plan.AllAliases()[0].AliasRelativePath == "corrupted" {
+	if plan.Aliases()[0].AliasRelativePath == "corrupted" {
 		t.Fatal("alias accessor copy leaked into plan")
 	}
-	if plan.AllHooks()[0].Name == "corrupted" {
+	if plan.Hooks()[0].Name == "corrupted" {
 		t.Fatal("hook accessor copy leaked into plan")
 	}
 }
 
+func mustPlan(input PlanInput) Plan {
+	plan, err := NewPlan(input)
+	if err != nil {
+		panic(err)
+	}
+	return plan
+}
+
 func testZeroPlanAccessors(t *testing.T) {
 	var plan Plan
-	if got := plan.AllGroups(); got != nil {
+	if got := plan.Groups(); got != nil {
 		t.Fatalf("zero plan groups = %v, want nil", got)
 	}
-	if got := plan.AllFiles(); got != nil {
+	if got := plan.Files(); got != nil {
 		t.Fatalf("zero plan files = %v, want nil", got)
 	}
-	if got := plan.AllAliases(); got != nil {
+	if got := plan.Aliases(); got != nil {
 		t.Fatalf("zero plan aliases = %v, want nil", got)
 	}
-	if got := plan.AllHooks(); got != nil {
+	if got := plan.Hooks(); got != nil {
 		t.Fatalf("zero plan hooks = %v, want nil", got)
 	}
 }

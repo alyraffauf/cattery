@@ -28,106 +28,17 @@ func TestSnapshotAssembly(t *testing.T) {
 	}
 }
 
-func mustAssemble(t *testing.T, plan deployment.Plan, state StateSnapshot) EvaluationSnapshot {
-	t.Helper()
-	snapshot, err := Assemble(plan, state, nil)
-	if err != nil {
-		t.Fatalf("assemble: %v", err)
-	}
-	return snapshot
-}
-func fixtureDir(t *testing.T) (repo, home string) {
-	t.Helper()
-	home = t.TempDir()
-	if err := os.MkdirAll(filepath.Join(home, "repo"), 0o700); err != nil {
-		t.Fatalf("mkdir repo: %v", err)
-	}
-	return filepath.Join(home, "repo"), home
-}
-func planFile(t *testing.T, repo, target string) deployment.ManagedFile {
-	t.Helper()
-	path := filepath.Join(repo, filepath.FromSlash(target))
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
-	}
-	writeSource(t, path, []byte("source "+target))
-	return deployment.ManagedFile{Scope: deployment.Scope{Group: "apps"}, Layer: deployment.LayerBase, Kind: deployment.FileOrdinary,
-		SourceAbsolutePath: path, SourceRepositoryPath: target, TargetRelativePath: target}
-}
-func samplePlan(repo string, files []deployment.ManagedFile, aliases []deployment.Alias) deployment.Plan {
-	return deployment.NewPlan(deployment.Plan{RepositoryRoot: repo, Platform: "linux", Files: files, Aliases: aliases})
-}
-func sampleState(t *testing.T, repo string, rows StateRows) StateSnapshot {
-	t.Helper()
-	rows.RepositoryRoot, rows.HomePath = repo, filepath.Dir(repo)
-	return convertRows(t, rows)
-}
-func findRecord(t *testing.T, records []Evaluation, path string) Evaluation {
-	t.Helper()
-	for _, record := range records {
-		if record.TargetPath == path {
-			return record
-		}
-	}
-	t.Fatalf("no record for %q", path)
-	return Evaluation{}
-}
-func fixtureLink(t *testing.T, path, link string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
-	}
-	if err := os.Symlink(link, path); err != nil {
-		t.Fatalf("symlink %s: %v", path, err)
-	}
-}
-func requireFileJoin(t *testing.T, record Evaluation, target string) {
-	t.Helper()
-	if record.Entry != PlanEntryFile || record.File.TargetRelativePath != target || record.FileState == nil || !record.FileState.Active() {
-		t.Fatalf("record %s must join its file descriptor and row", target)
-	}
-	if record.Target.Kind() != KindFile || record.Source.Snapshot().Token() != TokenOfContent([]byte("source "+target)) {
-		t.Fatalf("record %s must join target and source observations", target)
-	}
-}
-func requireRetiredJoin(t *testing.T, record Evaluation) {
-	t.Helper()
-	if record.Entry != PlanEntryNone || record.Source.Snapshot().Path() != "" {
-		t.Fatalf("record %s must carry no producer or source", record.TargetPath)
-	}
-	if record.FileState != nil {
-		if record.FileState.Active() {
-			t.Fatalf("record %s must join its retired file row", record.TargetPath)
-		}
-		return
-	}
-	if record.AliasState == nil || record.AliasState.Active() {
-		t.Fatalf("record %s must join its retired alias row", record.TargetPath)
-	}
-}
-func requireTransition(t *testing.T, record Evaluation, canonical string) {
-	t.Helper()
-	if record.FileState == nil || record.AliasState == nil || record.FileState.Active() == record.AliasState.Active() {
-		t.Fatalf("record %s must join exactly one active representation row", record.TargetPath)
-	}
-	if record.Entry == PlanEntryAlias {
-		if record.Alias.CanonicalTargetRelativePath != canonical || record.Target.Kind() != KindSymlink || record.Target.Payload() != canonical {
-			t.Fatalf("record %s must join its alias entry and symlink", record.TargetPath)
-		}
-		return
-	}
-	if record.File.TargetRelativePath != record.TargetPath || record.Target.Kind() != KindFile {
-		t.Fatalf("record %s must join its file entry and observation", record.TargetPath)
-	}
-}
 func testSnapshotDeterministicJoins(t *testing.T) {
 	repo, home := fixtureDir(t)
 	files := []deployment.ManagedFile{planFile(t, repo, "a.conf"), planFile(t, repo, "c")}
 	aliases := []deployment.Alias{{Platform: "linux", AliasRelativePath: "bin/z", CanonicalTargetRelativePath: "files/z"}}
 	mustTargetFile(t, filepath.Join(home, "a.conf"), []byte("current a"))
 	fixtureLink(t, filepath.Join(home, "bin", "z"), "files/z")
-	state := sampleState(t, repo, StateRows{Files: []state.FileBaseline{fileRow("a.conf", "apps", "a.conf"), fileRow("c", "apps", "c")}, Aliases: []state.AliasBaseline{aliasRow("bin/z", "files/z", "apps")}})
-	records := mustAssemble(t, samplePlan(repo, []deployment.ManagedFile{files[1], files[0]}, aliases), StateSnapshot{repositoryRoot: state.RepositoryRoot(), homePath: state.HomePath(), files: []FileState{state.AllFiles()[1], state.AllFiles()[0]}, aliases: state.AllAliases()}).All()
+	state := sampleState(t, repo, StateRows{Files: []state.FileBaseline{fileRow("a.conf", "apps", "a.conf"), fileRow("c", "apps", "c")},
+		Aliases: []state.AliasBaseline{aliasRow("bin/z", "files/z", "apps")}})
+	records := mustAssemble(t, samplePlan(repo, []deployment.ManagedFile{files[1], files[0]}, aliases),
+		StateSnapshot{repositoryRoot: state.RepositoryRoot(), homePath: state.HomePath(),
+			files: []FileState{state.AllFiles()[1], state.AllFiles()[0]}, aliases: state.AllAliases()}).All()
 	if len(records) != 3 || records[0].TargetPath > records[1].TargetPath || records[1].TargetPath > records[2].TargetPath {
 		t.Fatal("records must be bytewise sorted in path order")
 	}
@@ -136,13 +47,12 @@ func testSnapshotDeterministicJoins(t *testing.T) {
 func testSnapshotMissingProducers(t *testing.T) {
 	repo, home := fixtureDir(t)
 	mustTargetFile(t, filepath.Join(home, "gone"), []byte("stale target"))
-	when := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	retired := fileRow("gone", "apps", "files/gone")
 	retired.Status = state.StatusRetired
-	retired.RetiredAt = &when
+	retired.RetiredAt = ptrTimestamp()
 	alias := aliasRow("bin/old", "files/old", "apps")
 	alias.Status = state.StatusRetired
-	alias.RetiredAt = &when
+	alias.RetiredAt = ptrTimestamp()
 	state := sampleState(t, repo, StateRows{Files: []state.FileBaseline{retired}, Aliases: []state.AliasBaseline{alias}})
 	records := mustAssemble(t, samplePlan(repo, nil, nil), state).All()
 	if len(records) != 2 {
@@ -158,13 +68,12 @@ func testSnapshotMissingProducers(t *testing.T) {
 func testSnapshotRepresentationPairs(t *testing.T) {
 	repo, home := fixtureDir(t)
 	fileToAlias := fileRow("bin/tool", "apps", "files/tool")
-	when := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	fileToAliasPair := aliasRow("bin/tool", "files/tool", "apps")
 	fileToAliasPair.Status = state.StatusRetired
-	fileToAliasPair.RetiredAt = &when
+	fileToAliasPair.RetiredAt = ptrTimestamp()
 	aliasToFile := fileRow("conf/app", "apps", "files/app")
 	aliasToFile.Status = state.StatusRetired
-	aliasToFile.RetiredAt = &when
+	aliasToFile.RetiredAt = ptrTimestamp()
 	aliasToFilePair := aliasRow("conf/app", "files/app", "apps")
 	plan := samplePlan(repo, []deployment.ManagedFile{planFile(t, repo, "conf/app")},
 		[]deployment.Alias{{Platform: "linux", AliasRelativePath: "bin/tool", CanonicalTargetRelativePath: "files/tool"}})
@@ -173,7 +82,8 @@ func testSnapshotRepresentationPairs(t *testing.T) {
 	}
 	mustTargetFile(t, filepath.Join(home, "conf", "app"), []byte("current app"))
 	fixtureLink(t, filepath.Join(home, "bin", "tool"), "files/tool")
-	state := sampleState(t, repo, StateRows{Files: []state.FileBaseline{fileToAlias, aliasToFile}, Aliases: []state.AliasBaseline{fileToAliasPair, aliasToFilePair}})
+	state := sampleState(t, repo, StateRows{Files: []state.FileBaseline{fileToAlias, aliasToFile},
+		Aliases: []state.AliasBaseline{fileToAliasPair, aliasToFilePair}})
 	records := mustAssemble(t, plan, state).All()
 	requireTransition(t, findRecord(t, records, "bin/tool"), "files/tool")
 	requireTransition(t, findRecord(t, records, "conf/app"), "conf/app")
@@ -188,10 +98,13 @@ func testSnapshotDefensiveCopies(t *testing.T) {
 	plan := samplePlan(repo, []deployment.ManagedFile{planFile(t, repo, "a.conf")}, nil)
 	state := sampleState(t, repo, StateRows{Files: []state.FileBaseline{row}})
 	snapshot := mustAssemble(t, plan, state)
-	plan.Files[0].TargetRelativePath = "mutated"
-	state.files[0].baselineContent = deployment.Digest{}
+	files := plan.Files()
+	files[0].TargetRelativePath = "mutated"
+	stateFiles := state.AllFiles()
+	stateFiles[0].baselineContent = deployment.Digest{}
 	record := findRecord(t, snapshot.All(), "a.conf")
-	*record.FileState.RetiredAt() = time.Time{}
+	retiredAt := record.FileState.RetiredAt()
+	*retiredAt = time.Time{}
 	*row.RetiredAt = time.Time{}
 	fresh := findRecord(t, snapshot.All(), "a.conf")
 	if fresh.FileState.RetiredAt() == nil || fresh.FileState.RetiredAt().IsZero() || fresh.FileState.BaselineContent() == (deployment.Digest{}) {
@@ -226,17 +139,23 @@ func testSnapshotRejected(t *testing.T) {
 	state := sampleState(t, repo, StateRows{})
 	other := samplePlan(filepath.Join(filepath.Dir(repo), "other"), []deployment.ManagedFile{file}, nil)
 	noHome := StateSnapshot{repositoryRoot: repo, files: []FileState{{targetPath: "a.conf"}}}
+	duplicate := mustPlan(deployment.PlanInput{RepositoryRoot: repo, Platform: "linux", Files: []deployment.ManagedFile{file, file}})
+	collision := mustPlan(deployment.PlanInput{RepositoryRoot: repo, Platform: "linux", Files: []deployment.ManagedFile{file},
+		Aliases: []deployment.Alias{{Platform: "linux", AliasRelativePath: "a.conf", CanonicalTargetRelativePath: "files/a.conf"}}})
+	duplicateAlias := mustPlan(deployment.PlanInput{RepositoryRoot: repo, Platform: "linux",
+		Aliases: []deployment.Alias{{Platform: "linux", AliasRelativePath: "bin/x", CanonicalTargetRelativePath: "files/x"},
+			{Platform: "linux", AliasRelativePath: "bin/x", CanonicalTargetRelativePath: "files/y"}}})
 	cases := []struct {
 		name  string
 		plan  deployment.Plan
 		state StateSnapshot
 	}{
 		{"other repository", other, state},
-		{"no platform", deployment.NewPlan(deployment.Plan{RepositoryRoot: repo}), state},
+		{"no platform", deployment.Plan{}, state},
 		{"unset home", samplePlan(repo, []deployment.ManagedFile{file}, nil), noHome},
-		{"duplicate files", deployment.NewPlan(deployment.Plan{RepositoryRoot: repo, Platform: "linux", Files: []deployment.ManagedFile{file, file}}), state},
-		{"file and alias collision", deployment.NewPlan(deployment.Plan{RepositoryRoot: repo, Platform: "linux", Files: []deployment.ManagedFile{file}, Aliases: []deployment.Alias{{Platform: "linux", AliasRelativePath: "a.conf", CanonicalTargetRelativePath: "files/a.conf"}}}), state},
-		{"duplicate aliases", deployment.NewPlan(deployment.Plan{RepositoryRoot: repo, Platform: "linux", Aliases: []deployment.Alias{{Platform: "linux", AliasRelativePath: "bin/x", CanonicalTargetRelativePath: "files/x"}, {Platform: "linux", AliasRelativePath: "bin/x", CanonicalTargetRelativePath: "files/y"}}}), state},
+		{"duplicate files", duplicate, state},
+		{"file and alias collision", collision, state},
+		{"duplicate aliases", duplicateAlias, state},
 	}
 	for _, scenario := range cases {
 		if _, err := Assemble(scenario.plan, scenario.state, nil); err == nil {

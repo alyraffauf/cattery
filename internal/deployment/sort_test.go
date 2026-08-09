@@ -15,6 +15,7 @@ func TestDeploymentOrdering(t *testing.T) {
 		{"root scope sorts first", testRootScopeFirst},
 		{"unicode bytewise order", testUnicodeScopeOrder},
 		{"managed file total order", testManagedFileOrder},
+		{"managed file tie breakers", testManagedFileTieBreakers},
 		{"alias bytewise order", testAliasOrder},
 		{"both hook phases", testHookPhaseOrder},
 		{"groups dedup and sort", testGroupsDedup},
@@ -72,6 +73,28 @@ func testManagedFileOrder(t *testing.T) {
 	}
 	if files[3].TargetRelativePath != ".config/zsh/.zshrc" {
 		t.Fatalf("last must be zshrc: %q", files[3].TargetRelativePath)
+	}
+}
+
+func testManagedFileTieBreakers(t *testing.T) {
+	files := []ManagedFile{
+		{TargetRelativePath: "same", Layer: LayerBase, Kind: FileOrdinary, Scope: NewScope("z"), SourceRepositoryPath: "z", SourceAbsolutePath: "/z"},
+		{TargetRelativePath: "same", Layer: LayerBase, Kind: FileOrdinary, Scope: NewScope("a"), SourceRepositoryPath: "a", SourceAbsolutePath: "/a"},
+		{TargetRelativePath: "same", Layer: LayerBase, Kind: FileOrdinary, Scope: NewScope("a"), SourceRepositoryPath: "b", SourceAbsolutePath: "/b"},
+		{TargetRelativePath: "same", Layer: LayerBase, Kind: FileOrdinary, Scope: NewScope("a"), SourceRepositoryPath: "b", SourceAbsolutePath: "/a", SourceExecutableBits: 0o111},
+	}
+	SortFiles(files)
+	if files[0].Scope.Group != "a" || files[0].SourceRepositoryPath != "a" {
+		t.Fatalf("scope and repository path tie breakers failed: %+v", files)
+	}
+	if files[1].SourceAbsolutePath != "/a" || files[1].SourceExecutableBits != 0o111 {
+		t.Fatalf("executable bits tie breaker failed: %+v", files)
+	}
+	if files[2].Scope.Group != "a" || files[2].SourceRepositoryPath != "b" || files[2].SourceAbsolutePath != "/b" {
+		t.Fatalf("absolute path tie breaker failed: %+v", files)
+	}
+	if files[3].Scope.Group != "z" {
+		t.Fatalf("scope must be the first tie breaker: %+v", files)
 	}
 }
 

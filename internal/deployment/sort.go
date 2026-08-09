@@ -12,9 +12,7 @@ func LessScope(a, b Scope) bool {
 	return a.Group < b.Group
 }
 
-// LessManagedFile reports whether file a precedes b. Comparison is bytewise on
-// TargetRelativePath, then Layer, then Kind, establishing a total order so
-// stable sorts are deterministic across permutations.
+// LessManagedFile reports whether file a precedes b in a bytewise total order.
 func LessManagedFile(a, b ManagedFile) bool {
 	if a.TargetRelativePath != b.TargetRelativePath {
 		return a.TargetRelativePath < b.TargetRelativePath
@@ -22,7 +20,19 @@ func LessManagedFile(a, b ManagedFile) bool {
 	if a.Layer != b.Layer {
 		return a.Layer < b.Layer
 	}
-	return a.Kind < b.Kind
+	if a.Kind != b.Kind {
+		return a.Kind < b.Kind
+	}
+	if a.Scope.Group != b.Scope.Group {
+		return a.Scope.Group < b.Scope.Group
+	}
+	if a.SourceRepositoryPath != b.SourceRepositoryPath {
+		return a.SourceRepositoryPath < b.SourceRepositoryPath
+	}
+	if a.SourceAbsolutePath != b.SourceAbsolutePath {
+		return a.SourceAbsolutePath < b.SourceAbsolutePath
+	}
+	return a.SourceExecutableBits < b.SourceExecutableBits
 }
 
 // LessAlias reports whether alias a precedes b in bytewise AliasRelativePath

@@ -6,6 +6,7 @@ import (
 
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/secrets"
+	"github.com/alyraffauf/cattery/internal/state"
 )
 
 // PlanEntryKind names the representation one plan entry produces at a path.
@@ -69,19 +70,19 @@ func Assemble(plan deployment.Plan, state StateSnapshot, client *secrets.Client)
 	sort.SliceStable(records, func(first, second int) bool {
 		return records[first].TargetPath < records[second].TargetPath
 	})
-	return EvaluationSnapshot{RepositoryRoot: plan.RepositoryRoot, HomePath: state.HomePath(),
-		Platform: plan.Platform, records: records}, nil
+	return EvaluationSnapshot{RepositoryRoot: plan.RepositoryRoot(), HomePath: state.HomePath(),
+		Platform: plan.Platform(), records: records}, nil
 }
 
 // requireAssemblyPlan rejects a plan that cannot describe the state pair.
 func requireAssemblyPlan(plan deployment.Plan, state StateSnapshot) error {
-	if plan.RepositoryRoot == "" || state.HomePath() == "" {
+	if plan.RepositoryRoot() == "" || state.HomePath() == "" {
 		return fmt.Errorf("reconcile: snapshot assembly requires canonical repository and home paths")
 	}
-	if plan.RepositoryRoot != state.RepositoryRoot() {
-		return fmt.Errorf("reconcile: plan repository %q does not match state repository %q", plan.RepositoryRoot, state.RepositoryRoot())
+	if plan.RepositoryRoot() != state.RepositoryRoot() {
+		return fmt.Errorf("reconcile: plan repository %q does not match state repository %q", plan.RepositoryRoot(), state.RepositoryRoot())
 	}
-	if plan.Platform == "" {
+	if plan.Platform() == "" {
 		return fmt.Errorf("reconcile: snapshot assembly requires a selected platform")
 	}
 	return nil
@@ -90,15 +91,17 @@ func requireAssemblyPlan(plan deployment.Plan, state StateSnapshot) error {
 // entryIndexes indexes plan entries by destination path, rejecting duplicate
 // file, duplicate alias, and file/alias collisions at one path.
 func entryIndexes(plan deployment.Plan) (map[string]deployment.ManagedFile, map[string]deployment.Alias, error) {
-	files := make(map[string]deployment.ManagedFile, len(plan.Files))
-	for _, file := range plan.Files {
+	planFiles := plan.Files()
+	files := make(map[string]deployment.ManagedFile, len(planFiles))
+	for _, file := range planFiles {
 		if _, occupied := files[file.TargetRelativePath]; occupied {
 			return nil, nil, fmt.Errorf("reconcile: plan has duplicate file entry %q", file.TargetRelativePath)
 		}
 		files[file.TargetRelativePath] = file
 	}
-	aliases := make(map[string]deployment.Alias, len(plan.Aliases))
-	for _, alias := range plan.Aliases {
+	planAliases := plan.Aliases()
+	aliases := make(map[string]deployment.Alias, len(planAliases))
+	for _, alias := range planAliases {
 		if _, occupied := aliases[alias.AliasRelativePath]; occupied {
 			return nil, nil, fmt.Errorf("reconcile: plan has duplicate alias entry %q", alias.AliasRelativePath)
 		}
@@ -205,6 +208,7 @@ func cloneFileRecord(record *FileState) *FileState {
 		return nil
 	}
 	copyRecord := *record
+	copyRecord.retiredAt = state.CloneTimestamp(record.retiredAt)
 	return &copyRecord
 }
 
@@ -214,6 +218,7 @@ func cloneAliasRecord(record *AliasState) *AliasState {
 		return nil
 	}
 	copyRecord := *record
+	copyRecord.retiredAt = state.CloneTimestamp(record.retiredAt)
 	return &copyRecord
 }
 

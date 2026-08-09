@@ -144,12 +144,12 @@ var decisionOrderCases = []orderCase{
 
 // specOf builds one decision spec over the fixed file path.
 func specOf(reason Reason, choices []DecisionChoice) DecisionSpec {
-	return DecisionSpec{targetPath: decisionPath, action: ActionNeedsDecision, reason: reason, choices: choices}
+	return mustDecisionSpec(DecisionSpecInput{TargetPath: decisionPath, Action: ActionNeedsDecision, Reason: reason, Choices: choices})
 }
 
 // orderSpec builds one ordinary drift spec at path.
 func orderSpec(path string) DecisionSpec {
-	return DecisionSpec{targetPath: path, action: ActionNeedsDecision, reason: ReasonTargetDrift, choices: diffOverwriteSkipAbort}
+	return mustDecisionSpec(DecisionSpecInput{TargetPath: path, Action: ActionNeedsDecision, Reason: ReasonTargetDrift, Choices: diffOverwriteSkipAbort})
 }
 
 // checkDecisionSpec produces one spec from its row and compares the result.
@@ -165,7 +165,7 @@ func checkDecisionSpec(t *testing.T, row specCase) {
 	if err != nil {
 		t.Fatalf("spec %s: %v", row.name, err)
 	}
-	want := DecisionSpec{targetPath: row.path, action: row.action, reason: row.reason, choices: row.want}
+	want := mustDecisionSpec(DecisionSpecInput{TargetPath: row.path, Action: row.action, Reason: row.reason, Choices: row.want})
 	if !reflect.DeepEqual(spec, want) {
 		t.Fatalf("spec = %+v, want %+v", spec, want)
 	}
@@ -177,6 +177,14 @@ func specAt(row specCase) (DecisionSpec, error) {
 		return DecisionSpecForAlias(AliasClassification{TargetPath: row.path, Action: row.action, Reason: row.reason, Convergence: row.convergence})
 	}
 	return DecisionSpecForFile(FileClassification{TargetPath: row.path, Action: row.action, Reason: row.reason, Convergence: row.convergence}, row.kind)
+}
+
+func mustDecisionSpec(input DecisionSpecInput) DecisionSpec {
+	spec, err := NewDecisionSpec(input)
+	if err != nil {
+		panic(err)
+	}
+	return spec
 }
 
 // checkInvalidDecision validates one spec row against the eligibility rule.

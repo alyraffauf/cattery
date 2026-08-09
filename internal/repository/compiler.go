@@ -47,7 +47,7 @@ func Compile(input CompileInput) (deployment.Plan, error) {
 		CollisionScope{HomeRoot: input.HomeRoot, Protected: input.Protected}); err != nil {
 		return deployment.Plan{}, err
 	}
-	return finalize(input, records), nil
+	return finalize(input, records)
 }
 
 // compileRepository runs phases 1-7: scan, overlay, routes, hooks, paths.
@@ -87,7 +87,7 @@ func scanAndSelect(input CompileInput) (ScanResult, error) {
 }
 
 // finalize filters to the selection, sorts, and wraps the immutable plan.
-func finalize(input CompileInput, records compiled) deployment.Plan {
+func finalize(input CompileInput, records compiled) (deployment.Plan, error) {
 	selected := input.Selected
 	groups := records.groups
 	if len(input.Selected) > 0 {
@@ -103,7 +103,7 @@ func finalize(input CompileInput, records compiled) deployment.Plan {
 	deployment.SortFiles(keptFiles)
 	deployment.SortAliases(keptAliases)
 	deployment.SortHooks(keptHooks)
-	return deployment.NewPlan(deployment.Plan{
+	return deployment.NewPlan(deployment.PlanInput{
 		RepositoryRoot: input.RepositoryRoot,
 		Platform:       string(input.Platform),
 		Groups:         groups,

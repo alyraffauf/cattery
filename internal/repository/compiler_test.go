@@ -78,7 +78,7 @@ func testPlanGolden(t *testing.T) {
 
 // goldenWant builds the expected plan for one golden scenario.
 func goldenWant(root string, scenario goldenScenario) deployment.Plan {
-	return deployment.Plan{
+	return mustPlan(deployment.PlanInput{
 		RepositoryRoot: root,
 		Platform:       string(scenario.platform),
 		Groups:         []string{"atuin", "ghostty"},
@@ -89,7 +89,7 @@ func goldenWant(root string, scenario goldenScenario) deployment.Plan {
 			expectHook(root, hookWant{scope: deployment.NewScope(""), phase: deployment.HookBefore, name: "install.sh"}),
 			expectHook(root, hookWant{scope: deployment.NewScope("atuin"), phase: deployment.HookBefore, name: "init.sh"}),
 		},
-	}
+	})
 }
 
 func testPlanDeterminism(t *testing.T) {
@@ -120,7 +120,7 @@ func testPlanSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := deployment.Plan{
+	want := mustPlan(deployment.PlanInput{
 		RepositoryRoot: root,
 		Platform:       "linux",
 		Groups:         []string{"atuin"},
@@ -132,7 +132,7 @@ func testPlanSelection(t *testing.T) {
 			expectHook(root, hookWant{scope: deployment.NewScope(""), phase: deployment.HookBefore, name: "install.sh"}),
 			expectHook(root, hookWant{scope: deployment.NewScope("atuin"), phase: deployment.HookBefore, name: "init.sh"}),
 		},
-	}
+	})
 	assertPlan(t, plan, want)
 }
 
@@ -188,6 +188,14 @@ func assertPlan(t *testing.T, got deployment.Plan, want deployment.Plan) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("plan = %+v, want %+v", got, want)
 	}
+}
+
+func mustPlan(input deployment.PlanInput) deployment.Plan {
+	plan, err := deployment.NewPlan(input)
+	if err != nil {
+		panic(err)
+	}
+	return plan
 }
 
 // fileWant describes one expected managed file record.

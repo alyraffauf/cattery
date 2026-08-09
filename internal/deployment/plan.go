@@ -1,10 +1,20 @@
 package deployment
 
-// Plan is the immutable, validated deployment plan compiled from a repository
-// for one platform. Slice fields are defensively copied on construction and
-// on every read, so callers can never mutate a Plan through slices they held
-// before construction or hold after an accessor returns.
+import "fmt"
+
+// Plan is the immutable deployment plan compiled from a repository for one
+// platform.
 type Plan struct {
+	repositoryRoot string
+	platform       string
+	groups         []string
+	files          []ManagedFile
+	aliases        []Alias
+	hooks          []Hook
+}
+
+// PlanInput contains the validated records used to construct a Plan.
+type PlanInput struct {
 	RepositoryRoot string
 	Platform       string
 	Groups         []string
@@ -13,37 +23,90 @@ type Plan struct {
 	Hooks          []Hook
 }
 
-// NewPlan constructs a Plan from candidate, defensively copying every input
-// slice so the caller's source slices cannot mutate the plan later.
-func NewPlan(candidate Plan) Plan {
-	return Plan{
-		RepositoryRoot: candidate.RepositoryRoot,
-		Platform:       candidate.Platform,
-		Groups:         copyStrings(candidate.Groups),
-		Files:          copyFiles(candidate.Files),
-		Aliases:        copyAliases(candidate.Aliases),
-		Hooks:          copyHooks(candidate.Hooks),
+// NewPlan validates and freezes input. The returned Plan does not share any
+// slice storage with input or with a later accessor result.
+func NewPlan(input PlanInput) (Plan, error) {
+	if err := validatePlanInput(input); err != nil {
+		return Plan{}, err
 	}
+	return Plan{
+		repositoryRoot: input.RepositoryRoot,
+		platform:       input.Platform,
+		groups:         copyStrings(input.Groups),
+		files:          copyFiles(input.Files),
+		aliases:        copyAliases(input.Aliases),
+		hooks:          copyHooks(input.Hooks),
+	}, nil
 }
 
-// AllGroups returns a defensive copy of the plan's group list.
-func (p Plan) AllGroups() []string {
-	return copyStrings(p.Groups)
+func validatePlanInput(input PlanInput) error {
+	if input.RepositoryRoot == "" {
+		return fmt.Errorf("deployment: plan has empty repository root")
+	}
+	if input.Platform == "" {
+		return fmt.Errorf("deployment: plan has empty platform")
+	}
+	if err := validateFiles(input.Files); err != nil {
+		return err
+	}
+	if err := validateAliases(input.Aliases); err != nil {
+		return err
+	}
+	if err := validateHooks(input.Hooks); err != nil {
+		return err
+	}
+	return nil
 }
 
-// AllFiles returns a defensive copy of the plan's file list.
-func (p Plan) AllFiles() []ManagedFile {
-	return copyFiles(p.Files)
+func validateFiles(files []ManagedFile) error {
+	for _, file := range files {
+		if err := validateFile(file); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// AllAliases returns a defensive copy of the plan's alias list.
-func (p Plan) AllAliases() []Alias {
-	return copyAliases(p.Aliases)
+func validateAliases(aliases []Alias) error {
+	for _, alias := range aliases {
+		if err := validateAlias(alias); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// AllHooks returns a defensive copy of the plan's hook list.
-func (p Plan) AllHooks() []Hook {
-	return copyHooks(p.Hooks)
+func validateHooks(hooks []Hook) error {
+	for _, hook := range hooks {
+		if err := validateHook(hook); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p Plan) RepositoryRoot() string {
+	return p.repositoryRoot
+}
+
+func (p Plan) Platform() string {
+	return p.platform
+}
+
+func (p Plan) Groups() []string {
+	return copyStrings(p.groups)
+}
+
+func (p Plan) Files() []ManagedFile {
+	return copyFiles(p.files)
+}
+
+func (p Plan) Aliases() []Alias {
+	return copyAliases(p.aliases)
+}
+
+func (p Plan) Hooks() []Hook {
+	return copyHooks(p.hooks)
 }
 
 func copyStrings(items []string) []string {
