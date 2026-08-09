@@ -30,7 +30,7 @@ func TestRepositoryRows(t *testing.T) {
 
 func testRepositoryRegisters(t *testing.T) {
 	clock := &pinnedClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
-	store := openStore(t, Dependencies{StateHome: t.TempDir(), Clock: clock})
+	store := openStore(t, Dependencies{StateHome: t.TempDir(), Now: clock.Now})
 	root := t.TempDir()
 	home := t.TempDir()
 	first, err := store.RegisterRepository(root, home)
@@ -48,7 +48,7 @@ func testRepositoryRegisters(t *testing.T) {
 
 func testRepositoryReRegistration(t *testing.T) {
 	clock := &pinnedClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
-	store := openStore(t, Dependencies{StateHome: t.TempDir(), Clock: clock})
+	store := openStore(t, Dependencies{StateHome: t.TempDir(), Now: clock.Now})
 	root := t.TempDir()
 	home := t.TempDir()
 	first, err := store.RegisterRepository(root, home)

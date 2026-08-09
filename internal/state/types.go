@@ -2,7 +2,7 @@
 // successfully deployed representation of every managed target. This file holds
 // the data-transfer objects and enum validators only: no SQL, XDG, or file-lock
 // type crosses the package boundary here. Provider and store seams live in
-// later files; the sole interface declared here is the narrow Clock.
+// later files.
 package state
 
 import (
@@ -118,20 +118,6 @@ type AliasBaseline struct {
 	AppliedAt           time.Time
 	RetiredAt           *time.Time
 }
-
-// Clock reports the current time so callers can inject a deterministic clock.
-// This is the only interface declared in this package and stays at one method
-// so it remains a narrow value seam, not a provider contract.
-type Clock interface {
-	Now() time.Time
-}
-
-// SystemClock reads the wall clock. It is the default Clock injected when a
-// caller does not supply one.
-type SystemClock struct{}
-
-// Now returns the current local time.
-func (SystemClock) Now() time.Time { return time.Now() }
 
 // IsSlashRelative reports whether path is a non-empty relative path expressed
 // with forward slashes only: it must not be absolute and must not contain a

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -18,9 +19,21 @@ func TestProcessRun(t *testing.T) {
 		{"normal", testNormalRun},
 		{"nonzero", testNonzeroRun},
 		{"missing", testMissingExecutable},
+		{"non-missing path error", testNonMissingPathError},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
+	}
+}
+
+func testNonMissingPathError(t *testing.T) {
+	cause := &os.PathError{Op: "start", Path: "/not-executable", Err: syscall.EACCES}
+	launchErr := launchError(cause)
+	if launchErr.NotFound {
+		t.Fatal("NotFound = true for a non-ENOENT path error")
+	}
+	if !errors.Is(launchErr, cause) {
+		t.Fatal("LaunchError did not preserve the original cause")
 	}
 }
 

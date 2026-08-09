@@ -79,7 +79,7 @@ func (store *Store) transitionToAlias(transaction *sql.Tx, transition aliasTrans
 }
 
 func (store *Store) applyAliasTransition(transaction *sql.Tx, transition aliasTransition) error {
-	now := formatTimestamp(store.clock.Now())
+	now := formatTimestamp(store.now())
 	if err := execIn(transaction, aliasUpsertByRepositorySQL,
 		transition.repositoryID, transition.baseline.AliasPath, transition.baseline.CanonicalTargetPath,
 		transition.baseline.GroupName, string(transition.baseline.Layer), now); err != nil {
@@ -125,7 +125,7 @@ func (store *Store) transitionToFile(transaction *sql.Tx, transition fileTransit
 }
 
 func (store *Store) applyFileTransition(transaction *sql.Tx, transition fileTransition) error {
-	now := formatTimestamp(store.clock.Now())
+	now := formatTimestamp(store.now())
 	if err := execIn(transaction, fileUpsertByRepositorySQL,
 		transition.repositoryID, transition.baseline.TargetPath, transition.baseline.GroupName, transition.baseline.SourcePath,
 		string(transition.baseline.SourceKind), string(transition.baseline.Layer),

@@ -92,7 +92,7 @@ func (store *Store) UpsertFileBaseline(root, home string, baseline FileBaseline)
 	if err != nil {
 		return FileBaseline{}, err
 	}
-	now := formatTimestamp(store.clock.Now())
+	now := formatTimestamp(store.now())
 	transaction, err := store.database.conn.Begin()
 	if err != nil {
 		return FileBaseline{}, err
@@ -128,7 +128,7 @@ func (store *Store) setFileStatus(key fileBaselineKey, statement string) (FileBa
 	if !IsSlashRelative(key.target) {
 		return FileBaseline{}, fmt.Errorf("state: file target %q is not a slash-relative path", key.target)
 	}
-	now := formatTimestamp(store.clock.Now())
+	now := formatTimestamp(store.now())
 	transaction, err := store.database.conn.Begin()
 	if err != nil {
 		return FileBaseline{}, err

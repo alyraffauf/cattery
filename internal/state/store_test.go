@@ -33,9 +33,6 @@ func testStoreConstructionClean(t *testing.T) {
 	if store.Database() != nil {
 		t.Fatal("Database non-nil before Acquire")
 	}
-	if store.Clock() == nil {
-		t.Fatal("Clock nil")
-	}
 	if _, err := os.Stat(catteryDirFor(t, deps)); !os.IsNotExist(err) {
 		t.Fatalf("NewStore created the cattery directory before Acquire: %v", err)
 	}
@@ -143,7 +140,7 @@ func testStoreMigrateFailure(t *testing.T) {
 
 func tempDependencies(t *testing.T) Dependencies {
 	t.Helper()
-	return Dependencies{StateHome: t.TempDir(), Clock: SystemClock{}}
+	return Dependencies{StateHome: t.TempDir()}
 }
 
 func catteryDirFor(t *testing.T, deps Dependencies) string {

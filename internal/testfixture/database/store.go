@@ -30,8 +30,8 @@ func fixtureOrigin() time.Time {
 	return time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 }
 
-// Clock is a deterministic state.Clock pinned to a fixed instant. Advance
-// moves the instant so tests can produce stable, ordered timestamps.
+// Clock is a deterministic clock pinned to a fixed instant. Advance moves the
+// instant so tests can produce stable, ordered timestamps.
 type Clock struct {
 	now time.Time
 }
@@ -75,7 +75,7 @@ func New(t *testing.T) *Fixture {
 	}
 	stateHome := filepath.Join(root, "state")
 	clock := NewClock(fixtureOrigin())
-	store := state.NewStore(state.Dependencies{StateHome: stateHome, Clock: clock})
+	store := state.NewStore(state.Dependencies{StateHome: stateHome, Now: clock.Now})
 	if err := store.Acquire(context.Background()); err != nil {
 		t.Fatalf("fixture store acquire: %v", err)
 	}

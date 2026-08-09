@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,9 +20,29 @@ func TestStateLock(t *testing.T) {
 		{"rejects non-regular lock file", testRejectsNonRegularLock},
 		{"rejects wrong lock mode", testRejectsWrongLockMode},
 		{"release is idempotent", testReleaseIsIdempotent},
+		{"PID diagnostic failure releases lock", testPIDDiagnosticFailureReleasesLock},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
+	}
+}
+
+func testPIDDiagnosticFailureReleasesLock(t *testing.T) {
+	path := tempLockPath(t)
+	lock := NewLock(path)
+	want := errors.New("diagnostic write failed")
+	if err := lock.acquire(func(string) error { return want }); !errors.Is(err, want) {
+		t.Fatalf("Acquire error = %v, want %v", err, want)
+	}
+	if err := lock.Release(); err != nil {
+		t.Fatalf("Release after failed Acquire: %v", err)
+	}
+	probe := NewLock(path)
+	if err := probe.Acquire(); err != nil {
+		t.Fatalf("lock remained held after failed Acquire: %v", err)
+	}
+	if err := probe.Release(); err != nil {
+		t.Fatalf("probe Release: %v", err)
 	}
 }
 

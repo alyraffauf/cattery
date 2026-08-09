@@ -55,7 +55,7 @@ func (store *Store) RegisterRepository(root, home string) (Repository, error) {
 	if err != nil {
 		return Repository{}, err
 	}
-	now := formatTimestamp(store.clock.Now())
+	now := formatTimestamp(store.now())
 	transaction, err := store.database.conn.Begin()
 	if err != nil {
 		return Repository{}, err
@@ -77,7 +77,7 @@ func (store *Store) SetDefaultRepository(root, home string) (Repository, error) 
 	if err != nil {
 		return Repository{}, err
 	}
-	now := formatTimestamp(store.clock.Now())
+	now := formatTimestamp(store.now())
 	transaction, err := store.database.conn.Begin()
 	if err != nil {
 		return Repository{}, err

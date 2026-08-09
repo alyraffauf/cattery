@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 )
 
@@ -148,5 +149,5 @@ func launchError(err error) *LaunchError {
 
 func isPathENOENT(err error) bool {
 	var pathErr *os.PathError
-	return errors.As(err, &pathErr)
+	return errors.As(err, &pathErr) && errors.Is(pathErr.Err, syscall.ENOENT)
 }

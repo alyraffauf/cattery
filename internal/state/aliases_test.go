@@ -53,7 +53,7 @@ func seedAlias(t *testing.T, store *Store, spec aliasSpec) {
 
 func testAliasUpsertCreatesRow(t *testing.T) {
 	clock := &pinnedClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
-	store := openStore(t, Dependencies{StateHome: t.TempDir(), Clock: clock})
+	store := openStore(t, Dependencies{StateHome: t.TempDir(), Now: clock.Now})
 	root := t.TempDir()
 	home := t.TempDir()
 	baseline := aliasBaseline(".config/app", "canonical/.config/app", "conf")

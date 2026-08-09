@@ -44,9 +44,6 @@ func testFixtureStoreOpen(t *testing.T) {
 	if fixture.Store.Database() == nil {
 		t.Fatal("store database nil after New")
 	}
-	if fixture.Store.Clock() != fixture.Clock {
-		t.Fatal("store does not use the fixture clock")
-	}
 	assertMode(t, fixture.Directory(), 0o700)
 	assertMode(t, fixture.DatabasePath(), 0o600)
 	assertMode(t, fixture.LockPath(), 0o600)
@@ -61,7 +58,7 @@ func testFixtureConnectionsIndependent(t *testing.T) {
 	if err := first.Store.Close(); err != nil {
 		t.Fatalf("first close: %v", err)
 	}
-	reopen := state.NewStore(state.Dependencies{StateHome: first.StateHome, Clock: first.Clock})
+	reopen := state.NewStore(state.Dependencies{StateHome: first.StateHome, Now: first.Clock.Now})
 	if err := reopen.Acquire(context.Background()); err != nil {
 		t.Fatalf("first state home not reopenable: %v", err)
 	}

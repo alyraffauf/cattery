@@ -54,7 +54,7 @@ func (store *Store) setAliasStatus(key aliasBaselineKey, statement string) (Alia
 	if !IsSlashRelative(key.alias) {
 		return AliasBaseline{}, fmt.Errorf("state: alias path %q is not a slash-relative path", key.alias)
 	}
-	now := formatTimestamp(store.clock.Now())
+	now := formatTimestamp(store.now())
 	transaction, err := store.database.conn.Begin()
 	if err != nil {
 		return AliasBaseline{}, err

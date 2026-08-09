@@ -34,6 +34,10 @@ func (lock *Lock) Path() string {
 // holds it. After acquisition it writes the current PID to the lock file for
 // diagnostics.
 func (lock *Lock) Acquire() error {
+	return lock.acquire(writeProcessID)
+}
+
+func (lock *Lock) acquire(writePID func(string) error) error {
 	if err := preparePrivateFile(lock.path); err != nil {
 		return err
 	}
@@ -45,7 +49,11 @@ func (lock *Lock) Acquire() error {
 	if !locked {
 		return errLockHeld(lock.path)
 	}
-	return writeProcessID(lock.path)
+	if err := writePID(lock.path); err != nil {
+		_ = lock.Release()
+		return err
+	}
+	return nil
 }
 
 // Release releases the advisory lock. It is idempotent: calling Release on a

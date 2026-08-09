@@ -3,15 +3,16 @@ package state
 import (
 	"context"
 	"path/filepath"
+	"time"
 )
 
 // Dependencies bundles the injectable seams of a Store. StateHome, when set,
 // overrides the XDG-derived state directory; when empty, resolution reads
-// XDG_STATE_HOME and rejects a relative value. Clock supplies timestamps and
-// defaults to SystemClock when nil.
+// XDG_STATE_HOME and rejects a relative value. Now supplies timestamps and
+// defaults to the wall clock when nil.
 type Dependencies struct {
 	StateHome string
-	Clock     Clock
+	Now       func() time.Time
 }
 
 // Store coordinates the state lifecycle: path resolution, advisory locking,
@@ -20,7 +21,7 @@ type Dependencies struct {
 // reverses it.
 type Store struct {
 	stateHome string
-	clock     Clock
+	now       func() time.Time
 	lock      *Lock
 	database  *Database
 }
@@ -29,16 +30,11 @@ type Store struct {
 // no SQLite connection, acquires no lock, creates no path, and inspects no
 // repository: every effect begins inside Acquire.
 func NewStore(deps Dependencies) *Store {
-	clock := deps.Clock
-	if clock == nil {
-		clock = SystemClock{}
+	now := deps.Now
+	if now == nil {
+		now = time.Now
 	}
-	return &Store{stateHome: deps.StateHome, clock: clock}
-}
-
-// Clock returns the clock the store records timestamps with. It is never nil.
-func (store *Store) Clock() Clock {
-	return store.clock
+	return &Store{stateHome: deps.StateHome, now: now}
 }
 
 // Database returns the opened database handle, or nil before Acquire succeeds.

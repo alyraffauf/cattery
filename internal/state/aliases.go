@@ -67,7 +67,7 @@ func (store *Store) UpsertAliasBaseline(root, home string, baseline AliasBaselin
 	if err != nil {
 		return AliasBaseline{}, err
 	}
-	now := formatTimestamp(store.clock.Now())
+	now := formatTimestamp(store.now())
 	transaction, err := store.database.conn.Begin()
 	if err != nil {
 		return AliasBaseline{}, err

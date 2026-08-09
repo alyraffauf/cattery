@@ -1,7 +1,6 @@
 package state
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -17,7 +16,6 @@ func TestStateContract(t *testing.T) {
 		{"digest width", testDigestWidth},
 		{"defensive copies", testDefensiveCopy},
 		{"slash-relative path forms", testPathForms},
-		{"clock is the only narrow seam", testClockSeam},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
@@ -91,19 +89,5 @@ func testPathForms(t *testing.T) {
 		if IsSlashRelative(path) {
 			t.Fatalf("IsSlashRelative(%q) = true, want false", path)
 		}
-	}
-}
-
-func testClockSeam(t *testing.T) {
-	var clock Clock = SystemClock{}
-	if clock.Now().IsZero() {
-		t.Fatal("SystemClock.Now returned the zero time")
-	}
-	clockType := reflect.TypeOf((*Clock)(nil)).Elem()
-	if clockType.NumMethod() != 1 {
-		t.Fatalf("Clock declares %d methods, want 1", clockType.NumMethod())
-	}
-	if clockType.Method(0).Name != "Now" {
-		t.Fatalf("Clock method = %s, want Now", clockType.Method(0).Name)
 	}
 }
