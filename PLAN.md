@@ -1197,6 +1197,8 @@ internal/diff/safe.go
 internal/selection/repository.go
 internal/selection/groups.go
 
+internal/quality/scan_test.go
+internal/quality/shape_test.go
 internal/quality/source_limits_test.go
 internal/quality/naming_test.go
 internal/quality/architecture_test.go
@@ -1846,9 +1848,9 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 2, 3, 4.
 
-**Owns:** `internal/quality/source_limits_test.go`, `internal/quality/naming_test.go`.
+**Owns:** `internal/quality/scan_test.go`, `internal/quality/shape_test.go`, `internal/quality/source_limits_test.go`, `internal/quality/naming_test.go`.
 
-**Deliverable:** Implement repository-walk and AST checks for file/function/RunE/statement/nesting/decision/parameter/interface limits, globals, `init`, names, suppressions, and the two exact global exceptions.
+**Deliverable:** Provide shared repository-walk, parse, violation-reporting, and AST shape-measurement helpers plus checks for file/function/RunE/statement/nesting/decision/parameter/interface limits, globals, `init`, names, suppressions, and the two exact global exceptions.
 
 **Tests:** `TestSourceShapeChecker` and `TestNamingChecker` synthesize one failing Go snippet per AST/naming rule and an over-limit file for every scanned non-Go extension plus `justfile` in temporary directories.
 
