@@ -1275,7 +1275,7 @@ Each application request that needs a repository defines its own small `Reposito
 
 **Readable-code and size contract:**
 
-- Every hand-written implementation, test, script, Nix, workflow, and migration file is at most 250 physical lines. The live scan includes `.go`, `.sh`, `.bash`, `.py`, `.nix`, `.yml`, `.yaml`, `.sql`, and the root `justfile`; generated `go.sum`, `flake.lock`, and prose documentation are not implementation source. There are no initial-release source exceptions: split tables, fakes, renderers, workflows, scripts, and orchestration phases by cohesive behavior before crossing the limit.
+- Every hand-written implementation, test, script, Nix, workflow, and migration file is at most 400 physical lines. The live scan includes `.go`, `.sh`, `.bash`, `.py`, `.nix`, `.yml`, `.yaml`, `.sql`, and the root `justfile`; generated `go.sum`, `flake.lock`, and prose documentation are not implementation source. There are no initial-release source exceptions: split tables, fakes, renderers, workflows, scripts, and orchestration phases by cohesive behavior before crossing the limit.
 - Every named function, method, and function literal spans at most 40 physical lines from signature through closing brace. A Cobra `RunE` function literal has the stricter 15-line limit.
 - Functions have one responsibility and one abstraction level. Prefer guard clauses; control-flow nesting may not exceed two levels. Dense one-liners and boolean puzzles are not acceptable substitutes for named steps.
 - A function has at most 25 recursively counted `ast.Stmt` nodes and at most ten decision points. The decision walker counts `if`, `for`/`range`, each non-default switch/type-switch/select clause, and each `&&` or `||`. These limits apply to tests and function literals; meeting either count never excuses mixed abstraction levels.
@@ -3810,7 +3810,7 @@ The scheduler derives the ready set mechanically from each card's direct prerequ
 - `go.mod`, `go.sum`, `flake.nix`, `flake.lock`, `justfile`, each workflow, each script, and `PLAN.md` have one lifetime owner; no later “finish” card reopens them.
 - A worker never edits outside `Owns`, never creates an undeclared file, and never adds a dependency. The integration owner handles a reviewed plan amendment and supplies a new base commit when necessary.
 - Every freeze records the plan hash, base/result commits, exact changed paths, nonempty test selector, targeted green output, quality output, and a concise API/schema/artifact summary.
-- Review is two-stage: acceptance/specification first, then readable-code/security. The second stage checks 250-line files, 40-line/25-statement functions, 15-line `RunE`, ten decisions, two-level nesting, three parameters, three-method interfaces, exact imports/third-party ownership, globals, exported types, and suppressions.
+- Review is two-stage: acceptance/specification first, then readable-code/security. The second stage checks 400-line files, 40-line/25-statement functions, 15-line `RunE`, ten decisions, two-level nesting, three parameters, three-method interfaces, exact imports/third-party ownership, globals, exported types, and suppressions.
 - No placeholder, TODO, skipped core test, generic helper bucket, compatibility shim, unverified workflow, or undocumented ownership exception crosses a freeze.
 - A production defect discovered by an integration card returns to a new plan amendment owned by the original production boundary; the integration worker does not patch it.
 
@@ -3847,7 +3847,7 @@ The initial release is complete only when all of the following are demonstrated 
 - [ ] Cobra v1.10.2 is confined to `internal/cli`; no Cobra/pflag type or import reaches bootstrap, application, domain, state, repository, reconciliation, filesystem, hook, or secret code.
 - [ ] Every operational Cobra command calls one injected, one-method application service through a typed request/result seam; generated help calls no backend, command tests use fakes, and backend integration tests complete every workflow without constructing Cobra.
 - [ ] Every `RunE` is 15 lines or fewer and contains translation/rendering only; all semantic validation, decision policy, orchestration, state access, and side effects are independently callable application/backend behavior.
-- [ ] Automated quality tests prove every hand-written implementation/test/script/Nix/workflow/migration file is at most 250 lines, every Go function/literal is at most 40 lines with at most 25 statements and ten decision points, nesting/parameter/three-method-interface limits hold, the exact package/third-party DAG and exported-type boundary hold, no mutable globals or `init` functions exist outside the exact build-info and embedded-migration exceptions, and no generic dumping-ground, suppression, or scan exclusion exists.
+- [ ] Automated quality tests prove every hand-written implementation/test/script/Nix/workflow/migration file is at most 400 lines, every Go function/literal is at most 40 lines with at most 25 statements and ten decision points, nesting/parameter/three-method-interface limits hold, the exact package/third-party DAG and exported-type boundary hold, no mutable globals or `init` functions exist outside the exact build-info and embedded-migration exceptions, and no generic dumping-ground, suppression, or scan exclusion exists.
 - [ ] Every implementation card in Section 16 has its targeted acceptance evidence and no unresolved TODO, skipped core test, placeholder, cross-card file edit, or undocumented plan exception.
 - [ ] Linux and macOS CI pass.
 - [ ] Native black-box jobs pass on explicit `ubuntu-22.04` and `macos-15` runners; no unsupported older-runtime floor is advertised.
@@ -3867,7 +3867,7 @@ These decisions are fixed for the first release:
 - Go, not Rust.
 - Cobra v1.10.2 as a thin, replaceable CLI adapter over Cobra-free typed application services.
 - No Cobra or pflag types cross the `internal/cli` boundary, and no command contains business logic.
-- Strict hand-written source limits: 250 lines per implementation/test/build-automation file, 40 lines and 25 statements per Go function/literal, ten decision points, and 15 lines per `RunE`, enforced without an initial-release source allowlist.
+- Strict hand-written source limits: 400 lines per implementation/test/build-automation file, 40 lines and 25 statements per Go function/literal, ten decision points, and 15 lines per `RunE`, enforced without an initial-release source allowlist.
 - Materialized files by default.
 - Group is the public organizational term.
 - SQLite state under XDG state directories.

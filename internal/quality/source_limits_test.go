@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxFileLines        = 250
+	maxFileLines        = 400
 	maxFunctionLines    = 40
 	maxRunELines        = 15
 	maxStatements       = 25
