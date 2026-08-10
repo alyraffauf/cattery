@@ -94,14 +94,14 @@ func decisionSpecs(candidates Candidates) ([]reconcile.DecisionSpec, error) {
 // specFor freezes the decision spec of one candidate, or returns nil when
 // the candidate does not require a decision.
 func specFor(candidate Candidate) (*reconcile.DecisionSpec, error) {
-	if candidate.file.Convergence == reconcile.DecisionRequired {
+	if candidate.file.Convergence == reconcile.ConvergenceDecisionRequired {
 		spec, err := reconcile.DecisionSpecForFile(candidate.file, candidate.record.File.Kind)
 		if err != nil {
 			return nil, failure.New(failure.InvalidInput, "apply: freeze file decision", err)
 		}
 		return &spec, nil
 	}
-	if candidate.alias.Convergence == reconcile.DecisionRequired {
+	if candidate.alias.Convergence == reconcile.ConvergenceDecisionRequired {
 		spec, err := reconcile.DecisionSpecForAlias(candidate.alias)
 		if err != nil {
 			return nil, failure.New(failure.InvalidInput, "apply: freeze alias decision", err)

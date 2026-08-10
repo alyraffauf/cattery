@@ -57,7 +57,7 @@ func AllowedChoices(action Action, reason Reason, kind deployment.FileKind) []De
 // a decision are rejected: converged, pending, and rejected outcomes never
 // prompt (PLAN.md Sections 9.2 and 9.3).
 func DecisionSpecForFile(classification FileClassification, kind deployment.FileKind) (DecisionSpec, error) {
-	if classification.Convergence != DecisionRequired {
+	if classification.Convergence != ConvergenceDecisionRequired {
 		return DecisionSpec{}, fmt.Errorf("reconcile: file %q does not require a decision", classification.TargetPath)
 	}
 	return NewDecisionSpec(DecisionSpecInput{
@@ -73,7 +73,7 @@ func DecisionSpecForFile(classification FileClassification, kind deployment.File
 // (PLAN.md Sections 5.4 and 9.5). Alias reasons never qualify for diff, so
 // the kind argument is irrelevant to the eligibility call.
 func DecisionSpecForAlias(classification AliasClassification) (DecisionSpec, error) {
-	if classification.Convergence != DecisionRequired {
+	if classification.Convergence != ConvergenceDecisionRequired {
 		return DecisionSpec{}, fmt.Errorf("reconcile: alias %q does not require a decision", classification.TargetPath)
 	}
 	return NewDecisionSpec(DecisionSpecInput{

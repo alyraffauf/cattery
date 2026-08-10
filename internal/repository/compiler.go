@@ -24,7 +24,7 @@ type CompileInput struct {
 	Selected       []string
 }
 
-type compiled struct {
+type compiledRepository struct {
 	groups  []string
 	files   []deployment.ManagedFile
 	aliases []deployment.Alias
@@ -46,27 +46,27 @@ func Compile(input CompileInput) (deployment.Plan, error) {
 	return finalize(input, records)
 }
 
-func compileRepository(input CompileInput) (compiled, error) {
+func compileRepository(input CompileInput) (compiledRepository, error) {
 	base, err := scanAndSelect(input)
 	if err != nil {
-		return compiled{}, err
+		return compiledRepository{}, err
 	}
 	files, err := ResolvePlatform(input.RepositoryRoot, base, input.Platform)
 	if err != nil {
-		return compiled{}, err
+		return compiledRepository{}, err
 	}
-	aliases, err := activateRoutes(input, compiled{groups: base.Groups, files: files})
+	aliases, err := activateRoutes(input, compiledRepository{groups: base.Groups, files: files})
 	if err != nil {
-		return compiled{}, err
+		return compiledRepository{}, err
 	}
 	hookRecords, err := discoverHooks(input, base.Groups)
 	if err != nil {
-		return compiled{}, err
+		return compiledRepository{}, err
 	}
 	if err := validateDestinations(files, aliases); err != nil {
-		return compiled{}, err
+		return compiledRepository{}, err
 	}
-	return compiled{groups: base.Groups, files: files, aliases: aliases, hooks: hookRecords}, nil
+	return compiledRepository{groups: base.Groups, files: files, aliases: aliases, hooks: hookRecords}, nil
 }
 
 func scanAndSelect(input CompileInput) (ScanResult, error) {
@@ -80,18 +80,18 @@ func scanAndSelect(input CompileInput) (ScanResult, error) {
 	return base, nil
 }
 
-func finalize(input CompileInput, records compiled) (deployment.Plan, error) {
+func finalize(input CompileInput, compiled compiledRepository) (deployment.Plan, error) {
 	selected := input.Selected
-	groups := records.groups
+	groups := compiled.groups
 	if len(input.Selected) > 0 {
 		groups = append([]string(nil), selected...)
 		sort.Strings(groups)
 	}
-	keptFiles := selectRecords(records.files, selected,
+	keptFiles := selectRecords(compiled.files, selected,
 		func(file deployment.ManagedFile) bool { return scopeKept(file.Scope.Group, selected) })
-	keptAliases := selectRecords(records.aliases, selected,
+	keptAliases := selectRecords(compiled.aliases, selected,
 		func(alias deployment.Alias) bool { return scopeKept(alias.Scope.Group, selected) })
-	keptHooks := selectRecords(records.hooks, selected,
+	keptHooks := selectRecords(compiled.hooks, selected,
 		func(hook deployment.Hook) bool { return hookKept(hook.Scope, selected) })
 	deployment.SortFiles(keptFiles)
 	deployment.SortAliases(keptAliases)
@@ -141,10 +141,10 @@ func validateSelection(groups, selected []string) error {
 	return nil
 }
 
-func activateRoutes(input CompileInput, records compiled) ([]deployment.Alias, error) {
+func activateRoutes(input CompileInput, compiled compiledRepository) ([]deployment.Alias, error) {
 	var activated []deployment.Alias
-	for _, scope := range scopesOf(records.groups) {
-		scopeAliases, err := activateScope(input, scope, records.files)
+	for _, scope := range scopesOf(compiled.groups) {
+		scopeAliases, err := activateScope(input, scope, compiled.files)
 		if err != nil {
 			return nil, err
 		}

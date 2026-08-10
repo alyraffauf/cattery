@@ -143,7 +143,7 @@ func needsDecision(candidate Candidate) bool {
 }
 
 func candidateNeedsDecision(candidate Candidate) bool {
-	return candidate.file.Convergence == reconcile.DecisionRequired || candidate.alias.Convergence == reconcile.DecisionRequired
+	return candidate.file.Convergence == reconcile.ConvergenceDecisionRequired || candidate.alias.Convergence == reconcile.ConvergenceDecisionRequired
 }
 
 // plannedRecord builds the planned per-target record of one candidate.
@@ -183,8 +183,8 @@ func classificationAction(candidate Candidate) (reconcile.Action, string, bool) 
 		return candidate.file.Action, candidate.record.File.SourceRepositoryPath, true
 	case candidate.alias.Action == reconcile.ActionCreateAlias || candidate.alias.Action == reconcile.ActionReplaceAlias || candidate.alias.Action == reconcile.ActionVerifyAlias:
 		return candidate.alias.Action, "", true
-	case candidate.retirement.Action == reconcile.ActionRetireState:
-		return reconcile.ActionRetireState, "", true
+	case candidate.retirement.Action == reconcile.ActionRetireFileState:
+		return reconcile.ActionRetireFileState, "", true
 	case candidate.retirement.Action == reconcile.ActionRetireAliasState:
 		return reconcile.ActionRetireAliasState, "", true
 	}
@@ -200,7 +200,7 @@ func mapKind(action reconcile.Action) (ActionKind, bool) {
 		return ActionKindReplaceFile, true
 	case reconcile.ActionCreateAlias, reconcile.ActionReplaceAlias, reconcile.ActionVerifyAlias:
 		return ActionKindRealizeAlias, true
-	case reconcile.ActionRetireState:
+	case reconcile.ActionRetireFileState:
 		return ActionKindRetireFile, true
 	case reconcile.ActionRetireAliasState:
 		return ActionKindRetireAlias, true

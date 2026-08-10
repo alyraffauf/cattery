@@ -45,19 +45,19 @@ func ClassifyAlias(record Evaluation, semantics FileSemantics) AliasClassificati
 func classifyAliasEntry(record Evaluation) AliasClassification {
 	switch record.Target.Kind() {
 	case KindDirectory, KindSpecial:
-		return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonAliasOccupied, Rejected), record)
+		return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonAliasOccupied, ConvergenceRejected), record)
 	case KindAbsent:
-		return aliasWithPath(aliasOutcome(ActionCreateAlias, ReasonUnbaselinedAbsent, ActionPending), record)
+		return aliasWithPath(aliasOutcome(ActionCreateAlias, ReasonUnbaselinedAbsent, ConvergencePending), record)
 	case KindSymlink:
 		if record.Target.Payload() != payloadFor(record.Alias.CanonicalTargetRelativePath, record.Alias.AliasRelativePath) {
-			return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonAliasWrong, DecisionRequired), record)
+			return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonAliasWrong, ConvergenceDecisionRequired), record)
 		}
 		if record.AliasState == nil {
-			return aliasWithPath(aliasOutcome(ActionVerifyAlias, ReasonUnbaselinedEqual, Converged), record)
+			return aliasWithPath(aliasOutcome(ActionVerifyAlias, ReasonUnbaselinedEqual, ConvergenceConverged), record)
 		}
-		return aliasWithPath(aliasOutcome(ActionNoOp, ReasonAliasExact, Converged), record)
+		return aliasWithPath(aliasOutcome(ActionNoOp, ReasonAliasExact, ConvergenceConverged), record)
 	}
-	return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonAliasOccupied, DecisionRequired), record)
+	return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonAliasOccupied, ConvergenceDecisionRequired), record)
 }
 
 // classifyFileToAlias classifies a plan alias over an active file row: the
@@ -67,13 +67,13 @@ func classifyAliasEntry(record Evaluation) AliasClassification {
 func classifyFileToAlias(record Evaluation, semantics FileSemantics) AliasClassification {
 	switch record.Target.Kind() {
 	case KindDirectory, KindSpecial:
-		return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonRepresentationDrift, Rejected), record)
+		return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonRepresentationDrift, ConvergenceRejected), record)
 	case KindFile:
 		if representationIntact(record, semantics) {
-			return aliasWithPath(aliasOutcome(ActionReplaceAlias, ReasonRepresentationIntact, ActionPending), record)
+			return aliasWithPath(aliasOutcome(ActionReplaceAlias, ReasonRepresentationIntact, ConvergencePending), record)
 		}
 	}
-	return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonRepresentationDrift, DecisionRequired), record)
+	return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonRepresentationDrift, ConvergenceDecisionRequired), record)
 }
 
 // classifyAliasToFile classifies a plan file over an active alias row: the
@@ -83,13 +83,13 @@ func classifyFileToAlias(record Evaluation, semantics FileSemantics) AliasClassi
 func classifyAliasToFile(record Evaluation) AliasClassification {
 	switch record.Target.Kind() {
 	case KindDirectory, KindSpecial:
-		return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonRepresentationDrift, Rejected), record)
+		return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonRepresentationDrift, ConvergenceRejected), record)
 	case KindSymlink:
 		if record.Target.Payload() == payloadFor(record.AliasState.CanonicalTargetPath(), record.AliasState.AliasPath()) {
-			return aliasWithPath(aliasOutcome(ActionWriteSourceToTarget, ReasonRepresentationIntact, ActionPending), record)
+			return aliasWithPath(aliasOutcome(ActionWriteSourceToTarget, ReasonRepresentationIntact, ConvergencePending), record)
 		}
 	}
-	return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonRepresentationDrift, DecisionRequired), record)
+	return aliasWithPath(aliasOutcome(ActionNeedsDecision, ReasonRepresentationDrift, ConvergenceDecisionRequired), record)
 }
 
 // representationIntact reports whether the current regular target provably

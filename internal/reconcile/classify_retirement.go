@@ -32,7 +32,7 @@ func ClassifyRetirement(record Evaluation, platform string) RetirementClassifica
 	case row == nil && alias == nil:
 		return base
 	}
-	return withRetirementPath(retirementOutcome(ActionNoOp, ReasonAlreadyRetired, Converged), record)
+	return withRetirementPath(retirementOutcome(ActionNoOp, ReasonAlreadyRetired, ConvergenceConverged), record)
 }
 
 // fileRetirement classifies one active file row without a producer: tracking
@@ -40,17 +40,17 @@ func ClassifyRetirement(record Evaluation, platform string) RetirementClassifica
 // layer.
 func fileRetirement(record Evaluation, platform string) RetirementClassification {
 	if record.FileState.Layer().InactiveOn(platform) {
-		return withRetirementPath(retirementOutcome(ActionNoOp, ReasonInactivePlatform, Converged), record)
+		return withRetirementPath(retirementOutcome(ActionNoOp, ReasonInactivePlatform, ConvergenceConverged), record)
 	}
-	return withRetirementPath(retirementOutcome(ActionRetireState, ReasonSourceRemoved, ActionPending), record)
+	return withRetirementPath(retirementOutcome(ActionRetireFileState, ReasonSourceRemoved, ConvergencePending), record)
 }
 
 // aliasRetirement classifies one active alias row without a producer.
 func aliasRetirement(record Evaluation, platform string) RetirementClassification {
 	if record.AliasState.Layer().InactiveOn(platform) {
-		return withRetirementPath(retirementOutcome(ActionNoOp, ReasonInactivePlatform, Converged), record)
+		return withRetirementPath(retirementOutcome(ActionNoOp, ReasonInactivePlatform, ConvergenceConverged), record)
 	}
-	return withRetirementPath(retirementOutcome(ActionRetireAliasState, ReasonSourceRemoved, ActionPending), record)
+	return withRetirementPath(retirementOutcome(ActionRetireAliasState, ReasonSourceRemoved, ConvergencePending), record)
 }
 
 // retirementOutcome builds a bare classification from its three enum fields.

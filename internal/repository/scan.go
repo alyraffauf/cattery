@@ -64,90 +64,90 @@ type scopeScanner struct {
 	hooks     []HookCandidate
 }
 
-func (s *scopeScanner) scanScopeRoot() error {
-	entries, err := os.ReadDir(filepath.Join(s.repoRoot, s.scopeRoot))
+func (scanner *scopeScanner) scanScopeRoot() error {
+	entries, err := os.ReadDir(filepath.Join(scanner.repoRoot, scanner.scopeRoot))
 	if err != nil {
 		return err
 	}
 	for _, entry := range entries {
-		if err := s.scanEntry(entry); err != nil {
+		if err := scanner.scanEntry(entry); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *scopeScanner) scanEntry(entry os.DirEntry) error {
+func (scanner *scopeScanner) scanEntry(entry os.DirEntry) error {
 	control := ClassifyRoot(entry.Name())
 	switch {
 	// Root dot-directories do not promote to groups: pathsafe.GroupName
 	// rejects leading-"." names, so they must route to ordinary scanning
 	// (e.g. an ungrouped HOME tree rooted at a dot-directory) rather than
 	// being treated as a group.
-	case s.rootTree && control == ControlNone && entry.IsDir() && !strings.HasPrefix(entry.Name(), "."):
-		return s.beginGroup(entry)
+	case scanner.rootTree && control == ControlNone && entry.IsDir() && !strings.HasPrefix(entry.Name(), "."):
+		return scanner.beginGroup(entry)
 	case control == ControlNone:
-		return s.scanOrdinary(entry)
+		return scanner.scanOrdinary(entry)
 	case control == ControlSecrets:
-		return s.scanSecrets(entry)
+		return scanner.scanSecrets(entry)
 	case control == ControlHooks:
-		return s.scanHooks(entry)
+		return scanner.scanHooks(entry)
 	case control == ControlMetadata:
-		if s.rootTree {
+		if scanner.rootTree {
 			return nil
 		}
-		return s.scanOrdinary(entry)
+		return scanner.scanOrdinary(entry)
 	default:
 		return nil
 	}
 }
 
-func (s *scopeScanner) beginGroup(entry os.DirEntry) error {
+func (scanner *scopeScanner) beginGroup(entry os.DirEntry) error {
 	name := entry.Name()
 	if err := pathsafe.GroupName(name); err != nil {
 		return err
 	}
-	s.groups = append(s.groups, name)
-	previousScopeRoot, previousScope := s.scopeRoot, s.scope
-	s.scopeRoot = filepath.Join(s.scopeRoot, name)
-	s.scope = deployment.NewScope(name)
-	s.rootTree = false
-	err := s.scanScopeRoot()
-	s.scopeRoot, s.scope, s.rootTree = previousScopeRoot, previousScope, true
+	scanner.groups = append(scanner.groups, name)
+	previousScopeRoot, previousScope := scanner.scopeRoot, scanner.scope
+	scanner.scopeRoot = filepath.Join(scanner.scopeRoot, name)
+	scanner.scope = deployment.NewScope(name)
+	scanner.rootTree = false
+	err := scanner.scanScopeRoot()
+	scanner.scopeRoot, scanner.scope, scanner.rootTree = previousScopeRoot, previousScope, true
 	return err
 }
 
-func (s *scopeScanner) scanOrdinary(entry os.DirEntry) error {
+func (scanner *scopeScanner) scanOrdinary(entry os.DirEntry) error {
 	if entry.IsDir() {
-		return s.walkTree(entry.Name(), deployment.FileOrdinary)
+		return scanner.walkTree(entry.Name(), deployment.FileOrdinary)
 	}
 	if !entry.Type().IsRegular() {
-		return s.nonRegular(entry.Name())
+		return scanner.newNonRegularSourceError(entry.Name())
 	}
-	return s.addFileAt(entry.Name(), entry, deployment.FileOrdinary)
+	return scanner.addFileAt(entry.Name(), entry, deployment.FileOrdinary)
 }
 
-func (s *scopeScanner) scanSecrets(entry os.DirEntry) error {
+func (scanner *scopeScanner) scanSecrets(entry os.DirEntry) error {
 	if !entry.IsDir() {
 		return fmt.Errorf("repository: control %q is not a directory", entry.Name())
 	}
-	return s.walkTree(entry.Name(), deployment.FileSecret)
+	return scanner.walkTree(entry.Name(), deployment.FileSecret)
 }
 
-func (s *scopeScanner) scanHooks(entry os.DirEntry) error {
+func (scanner *scopeScanner) scanHooks(entry os.DirEntry) error {
 	if !entry.IsDir() {
 		return fmt.Errorf("repository: control %q is not a directory", entry.Name())
 	}
 	for _, phase := range []deployment.HookPhase{deployment.HookBefore, deployment.HookAfter} {
-		if err := s.scanHookPhase(entry.Name(), phase); err != nil {
+		if err := scanner.scanHookPhase(entry.Name(), phase); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *scopeScanner) scanHookPhase(hooksDir string, phase deployment.HookPhase) error {
-	path := filepath.Join(s.repoRoot, s.scopeRoot, hooksDir, string(phase))
+func (scanner *scopeScanner) scanHookPhase(hooksDir string, phase deployment.HookPhase) error {
+	path := filepath.Join(scanner.repoRoot, scanner.scopeRoot, hooksDir, string(phase))
 	info, err := os.Lstat(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -164,66 +164,66 @@ func (s *scopeScanner) scanHookPhase(hooksDir string, phase deployment.HookPhase
 	}
 	for _, entry := range entries {
 		if entry.Type().IsRegular() {
-			s.hooks = append(s.hooks, s.hookCandidate(hooksDir, phase, entry.Name()))
+			scanner.hooks = append(scanner.hooks, scanner.hookCandidate(hooksDir, phase, entry.Name()))
 		}
 	}
 	return nil
 }
 
-func (s *scopeScanner) walkTree(relative string, kind deployment.FileKind) error {
-	entries, err := os.ReadDir(filepath.Join(s.repoRoot, s.scopeRoot, relative))
+func (scanner *scopeScanner) walkTree(relative string, kind deployment.FileKind) error {
+	entries, err := os.ReadDir(filepath.Join(scanner.repoRoot, scanner.scopeRoot, relative))
 	if err != nil {
 		return err
 	}
 	for _, entry := range entries {
-		if err := s.walkEntry(relative, entry, kind); err != nil {
+		if err := scanner.walkEntry(relative, entry, kind); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *scopeScanner) walkEntry(parent string, entry os.DirEntry, kind deployment.FileKind) error {
+func (scanner *scopeScanner) walkEntry(parent string, entry os.DirEntry, kind deployment.FileKind) error {
 	path := filepath.Join(parent, entry.Name())
 	if entry.IsDir() {
-		return s.walkTree(path, kind)
+		return scanner.walkTree(path, kind)
 	}
 	if !entry.Type().IsRegular() {
-		return s.nonRegular(path)
+		return scanner.newNonRegularSourceError(path)
 	}
-	return s.addFileAt(path, entry, kind)
+	return scanner.addFileAt(path, entry, kind)
 }
 
-func (s *scopeScanner) addFileAt(relative string, entry os.DirEntry, kind deployment.FileKind) error {
+func (scanner *scopeScanner) addFileAt(relative string, entry os.DirEntry, kind deployment.FileKind) error {
 	info, err := entry.Info()
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(s.scopeRoot, relative)
-	s.files = append(s.files, Candidate{
-		Scope:          s.scope,
+	path := filepath.Join(scanner.scopeRoot, relative)
+	scanner.files = append(scanner.files, Candidate{
+		Scope:          scanner.scope,
 		Layer:          deployment.LayerBase,
 		Kind:           kind,
 		SourceRepoPath: path,
-		SourceAbsPath:  filepath.Join(s.repoRoot, path),
+		SourceAbsPath:  filepath.Join(scanner.repoRoot, path),
 		ExecutableBits: info.Mode() & deployment.ExecutableBitMask,
 	})
 	return nil
 }
 
-func (s *scopeScanner) hookCandidate(hooks string, phase deployment.HookPhase, name string) HookCandidate {
-	path := filepath.Join(s.scopeRoot, hooks, string(phase), name)
+func (scanner *scopeScanner) hookCandidate(hooks string, phase deployment.HookPhase, name string) HookCandidate {
+	path := filepath.Join(scanner.scopeRoot, hooks, string(phase), name)
 	return HookCandidate{
-		Scope:          s.scope,
+		Scope:          scanner.scope,
 		Phase:          phase,
 		Name:           name,
-		AbsolutePath:   filepath.Join(s.repoRoot, path),
+		AbsolutePath:   filepath.Join(scanner.repoRoot, path),
 		RepositoryPath: path,
 	}
 }
 
-func (s *scopeScanner) nonRegular(relative string) error {
-	return fmt.Errorf("repository: non-regular source entry %q", filepath.Join(s.scopeRoot, relative))
+func (scanner *scopeScanner) newNonRegularSourceError(relative string) error {
+	return fmt.Errorf("repository: non-regular source entry %q", filepath.Join(scanner.scopeRoot, relative))
 }
 
 func checkGroupCollisions(groups []string) error {

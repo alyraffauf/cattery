@@ -14,7 +14,7 @@ func (service *Service) classify(ctx context.Context, assembly reconcile.Evaluat
 	records := assembly.All()
 	evaluated := make([]Record, 0, len(records))
 	for _, record := range records {
-		fingerprints, err := semantics.fingerprints(fingerprintInput{
+		semanticFingerprints, err := semantics.semanticFingerprints(fingerprintInput{
 			context: ctx, home: assembly.HomePath, record: record,
 			includeUnmanagedTargetDigest: service.includeUnmanagedTargetDigest,
 		})
@@ -23,10 +23,10 @@ func (service *Service) classify(ctx context.Context, assembly reconcile.Evaluat
 		}
 		evaluated = append(evaluated, Record{
 			Evaluation: record,
-			File:       reconcile.ClassifyFile(record, fingerprints),
-			Alias:      reconcile.ClassifyAlias(record, fingerprints),
+			File:       reconcile.ClassifyFile(record, semanticFingerprints),
+			Alias:      reconcile.ClassifyAlias(record, semanticFingerprints),
 			Retirement: reconcile.ClassifyRetirement(record, assembly.Platform),
-			Semantics:  fingerprints,
+			Semantics:  semanticFingerprints,
 		})
 	}
 	return evaluated, nil
@@ -48,7 +48,7 @@ type semanticState struct {
 	haveKey      bool
 }
 
-func (state *semanticState) fingerprints(input fingerprintInput) (reconcile.FileSemantics, error) {
+func (semanticState *semanticState) semanticFingerprints(input fingerprintInput) (reconcile.FileSemantics, error) {
 	ctx, home, record := input.context, input.home, input.record
 	if record.Entry != reconcile.PlanEntryFile {
 		if input.includeUnmanagedTargetDigest && record.Target.Kind() == reconcile.KindFile {
@@ -62,29 +62,29 @@ func (state *semanticState) fingerprints(input fingerprintInput) (reconcile.File
 			Target: record.Target.Digest(),
 		}, nil
 	}
-	return state.secretFingerprints(ctx, home, record)
+	return semanticState.secretSemanticFingerprints(ctx, home, record)
 }
 
-func (state *semanticState) secretFingerprints(ctx context.Context, home string, record reconcile.Evaluation) (reconcile.FileSemantics, error) {
+func (semanticState *semanticState) secretSemanticFingerprints(ctx context.Context, home string, record reconcile.Evaluation) (reconcile.FileSemantics, error) {
 	semantics := reconcile.FileSemantics{}
 	targetFile := record.Target.Kind() == reconcile.KindFile
 	if !targetFile && !SecretDecryptionNeeded(record) {
 		return semantics, nil
 	}
-	if err := state.recover(); err != nil {
+	if err := semanticState.loadHashKey(); err != nil {
 		return semantics, err
 	}
 	if targetFile {
-		content, err := ReadTargetContent(home, record, state.commandLabel)
+		content, err := ReadTargetContent(home, record, semanticState.commandLabel)
 		if err != nil {
 			return semantics, err
 		}
-		semantics.Target = deployment.SecretSemantic(content, state.key)
+		semantics.Target = deployment.SecretSemantic(content, semanticState.key)
 	}
 	if SecretDecryptionNeeded(record) {
-		source, err := record.Source.KeyedSemantic(ctx, state.key)
+		source, err := record.Source.KeyedSemantic(ctx, semanticState.key)
 		if err != nil {
-			return semantics, categorized(err, state.commandLabel+": decrypt source "+record.File.SourceRepositoryPath)
+			return semantics, categorized(err, semanticState.commandLabel+": decrypt source "+record.File.SourceRepositoryPath)
 		}
 		semantics.Source = source
 	}
@@ -107,14 +107,14 @@ func SecretDecryptionNeeded(record reconcile.Evaluation) bool {
 	return record.Source.Snapshot().Storage() != record.FileState.BaselineSource()
 }
 
-func (state *semanticState) recover() error {
-	if state.haveKey {
+func (semanticState *semanticState) loadHashKey() error {
+	if semanticState.haveKey {
 		return nil
 	}
-	key, err := state.reader.RecoverHashKey()
+	key, err := semanticState.reader.RecoverHashKey()
 	if err != nil {
-		return failure.New(failure.Operational, state.commandLabel+": recover hash key", err)
+		return failure.New(failure.Operational, semanticState.commandLabel+": load hash key", err)
 	}
-	state.key, state.haveKey = key, true
+	semanticState.key, semanticState.haveKey = key, true
 	return nil
 }

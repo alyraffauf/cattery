@@ -49,7 +49,7 @@ const (
 	ActionWriteSourceToTarget
 	ActionEstablishBaseline
 	ActionNeedsDecision
-	ActionRetireState
+	ActionRetireFileState
 	ActionCreateAlias
 	ActionReplaceAlias
 	ActionVerifyAlias
@@ -88,13 +88,13 @@ func (r Reason) Valid() bool { return r >= ReasonNoChange && r <= ReasonAlreadyR
 type Convergence int
 
 const (
-	Converged Convergence = iota
-	ActionPending
-	DecisionRequired
-	Rejected
+	ConvergenceConverged Convergence = iota
+	ConvergencePending
+	ConvergenceDecisionRequired
+	ConvergenceRejected
 )
 
-func (c Convergence) Valid() bool { return c >= Converged && c <= Rejected }
+func (c Convergence) Valid() bool { return c >= ConvergenceConverged && c <= ConvergenceRejected }
 
 // DecisionChoice names one answer a user may give to a resolution prompt.
 type DecisionChoice int
@@ -148,13 +148,13 @@ func NewDecisionSpec(input DecisionSpecInput) (DecisionSpec, error) {
 	return DecisionSpec{targetPath: input.TargetPath, action: input.Action, reason: input.Reason, choices: append([]DecisionChoice(nil), input.Choices...)}, nil
 }
 
-func (s DecisionSpec) TargetPath() string { return s.targetPath }
-func (s DecisionSpec) Action() Action     { return s.action }
-func (s DecisionSpec) Reason() Reason     { return s.reason }
+func (spec DecisionSpec) TargetPath() string { return spec.targetPath }
+func (spec DecisionSpec) Action() Action     { return spec.action }
+func (spec DecisionSpec) Reason() Reason     { return spec.reason }
 
 // AllChoices returns a defensive copy of the resolution choices.
-func (s DecisionSpec) AllChoices() []DecisionChoice {
-	return append([]DecisionChoice(nil), s.choices...)
+func (spec DecisionSpec) AllChoices() []DecisionChoice {
+	return append([]DecisionChoice(nil), spec.choices...)
 }
 
 // SourceSnapshot freezes the immutable facts of one deployment source.
@@ -168,13 +168,13 @@ type SourceSnapshot struct {
 	executable fs.FileMode
 }
 
-func (s SourceSnapshot) Path() string                { return s.path }
-func (s SourceSnapshot) Identity() pathsafe.Identity { return s.identity }
-func (s SourceSnapshot) Kind() EntryKind             { return s.kind }
-func (s SourceSnapshot) Token() ContentToken         { return s.token }
-func (s SourceSnapshot) Semantic() deployment.Digest { return s.semantic }
-func (s SourceSnapshot) Storage() deployment.Digest  { return s.storage }
-func (s SourceSnapshot) Executable() fs.FileMode     { return s.executable }
+func (snapshot SourceSnapshot) Path() string                { return snapshot.path }
+func (snapshot SourceSnapshot) Identity() pathsafe.Identity { return snapshot.identity }
+func (snapshot SourceSnapshot) Kind() EntryKind             { return snapshot.kind }
+func (snapshot SourceSnapshot) Token() ContentToken         { return snapshot.token }
+func (snapshot SourceSnapshot) Semantic() deployment.Digest { return snapshot.semantic }
+func (snapshot SourceSnapshot) Storage() deployment.Digest  { return snapshot.storage }
+func (snapshot SourceSnapshot) Executable() fs.FileMode     { return snapshot.executable }
 
 // TargetSnapshot freezes the immutable facts of one destination observation
 // and doubles as the immutable target precondition (PLAN.md Section 12.4).
@@ -189,14 +189,14 @@ type TargetSnapshot struct {
 	payload     string
 }
 
-func (t TargetSnapshot) Destination() Destination    { return t.destination }
-func (t TargetSnapshot) Parent() pathsafe.Identity   { return t.parent }
-func (t TargetSnapshot) Kind() EntryKind             { return t.kind }
-func (t TargetSnapshot) Identity() pathsafe.Identity { return t.identity }
-func (t TargetSnapshot) Token() ContentToken         { return t.token }
-func (t TargetSnapshot) Digest() deployment.Digest   { return t.digest }
-func (t TargetSnapshot) Mode() fs.FileMode           { return t.mode }
-func (t TargetSnapshot) Payload() string             { return t.payload }
+func (snapshot TargetSnapshot) Destination() Destination    { return snapshot.destination }
+func (snapshot TargetSnapshot) Parent() pathsafe.Identity   { return snapshot.parent }
+func (snapshot TargetSnapshot) Kind() EntryKind             { return snapshot.kind }
+func (snapshot TargetSnapshot) Identity() pathsafe.Identity { return snapshot.identity }
+func (snapshot TargetSnapshot) Token() ContentToken         { return snapshot.token }
+func (snapshot TargetSnapshot) Digest() deployment.Digest   { return snapshot.digest }
+func (snapshot TargetSnapshot) Mode() fs.FileMode           { return snapshot.mode }
+func (snapshot TargetSnapshot) Payload() string             { return snapshot.payload }
 
 // FileState is one immutable evaluation record of a persisted file row.
 type FileState struct {
@@ -212,16 +212,16 @@ type FileState struct {
 	retiredAt       *time.Time
 }
 
-func (s FileState) TargetPath() string                 { return s.targetPath }
-func (s FileState) GroupName() string                  { return s.groupName }
-func (s FileState) SourcePath() string                 { return s.sourcePath }
-func (s FileState) SourceKind() deployment.FileKind    { return s.sourceKind }
-func (s FileState) Layer() deployment.Layer            { return s.layer }
-func (s FileState) BaselineContent() deployment.Digest { return s.baselineContent }
-func (s FileState) BaselineSource() deployment.Digest  { return s.baselineSource }
-func (s FileState) ExecutableBits() fs.FileMode        { return s.executableBits }
-func (s FileState) Active() bool                       { return s.active }
-func (s FileState) RetiredAt() *time.Time              { return state.CloneTimestamp(s.retiredAt) }
+func (fileState FileState) TargetPath() string                 { return fileState.targetPath }
+func (fileState FileState) GroupName() string                  { return fileState.groupName }
+func (fileState FileState) SourcePath() string                 { return fileState.sourcePath }
+func (fileState FileState) SourceKind() deployment.FileKind    { return fileState.sourceKind }
+func (fileState FileState) Layer() deployment.Layer            { return fileState.layer }
+func (fileState FileState) BaselineContent() deployment.Digest { return fileState.baselineContent }
+func (fileState FileState) BaselineSource() deployment.Digest  { return fileState.baselineSource }
+func (fileState FileState) ExecutableBits() fs.FileMode        { return fileState.executableBits }
+func (fileState FileState) Active() bool                       { return fileState.active }
+func (fileState FileState) RetiredAt() *time.Time              { return state.CloneTimestamp(fileState.retiredAt) }
 
 // AliasState is one immutable evaluation record of a persisted alias row.
 type AliasState struct {
@@ -233,9 +233,11 @@ type AliasState struct {
 	retiredAt           *time.Time
 }
 
-func (s AliasState) AliasPath() string           { return s.aliasPath }
-func (s AliasState) CanonicalTargetPath() string { return s.canonicalTargetPath }
-func (s AliasState) GroupName() string           { return s.groupName }
-func (s AliasState) Layer() state.AliasLayer     { return s.layer }
-func (s AliasState) Active() bool                { return s.active }
-func (s AliasState) RetiredAt() *time.Time       { return state.CloneTimestamp(s.retiredAt) }
+func (aliasState AliasState) AliasPath() string           { return aliasState.aliasPath }
+func (aliasState AliasState) CanonicalTargetPath() string { return aliasState.canonicalTargetPath }
+func (aliasState AliasState) GroupName() string           { return aliasState.groupName }
+func (aliasState AliasState) Layer() state.AliasLayer     { return aliasState.layer }
+func (aliasState AliasState) Active() bool                { return aliasState.active }
+func (aliasState AliasState) RetiredAt() *time.Time {
+	return state.CloneTimestamp(aliasState.retiredAt)
+}
