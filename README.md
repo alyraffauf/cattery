@@ -17,7 +17,14 @@ Cattery is a single static binary. Build it with Go 1.25 or newer:
 go build ./cmd/cattery
 ```
 
-A Nix flake is provided for development:
+Or with the Nix flake:
+
+```
+nix build
+nix run . -- version
+```
+
+A development shell is also available:
 
 ```
 nix develop

@@ -1,27 +1,28 @@
 {
   description = "Cattery — a safe, cross-platform dotfiles manager";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    flake-parts.url = "github:hercules-ci/flake-parts";
 
-  outputs = { self, nixpkgs }:
-    let
-      supportedSystems = [ "x86_64-linux" ];
-      forAllSystems = function:
-        nixpkgs.lib.genAttrs supportedSystems (system: function system);
-      pkgsFor = system: import nixpkgs { inherit system; };
-      shellPackages = pkgs: with pkgs; [ go_1_26 just ];
-    in
-    {
-      devShells = forAllSystems (system:
-        let pkgs = pkgsFor system; in
-        {
-          default = pkgs.mkShell {
-            packages = shellPackages pkgs;
-          };
-        });
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
-      checks = forAllSystems (system: {
-        devShell = self.devShells.${system}.default;
-      });
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      systems = [
+        "aarch64-linux"
+        "x86_64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
+
+      imports = [
+        ./flake
+        inputs.treefmt-nix.flakeModule
+      ];
     };
 }
