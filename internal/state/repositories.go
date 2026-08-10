@@ -47,29 +47,6 @@ SELECT ` + repositoryColumns + `
 FROM repositories
 ORDER BY root_path, home_path`
 
-// RegisterRepository records the canonical (root, home) pair and refreshes its
-// last-seen timestamp, returning the stored row. Re-registering an existing
-// pair is idempotent: the row id, creation time, and default flag survive.
-func (store *Store) RegisterRepository(root, home string) (Repository, error) {
-	root, home, err := canonicalRepositoryPair(root, home)
-	if err != nil {
-		return Repository{}, err
-	}
-	now := formatTimestamp(store.now())
-	transaction, err := store.database.conn.Begin()
-	if err != nil {
-		return Repository{}, err
-	}
-	if err := execIn(transaction, repositoryUpsertSQL, root, home, now, now); err != nil {
-		return Repository{}, err
-	}
-	repository, err := scanAndCommit(transaction, root, home)
-	if err != nil {
-		return Repository{}, err
-	}
-	return repository, nil
-}
-
 // SetDefaultRepository registers the canonical pair and promotes it to the
 // sole default of its home in one transaction, demoting any previous default.
 func (store *Store) SetDefaultRepository(root, home string) (Repository, error) {

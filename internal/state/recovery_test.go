@@ -44,9 +44,9 @@ type baselineSeed struct {
 // insertSecretBaseline inserts one secret file row for the registered pair.
 func insertSecretBaseline(t *testing.T, store *Store, seed baselineSeed) {
 	t.Helper()
-	repository, err := store.RegisterRepository(seed.root, seed.home)
+	repository, err := store.SetDefaultRepository(seed.root, seed.home)
 	if err != nil {
-		t.Fatalf("RegisterRepository: %v", err)
+		t.Fatalf("register repository: %v", err)
 	}
 	execOn(t, store.Database().conn, fmt.Sprintf(
 		"INSERT INTO files (repository_id, target_path, group_name, source_path, source_kind, layer, baseline_content_hash, baseline_source_hash, executable_bits, status, applied_at) VALUES (%d, '%s', '', 'secrets/%s', 'secret', 'base', X'0101010101010101010101010101010101010101010101010101010101010101', X'0202020202020202020202020202020202020202020202020202020202020202', 384, 'active', '2026-01-02T03:04:05Z')",

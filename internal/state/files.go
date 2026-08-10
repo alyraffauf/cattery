@@ -27,8 +27,6 @@ ON CONFLICT(repository_id, target_path) DO UPDATE SET
 
 const fileRetireSQL = "UPDATE files SET status = 'retired', retired_at = ? WHERE repository_id = ? AND target_path = ?"
 
-const fileReactivateSQL = "UPDATE files SET status = 'active', retired_at = NULL, applied_at = ? WHERE repository_id = ? AND target_path = ?"
-
 const fileByPairTargetSQL = `
 SELECT ` + fileColumns + `
 FROM files f JOIN repositories r ON r.id = f.repository_id
@@ -38,11 +36,6 @@ const allFileBaselinesSQL = `
 SELECT ` + fileColumns + `
 FROM files f JOIN repositories r ON r.id = f.repository_id
 WHERE r.root_path = ? AND r.home_path = ? ORDER BY f.target_path`
-
-const activeFileBaselinesSQL = `
-SELECT ` + fileColumns + `
-FROM files f JOIN repositories r ON r.id = f.repository_id
-WHERE r.root_path = ? AND r.home_path = ? AND f.status = 'active' ORDER BY f.target_path`
 
 // dualActiveByPairSQL lists paths active in both representations of a pair,
 // which the schema cannot express as a constraint (PLAN.md Section 8.4).
@@ -56,10 +49,6 @@ ORDER BY f.target_path`
 const allFileGroupsSQL = `
 SELECT DISTINCT group_name FROM files f JOIN repositories r ON r.id = f.repository_id
 WHERE r.root_path = ? AND r.home_path = ? ORDER BY group_name`
-
-const activeFileGroupsSQL = `
-SELECT DISTINCT group_name FROM files f JOIN repositories r ON r.id = f.repository_id
-WHERE r.root_path = ? AND r.home_path = ? AND f.status = 'active' ORDER BY group_name`
 
 // fileBaselineKey identifies one row by canonical pair and target.
 type fileBaselineKey struct {
@@ -100,12 +89,6 @@ func (store *Store) UpsertFileBaseline(root, home string, baseline FileBaseline)
 // retaining the baseline for diagnostics and reactivation.
 func (store *Store) RetireFileBaseline(root, home, target string) (FileBaseline, error) {
 	return store.setFileStatus(fileBaselineKey{root: root, home: home, target: target}, fileRetireSQL)
-}
-
-// ReactivateFileBaseline restores a retired row to active without touching its
-// retained baseline, which the caller reconciles against.
-func (store *Store) ReactivateFileBaseline(root, home, target string) (FileBaseline, error) {
-	return store.setFileStatus(fileBaselineKey{root: root, home: home, target: target}, fileReactivateSQL)
 }
 
 func (store *Store) setFileStatus(key fileBaselineKey, statement string) (FileBaseline, error) {
@@ -153,15 +136,6 @@ func (store *Store) FileBaselines(root, home string) ([]FileBaseline, error) {
 	return store.readFileBaselines(allFileBaselinesSQL, root, home)
 }
 
-// ActiveFileBaselines reads the active file rows of the canonical pair.
-func (store *Store) ActiveFileBaselines(root, home string) ([]FileBaseline, error) {
-	root, home, err := canonicalRepositoryPair(root, home)
-	if err != nil {
-		return nil, err
-	}
-	return store.readFileBaselines(activeFileBaselinesSQL, root, home)
-}
-
 // FileGroups lists the distinct group names of any file row, so an explicitly
 // selected retired-only group remains valid.
 func (store *Store) FileGroups(root, home string) ([]string, error) {
@@ -170,14 +144,4 @@ func (store *Store) FileGroups(root, home string) ([]string, error) {
 		return nil, err
 	}
 	return store.readFileGroups(allFileGroupsSQL, root, home)
-}
-
-// ActiveFileGroups lists the distinct group names with an active file row, so
-// no-argument selection can exclude retired-only groups.
-func (store *Store) ActiveFileGroups(root, home string) ([]string, error) {
-	root, home, err := canonicalRepositoryPair(root, home)
-	if err != nil {
-		return nil, err
-	}
-	return store.readFileGroups(activeFileGroupsSQL, root, home)
 }

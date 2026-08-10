@@ -15,7 +15,7 @@ func SortBefore(hooks []deployment.Hook) {
 			return firstHook.Phase == deployment.HookBefore
 		}
 		if firstHook.Phase == deployment.HookBefore {
-			return LessBefore(firstHook, secondHook)
+			return lessBefore(firstHook, secondHook)
 		}
 		return false
 	})
@@ -30,15 +30,15 @@ func SortAfter(hooks []deployment.Hook) {
 			return firstHook.Phase == deployment.HookBefore
 		}
 		if firstHook.Phase == deployment.HookAfter {
-			return LessAfter(firstHook, secondHook)
+			return lessAfter(firstHook, secondHook)
 		}
 		return false
 	})
 }
 
-// LessBefore reports whether a precedes b among before-phase hooks: repository
+// lessBefore reports whether a precedes b among before-phase hooks: repository
 // scope first, then groups bytewise, then names bytewise.
-func LessBefore(a, b deployment.Hook) bool {
+func lessBefore(a, b deployment.Hook) bool {
 	if a.Scope.Group != b.Scope.Group {
 		if a.Scope.Group == "" {
 			return true
@@ -51,9 +51,9 @@ func LessBefore(a, b deployment.Hook) bool {
 	return a.Name < b.Name
 }
 
-// LessAfter reports whether a precedes b among after-phase hooks: groups
+// lessAfter reports whether a precedes b among after-phase hooks: groups
 // bytewise first, repository scope last, then names bytewise.
-func LessAfter(a, b deployment.Hook) bool {
+func lessAfter(a, b deployment.Hook) bool {
 	if a.Scope.Group != b.Scope.Group {
 		if a.Scope.Group == "" {
 			return false

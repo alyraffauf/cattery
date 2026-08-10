@@ -1,19 +1,9 @@
 package deployment
 
-import (
-	"slices"
-	"sort"
-)
+import "sort"
 
-// LessScope reports whether scope a precedes b in bytewise group order. The
-// root scope (empty Group) sorts first because the empty string is the
-// bytewise minimum.
-func LessScope(a, b Scope) bool {
-	return a.Group < b.Group
-}
-
-// LessManagedFile reports whether file a precedes b in a bytewise total order.
-func LessManagedFile(a, b ManagedFile) bool {
+// lessManagedFile reports whether file a precedes b in a bytewise total order.
+func lessManagedFile(a, b ManagedFile) bool {
 	if a.TargetRelativePath != b.TargetRelativePath {
 		return a.TargetRelativePath < b.TargetRelativePath
 	}
@@ -35,16 +25,16 @@ func LessManagedFile(a, b ManagedFile) bool {
 	return a.SourceExecutableBits < b.SourceExecutableBits
 }
 
-// LessAlias reports whether alias a precedes b in bytewise AliasRelativePath
+// lessAlias reports whether alias a precedes b in bytewise AliasRelativePath
 // order.
-func LessAlias(a, b Alias) bool {
+func lessAlias(a, b Alias) bool {
 	return a.AliasRelativePath < b.AliasRelativePath
 }
 
-// LessHook reports whether hook a precedes b. Comparison is bytewise on
+// lessHook reports whether hook a precedes b. Comparison is bytewise on
 // (phase, scope.Group, name). The apply orchestrator, not this comparator,
 // owns final execution order between phases and scopes.
-func LessHook(a, b Hook) bool {
+func lessHook(a, b Hook) bool {
 	if a.Phase != b.Phase {
 		return a.Phase < b.Phase
 	}
@@ -54,45 +44,23 @@ func LessHook(a, b Hook) bool {
 	return a.Name < b.Name
 }
 
-// SortFiles sorts files in place by LessManagedFile, stably.
+// SortFiles sorts files in place by target path, stably.
 func SortFiles(files []ManagedFile) {
-	sort.SliceStable(files, indexLess(files, LessManagedFile))
+	sort.SliceStable(files, indexLess(files, lessManagedFile))
 }
 
-// SortAliases sorts aliases in place by LessAlias, stably.
+// SortAliases sorts aliases in place by alias path, stably.
 func SortAliases(aliases []Alias) {
-	sort.SliceStable(aliases, indexLess(aliases, LessAlias))
+	sort.SliceStable(aliases, indexLess(aliases, lessAlias))
 }
 
-// SortHooks sorts hooks in place by LessHook, stably.
+// SortHooks sorts hooks in place by phase, scope, and name, stably.
 func SortHooks(hooks []Hook) {
-	sort.SliceStable(hooks, indexLess(hooks, LessHook))
-}
-
-// SortGroups returns a copy of groups sorted in bytewise order with duplicates
-// removed.
-func SortGroups(groups []string) []string {
-	sorted := copyStrings(groups)
-	slices.Sort(sorted)
-	return compactStrings(sorted)
+	sort.SliceStable(hooks, indexLess(hooks, lessHook))
 }
 
 func indexLess[T any](items []T, less func(a, b T) bool) func(int, int) bool {
 	return func(i, j int) bool {
 		return less(items[i], items[j])
 	}
-}
-
-func compactStrings(sorted []string) []string {
-	if len(sorted) == 0 {
-		return sorted
-	}
-	write := 1
-	for read := 1; read < len(sorted); read++ {
-		if sorted[read] != sorted[read-1] {
-			sorted[write] = sorted[read]
-			write++
-		}
-	}
-	return sorted[:write]
 }

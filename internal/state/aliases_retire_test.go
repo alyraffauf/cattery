@@ -42,42 +42,6 @@ func testAliasRetirementRequiresRow(t *testing.T) {
 	}
 }
 
-func testAliasReactivation(t *testing.T) {
-	store := openStore(t, tempDependencies(t))
-	root := t.TempDir()
-	home := t.TempDir()
-	seedAlias(t, store, aliasSpec{root: root, home: home, alias: ".once", canonical: ".config/once"})
-	if _, err := store.RetireAliasBaseline(root, home, ".once"); err != nil {
-		t.Fatalf("retire: %v", err)
-	}
-	restored, err := store.ReactivateAliasBaseline(root, home, ".once")
-	requireNoError(t, err)
-	if restored.Status != StatusActive || restored.RetiredAt != nil {
-		t.Fatal("reactivation left status or timestamp behind")
-	}
-	if restored.CanonicalTargetPath != ".config/once" {
-		t.Fatalf("reactivation lost the payload: %+v", restored)
-	}
-}
-
-func testAliasDeterministicReads(t *testing.T) {
-	store := openStore(t, tempDependencies(t))
-	root := t.TempDir()
-	home := t.TempDir()
-	seedAlias(t, store, aliasSpec{root: root, home: home, alias: ".z", canonical: ".config/z"})
-	seedAlias(t, store, aliasSpec{root: root, home: home, alias: ".a", canonical: ".config/a", group: "zeta"})
-	seedAlias(t, store, aliasSpec{root: root, home: home, alias: ".m", canonical: ".config/m", group: "alpha"})
-	if _, err := store.RetireAliasBaseline(root, home, ".a"); err != nil {
-		t.Fatalf("retire: %v", err)
-	}
-	if groups, err := store.AliasGroups(root, home); err != nil || len(groups) != 3 || groups[0] != "" || groups[1] != "alpha" || groups[2] != "zeta" {
-		t.Fatalf("AliasGroups = %v (%v), want ['', alpha, zeta]", groups, err)
-	}
-	if active, err := store.ActiveAliasGroups(root, home); err != nil || len(active) != 2 || active[0] != "" || active[1] != "alpha" {
-		t.Fatalf("ActiveAliasGroups = %v (%v), want ['', alpha]", active, err)
-	}
-}
-
 func testAliasRollback(t *testing.T) {
 	store := openStore(t, tempDependencies(t))
 	root := t.TempDir()
@@ -104,9 +68,6 @@ func testAliasDualActiveCorruption(t *testing.T) {
 		root, home))
 	if _, err := store.AliasBaselines(root, home); err == nil {
 		t.Fatal("alias snapshot accepted a dual-active path")
-	}
-	if _, err := store.ActiveAliasBaselines(root, home); err == nil {
-		t.Fatal("active alias snapshot accepted a dual-active path")
 	}
 }
 

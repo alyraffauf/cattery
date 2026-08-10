@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"testing"
 )
@@ -25,7 +24,6 @@ func TestDatabaseOpen(t *testing.T) {
 		{"rejects wrong file mode", testRejectsWrongFileMode},
 		{"open failure leaves no connection", testOpenFailureLeavesNoConnection},
 		{"rejects relative state home", testRejectsRelativeStateHome},
-		{"resolves cattery database path", testResolvesCatteryDatabasePath},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
@@ -140,9 +138,6 @@ func testOpenFailureLeavesNoConnection(t *testing.T) {
 
 func testRejectsRelativeStateHome(t *testing.T) {
 	t.Setenv("XDG_STATE_HOME", "relative/path")
-	if _, err := ResolveDatabasePath(); err == nil {
-		t.Fatal("ResolveDatabasePath accepted a relative XDG_STATE_HOME")
-	}
 	if _, err := resolveStateHome("relative/path"); err == nil {
 		t.Fatal("resolveStateHome accepted a relative explicit home")
 	}
@@ -153,17 +148,6 @@ func testRejectsRelativeStateHome(t *testing.T) {
 	}
 	if got != home {
 		t.Fatalf("resolveStateHome = %q, want %q", got, home)
-	}
-}
-
-func testResolvesCatteryDatabasePath(t *testing.T) {
-	path, err := ResolveDatabasePath()
-	if err != nil {
-		t.Fatalf("ResolveDatabasePath: %v", err)
-	}
-	suffix := "/" + catteryDirectoryName + "/" + stateDatabaseFileName
-	if !strings.HasSuffix(path, suffix) {
-		t.Fatalf("ResolveDatabasePath = %q, want suffix %q", path, suffix)
 	}
 }
 

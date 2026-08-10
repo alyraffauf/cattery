@@ -12,13 +12,10 @@ func TestDeploymentOrdering(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{"empty inputs are safe", testSortEmpty},
-		{"root scope sorts first", testRootScopeFirst},
-		{"unicode bytewise order", testUnicodeScopeOrder},
 		{"managed file total order", testManagedFileOrder},
 		{"managed file tie breakers", testManagedFileTieBreakers},
 		{"alias bytewise order", testAliasOrder},
 		{"both hook phases", testHookPhaseOrder},
-		{"groups dedup and sort", testGroupsDedup},
 		{"file permutations converge", testFilePermutations},
 		{"alias permutations converge", testAliasPermutations},
 	}
@@ -31,27 +28,6 @@ func testSortEmpty(t *testing.T) {
 	SortFiles(nil)
 	SortAliases(nil)
 	SortHooks(nil)
-	if got := SortGroups(nil); len(got) != 0 {
-		t.Fatalf("SortGroups(nil) = %v", got)
-	}
-}
-
-func testRootScopeFirst(t *testing.T) {
-	if !LessScope(NewScope(""), NewScope("atuin")) {
-		t.Fatal("root scope must sort before any named group")
-	}
-	if LessScope(NewScope("atuin"), NewScope("")) {
-		t.Fatal("named group must not sort before root scope")
-	}
-}
-
-func testUnicodeScopeOrder(t *testing.T) {
-	if !LessScope(NewScope("Apple"), NewScope("äpple")) {
-		t.Fatal("'Apple' must sort before 'äpple' bytewise")
-	}
-	if !LessScope(NewScope("atom"), NewScope("ätzend")) {
-		t.Fatal("'atom' must sort before 'ätzend' bytewise")
-	}
 }
 
 func testManagedFileOrder(t *testing.T) {
@@ -131,18 +107,6 @@ func testHookPhaseOrder(t *testing.T) {
 	}
 	if hooks[2].Name != "z" {
 		t.Fatalf("'z' must sort last: %q", hooks[2].Name)
-	}
-}
-
-func testGroupsDedup(t *testing.T) {
-	input := []string{"zsh", "atuin", "zsh", "atuin", "bash"}
-	got := SortGroups(input)
-	want := []string{"atuin", "bash", "zsh"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("SortGroups = %v, want %v", got, want)
-	}
-	if len(input) != 5 || input[0] != "zsh" {
-		t.Fatalf("SortGroups mutated caller input: %v", input)
 	}
 }
 

@@ -63,41 +63,6 @@ func testFileRetirementRequiresRow(t *testing.T) {
 	}
 }
 
-func testFileReactivation(t *testing.T) {
-	store := openStore(t, tempDependencies(t))
-	root := t.TempDir()
-	home := t.TempDir()
-	seedOrdinary(t, store, seedSpec{root: root, home: home, target: ".once", fill: 0x41})
-	if _, err := store.RetireFileBaseline(root, home, ".once"); err != nil {
-		t.Fatalf("retire: %v", err)
-	}
-	restored, err := store.ReactivateFileBaseline(root, home, ".once")
-	if err != nil {
-		t.Fatalf("ReactivateFileBaseline: %v", err)
-	}
-	if restored.Status != StatusActive || restored.RetiredAt != nil {
-		t.Fatal("reactivation left status or timestamp behind")
-	}
-}
-
-func testFileDeterministicReads(t *testing.T) {
-	store := openStore(t, tempDependencies(t))
-	root := t.TempDir()
-	home := t.TempDir()
-	seedOrdinary(t, store, seedSpec{root: root, home: home, target: ".z", fill: 0x91})
-	seedOrdinary(t, store, seedSpec{root: root, home: home, target: ".a", group: "zeta", fill: 0x92})
-	seedOrdinary(t, store, seedSpec{root: root, home: home, target: ".m", group: "alpha", fill: 0x93})
-	if _, err := store.RetireFileBaseline(root, home, ".a"); err != nil {
-		t.Fatalf("retire: %v", err)
-	}
-	if groups, err := store.FileGroups(root, home); err != nil || len(groups) != 3 || groups[0] != "" || groups[1] != "alpha" || groups[2] != "zeta" {
-		t.Fatalf("FileGroups = %v (%v), want ['', alpha, zeta]", groups, err)
-	}
-	if active, err := store.ActiveFileGroups(root, home); err != nil || len(active) != 2 || active[0] != "" || active[1] != "alpha" {
-		t.Fatalf("ActiveFileGroups = %v (%v), want ['', alpha]", active, err)
-	}
-}
-
 func testFileRollback(t *testing.T) {
 	store := openStore(t, tempDependencies(t))
 	root := t.TempDir()
@@ -124,9 +89,6 @@ func testFileDualActiveCorruption(t *testing.T) {
 		root, home))
 	if _, err := store.FileBaselines(root, home); err == nil {
 		t.Fatal("snapshot accepted a dual-active path")
-	}
-	if _, err := store.ActiveFileBaselines(root, home); err == nil {
-		t.Fatal("active snapshot accepted a dual-active path")
 	}
 }
 

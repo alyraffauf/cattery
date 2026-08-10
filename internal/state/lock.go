@@ -3,7 +3,6 @@ package state
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"syscall"
 
@@ -67,21 +66,6 @@ func (lock *Lock) Release() error {
 	err := lock.flock.Unlock()
 	lock.flock = nil
 	return err
-}
-
-// ResolveLockPath resolves the canonical absolute path of the advisory lock
-// beneath $XDG_STATE_HOME/cattery/cattery.lock. A relative XDG_STATE_HOME is
-// rejected rather than resolved against the working directory.
-func ResolveLockPath() (string, error) {
-	home, err := resolveStateHome("")
-	if err != nil {
-		return "", err
-	}
-	directory, err := resolveCatteryDirectory(home)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(directory, stateLockFileName), nil
 }
 
 // writeProcessID writes the current PID to the lock file for diagnostics and

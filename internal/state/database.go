@@ -79,21 +79,6 @@ func (database *Database) Close() error {
 	return err
 }
 
-// ResolveDatabasePath resolves the canonical absolute path of the SQLite state
-// database beneath $XDG_STATE_HOME/cattery/state.db. A relative XDG_STATE_HOME
-// is rejected rather than resolved against the working directory.
-func ResolveDatabasePath() (string, error) {
-	home, err := resolveStateHome("")
-	if err != nil {
-		return "", err
-	}
-	directory, err := resolveCatteryDirectory(home)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(directory, stateDatabaseFileName), nil
-}
-
 // resolveStateHome returns the validated state home. An explicit absolute path
 // overrides the environment; an empty explicit reads XDG_STATE_HOME and rejects
 // a relative value before falling back to the XDG default.

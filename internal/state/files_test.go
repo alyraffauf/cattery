@@ -19,8 +19,6 @@ func TestFileRows(t *testing.T) {
 		{"secret baselines create the key and commit its identifier", testFileSecretBaseline},
 		{"selected retirement marks only the chosen row", testFileSelectedRetirement},
 		{"retirement requires an existing row", testFileRetirementRequiresRow},
-		{"reactivation restores a retired row", testFileReactivation},
-		{"reads are deterministic and scopes are state-only", testFileDeterministicReads},
 		{"rollback discards the whole transaction", testFileRollback},
 		{"dual-active corruption fails the snapshot", testFileDualActiveCorruption},
 		{"no plaintext column exists", testFileNoPlaintextColumn},

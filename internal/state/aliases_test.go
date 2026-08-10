@@ -17,8 +17,6 @@ func TestAliasRows(t *testing.T) {
 		{"baseline validation rejects malformed rows", testAliasValidationRejects},
 		{"selected retirement marks only the chosen row", testAliasSelectedRetirement},
 		{"retirement requires an existing row", testAliasRetirementRequiresRow},
-		{"reactivation restores a retired row", testAliasReactivation},
-		{"reads are deterministic and scopes are state-only", testAliasDeterministicReads},
 		{"rollback discards the whole transaction", testAliasRollback},
 		{"dual-active corruption fails the snapshot", testAliasDualActiveCorruption},
 		{"no plaintext column exists", testAliasColumnCount},

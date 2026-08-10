@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -14,8 +15,6 @@ func TestRepositoryRows(t *testing.T) {
 		name string
 		run  func(*testing.T)
 	}{
-		{"registers canonical pair with timestamps", testRepositoryRegisters},
-		{"re-registration preserves identity", testRepositoryReRegistration},
 		{"lookup never registers", testRepositoryLookupDoesNotRegister},
 		{"default replacement keeps one per home", testRepositoryDefaultReplacement},
 		{"defaults across two homes", testRepositoryTwoHomes},
@@ -25,46 +24,6 @@ func TestRepositoryRows(t *testing.T) {
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
-	}
-}
-
-func testRepositoryRegisters(t *testing.T) {
-	clock := &pinnedClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
-	store := openStore(t, Dependencies{StateHome: t.TempDir(), Now: clock.Now})
-	root := t.TempDir()
-	home := t.TempDir()
-	first, err := store.RegisterRepository(root, home)
-	if err != nil {
-		t.Fatalf("RegisterRepository: %v", err)
-	}
-	assertRepositoryPair(t, first, Repository{RootPath: root, HomePath: home})
-	if first.IsDefault {
-		t.Fatal("registration created a default")
-	}
-	if !first.CreatedAt.Equal(clock.now) || !first.LastSeenAt.Equal(clock.now) {
-		t.Fatalf("timestamps = %v/%v, want %v", first.CreatedAt, first.LastSeenAt, clock.now)
-	}
-}
-
-func testRepositoryReRegistration(t *testing.T) {
-	clock := &pinnedClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
-	store := openStore(t, Dependencies{StateHome: t.TempDir(), Now: clock.Now})
-	root := t.TempDir()
-	home := t.TempDir()
-	first, err := store.RegisterRepository(root, home)
-	if err != nil {
-		t.Fatalf("RegisterRepository: %v", err)
-	}
-	clock.now = clock.now.Add(time.Hour)
-	second, err := store.RegisterRepository(root, home)
-	if err != nil {
-		t.Fatalf("re-register: %v", err)
-	}
-	if second.ID != first.ID {
-		t.Fatalf("re-registration changed row id %d -> %d", first.ID, second.ID)
-	}
-	if !second.CreatedAt.Equal(first.CreatedAt) || !second.LastSeenAt.Equal(clock.now) {
-		t.Fatal("re-registration changed created_at or last_seen_at")
 	}
 }
 
@@ -78,8 +37,8 @@ func testRepositoryLookupDoesNotRegister(t *testing.T) {
 	if count := rowCount(t, store.Database().conn, "repositories"); count != 0 {
 		t.Fatalf("lookup registered %d rows", count)
 	}
-	if _, err := store.RegisterRepository(root, home); err != nil {
-		t.Fatalf("RegisterRepository: %v", err)
+	if _, err := store.SetDefaultRepository(root, home); err != nil {
+		t.Fatalf("register repository: %v", err)
 	}
 	found, err := store.LookupRepository(root, home)
 	if err != nil {
@@ -162,8 +121,9 @@ func testRepositorySnapshotOrdering(t *testing.T) {
 	store := openStore(t, tempDependencies(t))
 	home := t.TempDir()
 	roots := []string{t.TempDir(), t.TempDir(), t.TempDir(), t.TempDir()}
-	for _, root := range roots {
-		if _, err := store.RegisterRepository(root, home); err != nil {
+	for index, root := range roots {
+		if _, err := store.UpsertFileBaseline(root, home,
+			ordinaryBaseline(".file"+strconv.Itoa(index), "", byte(index+1))); err != nil {
 			t.Fatalf("register %q: %v", root, err)
 		}
 	}

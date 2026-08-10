@@ -21,8 +21,6 @@ ON CONFLICT(repository_id, alias_path) DO UPDATE SET
 
 const aliasRetireSQL = "UPDATE aliases SET status = 'retired', retired_at = ? WHERE repository_id = ? AND alias_path = ?"
 
-const aliasReactivateSQL = "UPDATE aliases SET status = 'active', retired_at = NULL, applied_at = ? WHERE repository_id = ? AND alias_path = ?"
-
 const aliasByPairPathSQL = `
 SELECT ` + aliasColumns + `
 FROM aliases a JOIN repositories r ON r.id = a.repository_id
@@ -33,18 +31,9 @@ SELECT ` + aliasColumns + `
 FROM aliases a JOIN repositories r ON r.id = a.repository_id
 WHERE r.root_path = ? AND r.home_path = ? ORDER BY a.alias_path`
 
-const activeAliasBaselinesSQL = `
-SELECT ` + aliasColumns + `
-FROM aliases a JOIN repositories r ON r.id = a.repository_id
-WHERE r.root_path = ? AND r.home_path = ? AND a.status = 'active' ORDER BY a.alias_path`
-
 const allAliasGroupsSQL = `
 SELECT DISTINCT group_name FROM aliases a JOIN repositories r ON r.id = a.repository_id
 WHERE r.root_path = ? AND r.home_path = ? ORDER BY group_name`
-
-const activeAliasGroupsSQL = `
-SELECT DISTINCT group_name FROM aliases a JOIN repositories r ON r.id = a.repository_id
-WHERE r.root_path = ? AND r.home_path = ? AND a.status = 'active' ORDER BY group_name`
 
 // aliasBaselineKey identifies one row by canonical pair and alias path.
 type aliasBaselineKey struct {
@@ -80,12 +69,6 @@ func (store *Store) RetireAliasBaseline(root, home, aliasPath string) (AliasBase
 	return store.setAliasStatus(aliasBaselineKey{root: root, home: home, alias: aliasPath}, aliasRetireSQL)
 }
 
-// ReactivateAliasBaseline restores a retired row to active without touching
-// its retained payload, which the caller reconciles against.
-func (store *Store) ReactivateAliasBaseline(root, home, aliasPath string) (AliasBaseline, error) {
-	return store.setAliasStatus(aliasBaselineKey{root: root, home: home, alias: aliasPath}, aliasReactivateSQL)
-}
-
 // AliasBaseline reads one alias row of the canonical pair.
 func (store *Store) AliasBaseline(root, home, aliasPath string) (AliasBaseline, error) {
 	root, home, err := canonicalRepositoryPair(root, home)
@@ -115,15 +98,6 @@ func (store *Store) AliasBaselines(root, home string) ([]AliasBaseline, error) {
 	return store.readAliasBaselines(allAliasBaselinesSQL, root, home)
 }
 
-// ActiveAliasBaselines reads the active alias rows of the canonical pair.
-func (store *Store) ActiveAliasBaselines(root, home string) ([]AliasBaseline, error) {
-	root, home, err := canonicalRepositoryPair(root, home)
-	if err != nil {
-		return nil, err
-	}
-	return store.readAliasBaselines(activeAliasBaselinesSQL, root, home)
-}
-
 // AliasGroups lists the distinct group names of any alias row, so an
 // explicitly selected retired-only group remains valid.
 func (store *Store) AliasGroups(root, home string) ([]string, error) {
@@ -132,14 +106,4 @@ func (store *Store) AliasGroups(root, home string) ([]string, error) {
 		return nil, err
 	}
 	return store.readAliasGroups(allAliasGroupsSQL, root, home)
-}
-
-// ActiveAliasGroups lists the distinct group names with an active alias row,
-// so no-argument selection can exclude retired-only groups.
-func (store *Store) ActiveAliasGroups(root, home string) ([]string, error) {
-	root, home, err := canonicalRepositoryPair(root, home)
-	if err != nil {
-		return nil, err
-	}
-	return store.readAliasGroups(activeAliasGroupsSQL, root, home)
 }
