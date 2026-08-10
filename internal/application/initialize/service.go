@@ -60,7 +60,9 @@ func (service *Service) Initialize(ctx context.Context, request Request) (Result
 	if err != nil {
 		return Result{}, failure.New(failure.Operational, "initialize: register repository", err)
 	}
-	return Result{Repository: row}, nil
+	return Result{Repository: RegisteredRepository{
+		RootPath: row.RootPath, HomePath: row.HomePath, IsDefault: row.IsDefault,
+	}}, nil
 }
 
 // environment bundles the canonical inputs every initialization needs.

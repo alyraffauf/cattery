@@ -40,8 +40,8 @@ func testContractResultShape(t *testing.T) {
 	if !found {
 		t.Fatal("Result.Repository field missing")
 	}
-	if field.Type != reflect.TypeOf(state.Repository{}) {
-		t.Fatalf("Result.Repository type = %v, want state.Repository", field.Type)
+	if field.Type != reflect.TypeOf(RegisteredRepository{}) {
+		t.Fatalf("Result.Repository type = %v, want initialize.RegisteredRepository", field.Type)
 	}
 }
 

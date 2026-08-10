@@ -202,7 +202,7 @@ func newService(t *testing.T) (*database.Fixture, *Service) {
 	return fixture, service
 }
 
-func registerPath(t *testing.T, fixture *database.Fixture, path string) state.Repository {
+func registerPath(t *testing.T, fixture *database.Fixture, path string) RegisteredRepository {
 	t.Helper()
 	service := NewService(Dependencies{Home: fixture.Home, Store: fixture.Store})
 	result, err := service.Initialize(context.Background(), Request{Path: path})

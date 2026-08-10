@@ -22,8 +22,16 @@ type Request struct {
 	Path string
 }
 
+// RegisteredRepository is the application-owned projection of a registered
+// repository row. Persistence identifiers and timestamps stay inside state.
+type RegisteredRepository struct {
+	RootPath  string
+	HomePath  string
+	IsDefault bool
+}
+
 // Result is the frozen outcome of one initialization, carrying the registered
-// repository row so callers can render or chain it without another lookup.
+// repository projection so callers can render or chain it without another lookup.
 type Result struct {
-	Repository state.Repository
+	Repository RegisteredRepository
 }

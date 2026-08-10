@@ -108,16 +108,16 @@ func testContractActionPlan(t *testing.T) {
 		{TargetPath: "b", Kind: ActionKindReplaceFile, SourcePath: "files/b"},
 		{TargetPath: "a", Kind: ActionKindWriteSource, SourcePath: "files/a"},
 	})
-	if got := plan.Actions(); len(got) != 2 || got[0].Kind != ActionKindReplaceFile {
+	if got := plan.Items(); len(got) != 2 || got[0].Kind != ActionKindReplaceFile {
 		t.Fatalf("action plan must freeze the ordered actions, got %+v", got)
 	}
-	actions := plan.Actions()
+	actions := plan.Items()
 	actions[0].Kind = ActionKindRetireFile
-	if plan.Actions()[0].Kind != ActionKindReplaceFile {
+	if plan.Items()[0].Kind != ActionKindReplaceFile {
 		t.Fatal("mutating an Actions copy must not reach the plan")
 	}
 	empty := NewActionPlan(nil)
-	if len(empty.Actions()) != 0 {
+	if len(empty.Items()) != 0 {
 		t.Fatal("an empty action plan must stay empty")
 	}
 }

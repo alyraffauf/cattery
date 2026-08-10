@@ -22,7 +22,7 @@ func (service *Service) ExecuteAliases(ctx context.Context, plan PreparedPlan, c
 	}
 	byPath := candidatesByPath(candidates)
 	results := make([]ItemResult, 0)
-	for _, action := range plan.Actions().Actions() {
+	for _, action := range plan.Actions().Items() {
 		if action.Kind != ActionKindRealizeAlias && action.Kind != ActionKindRetireFile && action.Kind != ActionKindRetireAlias {
 			continue
 		}

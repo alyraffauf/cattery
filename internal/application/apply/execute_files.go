@@ -20,7 +20,7 @@ func (service *Service) ExecuteFiles(ctx context.Context, plan PreparedPlan, can
 	}
 	byPath := candidatesByPath(candidates)
 	results := make([]ItemResult, 0)
-	for _, action := range plan.Actions().Actions() {
+	for _, action := range plan.Actions().Items() {
 		if action.Kind != ActionKindWriteSource && action.Kind != ActionKindReplaceFile {
 			continue
 		}
