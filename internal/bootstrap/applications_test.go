@@ -28,7 +28,7 @@ func TestBootstrapApplications(t *testing.T) {
 func appFixture(t *testing.T) (Applications, Adapters) {
 	t.Helper()
 	adapters := NewAdapters(filepath.Join(t.TempDir(), "state"), fixedClock())
-	applications := Build(BuildInput{
+	applications := BuildApplications(ApplicationsInput{
 		Adapters:   adapters,
 		Home:       "/home",
 		Platform:   deployment.LayerLinux,

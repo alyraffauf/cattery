@@ -25,9 +25,9 @@ type Applications struct {
 	Version    *version.Service
 }
 
-// BuildInput carries the adapters, home, platform, protected trees, and
-// prompt streams of one application build.
-type BuildInput struct {
+// ApplicationsInput carries the adapters, home, platform, protected
+// trees, and prompt streams of one application build.
+type ApplicationsInput struct {
 	Adapters   Adapters
 	Home       string
 	Platform   deployment.Layer
@@ -48,8 +48,8 @@ type shared struct {
 	prompt      *cli.DecisionPrompt
 }
 
-// newShared constructs the shared adapters over one build input.
-func newShared(input BuildInput) shared {
+// newShared constructs the shared adapters over one applications input.
+func newShared(input ApplicationsInput) shared {
 	stateReader := stateReaderAdapter{store: input.Adapters.Store}
 	return shared{
 		compiler:    compilerAdapter{},
@@ -71,9 +71,10 @@ func repositorySourceOf[T any](resolver *selection.RepositoryResolver, convert f
 	return repositorySource[T]{resolver: resolver, convert: convert}
 }
 
-// Build wires the adapters into every application service through its
-// purpose-named ports; no constructor opens, probes, or mutates anything.
-func Build(input BuildInput) Applications {
+// BuildApplications wires the adapters into every application service
+// through its purpose-named ports; no constructor opens, probes, or
+// mutates anything.
+func BuildApplications(input ApplicationsInput) Applications {
 	shared := newShared(input)
 	return Applications{
 		Initialize: buildInitialize(input, shared),
@@ -86,7 +87,7 @@ func Build(input BuildInput) Applications {
 }
 
 // buildInitialize wires the repository initialization service.
-func buildInitialize(input BuildInput, shared shared) *initialize.Service {
+func buildInitialize(input ApplicationsInput, shared shared) *initialize.Service {
 	return initialize.NewService(initialize.Dependencies{
 		Home:  input.Home,
 		Store: input.Adapters.Store,
@@ -94,7 +95,7 @@ func buildInitialize(input BuildInput, shared shared) *initialize.Service {
 }
 
 // buildValidate wires the repository validation service.
-func buildValidate(input BuildInput, shared shared) *validate.Service {
+func buildValidate(input ApplicationsInput, shared shared) *validate.Service {
 	return validate.NewService(validate.Dependencies{
 		RepositorySource: repositorySourceOf(shared.resolver, validateIdentity),
 		Compiler:         shared.compiler,
@@ -103,7 +104,7 @@ func buildValidate(input BuildInput, shared shared) *validate.Service {
 }
 
 // buildInspect wires the inspection service.
-func buildInspect(input BuildInput, shared shared) *inspect.Service {
+func buildInspect(input ApplicationsInput, shared shared) *inspect.Service {
 	return inspect.NewService(inspect.Dependencies{
 		RepositorySource: repositorySourceOf(shared.resolver, inspectIdentity),
 		Compiler:         shared.compiler,
@@ -115,7 +116,7 @@ func buildInspect(input BuildInput, shared shared) *inspect.Service {
 }
 
 // buildApply wires the apply service with the prompt resolver.
-func buildApply(input BuildInput, shared shared) *apply.Service {
+func buildApply(input ApplicationsInput, shared shared) *apply.Service {
 	return apply.NewService(apply.Dependencies{
 		RepositorySource: repositorySourceOf(shared.resolver, applyIdentity),
 		Compiler:         shared.compiler,
@@ -135,7 +136,7 @@ func buildApply(input BuildInput, shared shared) *apply.Service {
 }
 
 // buildAdd wires the add service.
-func buildAdd(input BuildInput, shared shared) *add.Service {
+func buildAdd(input ApplicationsInput, shared shared) *add.Service {
 	return add.NewService(add.Dependencies{
 		RepositorySource: repositorySourceOf(shared.resolver, addIdentity),
 		Compiler:         shared.compiler,
