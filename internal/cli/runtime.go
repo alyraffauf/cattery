@@ -7,6 +7,7 @@ package cli
 import (
 	"io"
 	"os"
+	"strings"
 
 	"golang.org/x/term"
 )
@@ -100,4 +101,15 @@ func (r Runtime) SetVerbose(verbose bool) {
 	if r.setVerbose != nil {
 		r.setVerbose(verbose)
 	}
+}
+
+// EnvValue returns the value and presence of one environment entry.
+func (r Runtime) EnvValue(name string) (string, bool) {
+	prefix := name + "="
+	for _, entry := range r.environment {
+		if strings.HasPrefix(entry, prefix) {
+			return strings.TrimPrefix(entry, prefix), true
+		}
+	}
+	return "", false
 }

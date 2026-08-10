@@ -14,6 +14,7 @@ func TestCLIRuntime(t *testing.T) {
 		{"stream defaults", testRuntimeStreams},
 		{"terminal predicates", testRuntimeTerminal},
 		{"verbosity callback", testRuntimeVerbose},
+		{"environment lookup", testRuntimeEnvValue},
 		{"instance isolation", testRuntimeIsolation},
 	}
 	for _, scenario := range scenarios {
@@ -73,6 +74,17 @@ func testRuntimeVerbose(t *testing.T) {
 	runtime.SetVerbose(false)
 	if len(levels) != 2 || levels[0] != true || levels[1] != false {
 		t.Fatalf("levels = %v, want true then false", levels)
+	}
+}
+
+func testRuntimeEnvValue(t *testing.T) {
+	runtime, _, _ := runtimeFixture(t, []string{"CATTERY_REPO=repo", "OTHER=x"}, nil)
+	value, present := runtime.EnvValue("CATTERY_REPO")
+	if !present || value != "repo" {
+		t.Fatalf("CATTERY_REPO = %q present = %v, want repo true", value, present)
+	}
+	if _, present := runtime.EnvValue("MISSING"); present {
+		t.Fatal("a missing variable must report absent")
 	}
 }
 
