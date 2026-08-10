@@ -1,7 +1,7 @@
 {
   description = "Cattery — a safe, cross-platform dotfiles manager";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/ee48b147c18c7de1e6ec97dc74792be42724bed1";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
   outputs = { self, nixpkgs }:
     let
@@ -14,8 +14,8 @@
       forAllSystems = function:
         nixpkgs.lib.genAttrs supportedSystems (system: function system);
       pkgsFor = system: import nixpkgs { inherit system; };
-      shellPackages = pkgs: with pkgs; [
-        go_1_26
+      shellPackages = pkgs: go: with pkgs; [
+        go
         go_1_25
         just
         go-tools
@@ -30,10 +30,13 @@
     in
     {
       devShells = forAllSystems (system:
-        let pkgs = pkgsFor system; in
-        {
+        let pkgs = pkgsFor system;
+        in {
           default = pkgs.mkShell {
-            packages = shellPackages pkgs;
+            packages = shellPackages pkgs pkgs.go_1_26;
+          };
+          go-floor = pkgs.mkShell {
+            packages = shellPackages pkgs pkgs.go_1_25;
           };
         });
 

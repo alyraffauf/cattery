@@ -1,6 +1,7 @@
 # Cattery development recipes. Frozen by Task 4; no later card edits this file.
 
-# Primary Go toolchain. The Nix shell pins go_1_26; override for the floor.
+# Primary Go toolchain. The default Nix shell exposes Go 1.26; use the
+# go-floor shell to run the same recipes against Go 1.25.
 go := env_var_or_default("CATTERY_GO", "go")
 
 # default: show available recipes.
@@ -11,7 +12,7 @@ default:
 fmt-check:
     out="$({{go}}fmt -l . 2>&1)"; test -z "$out"
 
-# Run the architecture and source-shape quality gates.
+# Run the architecture and dependency-boundary quality gates.
 quality-tests:
     {{go}} test ./internal/quality/...
 

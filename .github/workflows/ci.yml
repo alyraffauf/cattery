@@ -46,7 +46,10 @@ jobs:
           persist-credentials: false
       # cachix/install-nix-action v31.11.0
       - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
-      - run: nix develop -c bash -euo pipefail -c 'CATTERY_GO=go_1_25 just fmt-check && CATTERY_GO=go_1_25 just quality && CATTERY_GO=go_1_25 just test && CATTERY_GO=go_1_25 just build'
+      - run: nix develop .#go-floor -c just fmt-check
+      - run: nix develop .#go-floor -c just quality
+      - run: nix develop .#go-floor -c just test
+      - run: nix develop .#go-floor -c just build
 
   cross-build:
     name: cross-build-${{ matrix.goos }}-${{ matrix.goarch }}
