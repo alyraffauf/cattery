@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 
@@ -49,7 +50,7 @@ func testBuildApplication(t *testing.T) {
 
 func testBuildVersion(t *testing.T) {
 	application, stdout, _ := buildFixture(t)
-	if err := application.Execute([]string{"version"}); err != nil {
+	if err := application.Execute(context.Background(), []string{"version"}); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if !strings.Contains(stdout.String(), "cattery") {
@@ -59,7 +60,7 @@ func testBuildVersion(t *testing.T) {
 
 func testBuildHelp(t *testing.T) {
 	application, stdout, _ := buildFixture(t)
-	if err := application.Execute(nil); err != nil {
+	if err := application.Execute(context.Background(), nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if !strings.Contains(stdout.String(), "cattery") {
@@ -69,7 +70,7 @@ func testBuildHelp(t *testing.T) {
 
 func testBuildParseFailure(t *testing.T) {
 	application, _, stderr := buildFixture(t)
-	if err := application.Execute([]string{"--version"}); err == nil {
+	if err := application.Execute(context.Background(), []string{"--version"}); err == nil {
 		t.Fatal("an unknown root flag must fail")
 	}
 	if stderr.Len() != 0 {

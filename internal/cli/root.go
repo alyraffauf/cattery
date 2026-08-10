@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"context"
+
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/spf13/cobra"
 )
@@ -59,13 +61,14 @@ func NewApplication(dependencies Dependencies, runtime Runtime) *Application {
 	return &Application{root: root}
 }
 
-// Execute runs the application exactly once over the given arguments; a
-// second use is rejected.
-func (a *Application) Execute(args []string) error {
+// Execute runs the application exactly once over the given arguments and
+// process context; a second use is rejected.
+func (a *Application) Execute(ctx context.Context, args []string) error {
 	if a.executed {
 		return failure.New(failure.Operational, "cli: application already executed", nil)
 	}
 	a.executed = true
+	a.root.SetContext(ctx)
 	a.root.SetArgs(args)
 	return a.root.Execute()
 }
