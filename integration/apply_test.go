@@ -56,23 +56,13 @@ func (env execEnv) initRepository(t *testing.T) {
 // run executes the binary with the given stdin and arguments.
 func (env execEnv) run(t *testing.T, stdin []string, args ...string) ProcessResult {
 	t.Helper()
-	return env.runPty(t, false, stdin, args...)
+	return env.runInput(t, ProcessInput{Args: args, Home: env.home, Stdin: joined(stdin), Timeout: 30 * time.Second})
 }
 
-// runPty executes the binary under a pseudo-terminal when requested.
-func (env execEnv) runPty(t *testing.T, pty bool, stdin []string, args ...string) ProcessResult {
+// runPty executes the binary under a pseudo-terminal.
+func (env execEnv) runPty(t *testing.T, stdin []string, args ...string) ProcessResult {
 	t.Helper()
-	input := ""
-	if len(stdin) > 0 {
-		input = strings.Join(stdin, "\n") + "\n"
-	}
-	return env.runInput(t, ProcessInput{Args: args, Home: env.home, Stdin: input, Timeout: 30 * time.Second, Pty: pty})
-}
-
-// runInput executes the binary under one full process input.
-func (env execEnv) runInput(t *testing.T, input ProcessInput) ProcessResult {
-	t.Helper()
-	return env.fixture.Run(t, input)
+	return env.runInput(t, ProcessInput{Args: args, Home: env.home, Stdin: joined(stdin), Timeout: 30 * time.Second, Pty: true})
 }
 
 // source writes one repository source file.
@@ -136,7 +126,7 @@ func testExecApplyOverwrite(t *testing.T) {
 		t.Fatalf("first apply: %+v", result)
 	}
 	writeFile(t, filepath.Join(env.home, ".config", "app"), []byte("drifted"))
-	result := env.runPty(t, true, []string{"overwrite"}, "apply")
+	result := env.runPty(t, []string{"overwrite"}, "apply")
 	if result.Code != 0 {
 		t.Fatalf("apply: code=%d stderr=%q", result.Code, result.Stderr)
 	}
@@ -153,7 +143,7 @@ func testExecApplySkip(t *testing.T) {
 		t.Fatalf("first apply: %+v", result)
 	}
 	writeFile(t, filepath.Join(env.home, ".config", "app"), []byte("drifted"))
-	result := env.runPty(t, true, []string{"skip"}, "apply")
+	result := env.runPty(t, []string{"skip"}, "apply")
 	if result.Code != 2 {
 		t.Fatalf("code = %d, want 2 after a skip", result.Code)
 	}
@@ -236,4 +226,12 @@ func testExecApplyRemoval(t *testing.T) {
 func (env execEnv) runInput(t *testing.T, input ProcessInput) ProcessResult {
 	t.Helper()
 	return env.fixture.Run(t, input)
+}
+
+// joined joins one answer list into scripted stdin.
+func joined(stdin []string) string {
+	if len(stdin) == 0 {
+		return ""
+	}
+	return strings.Join(stdin, "\n") + "\n"
 }
