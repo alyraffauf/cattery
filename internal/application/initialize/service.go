@@ -215,10 +215,10 @@ func existingDirectory(path string) (bool, error) {
 func requireDirectory(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
-		return err
+		return failure.New(failure.Operational, "initialize: inspect directory "+path, err)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("initialize: %s is not a directory", path)
+		return failure.New(failure.InvalidInput, "initialize: "+path+" is not a directory", nil)
 	}
 	return nil
 }
