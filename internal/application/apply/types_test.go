@@ -161,6 +161,7 @@ type fakeStateReader struct {
 	files   []state.FileBaseline
 	aliases []state.AliasBaseline
 	key     [32]byte
+	keyErr  error
 }
 
 func (f fakeStateReader) FileBaselines(root, home string) ([]state.FileBaseline, error) {
@@ -172,7 +173,7 @@ func (f fakeStateReader) AliasBaselines(root, home string) ([]state.AliasBaselin
 }
 
 func (f fakeStateReader) RecoverHashKey() ([32]byte, error) {
-	return f.key, nil
+	return f.key, f.keyErr
 }
 
 type fakeBaselineStore struct {
@@ -237,6 +238,12 @@ func (f fakeProbe) Probe(context.Context) error {
 	return nil
 }
 
+type fakeResolver struct{}
+
+func (f fakeResolver) Resolve(context.Context, DecisionRequest) (DecisionResponse, error) {
+	return DecisionResponse{}, nil
+}
+
 func testContractDependencySeams(t *testing.T) {
 	dependencies := Dependencies{
 		RepositorySource: fakeRepositorySource{identity: RepositoryIdentity{Root: "/repo", Home: "/home"}},
@@ -250,12 +257,13 @@ func testContractDependencySeams(t *testing.T) {
 		Replacer:         fakeReplacer{},
 		Hooks:            fakeHookExecutor{},
 		Probe:            fakeProbe{},
+		Resolver:         fakeResolver{},
 		ProtectedTrees:   []string{},
 		Platform:         "linux",
 	}
 	for _, seam := range []any{dependencies.RepositorySource, dependencies.Compiler, dependencies.State,
 		dependencies.Baselines, dependencies.Transitions, dependencies.Retirements, dependencies.Client,
-		dependencies.Replacer, dependencies.Hooks, dependencies.Probe} {
+		dependencies.Replacer, dependencies.Hooks, dependencies.Probe, dependencies.Resolver} {
 		if seam == nil {
 			t.Fatal("every dependency seam must accept fakes")
 		}

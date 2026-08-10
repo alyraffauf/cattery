@@ -34,6 +34,7 @@ type Dependencies struct {
 	Replacer         AtomicReplacer
 	Hooks            HookExecutor
 	Probe            DependencyProbe
+	Resolver         DecisionResolver
 	ProtectedTrees   []string
 	Platform         string
 }
@@ -105,6 +106,12 @@ type HookExecutor interface {
 // DependencyProbe verifies the SOPS dependency before any write begins.
 type DependencyProbe interface {
 	Probe(context.Context) error
+}
+
+// DecisionResolver resolves one frozen decision request; presentation IO
+// lives in the CLI adapter, and policy stays in the service.
+type DecisionResolver interface {
+	Resolve(context.Context, DecisionRequest) (DecisionResponse, error)
 }
 
 // RepositoryInput carries the raw repository fields the CLI adapter copies
