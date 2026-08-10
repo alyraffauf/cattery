@@ -21,6 +21,62 @@ type DiffRecord struct {
 	safe   diff.SafeRecord
 }
 
+// DiffRecordInput carries the renderable fields of one diff record.
+type DiffRecordInput struct {
+	TargetPath  string
+	Kind        StatusKind
+	Action      string
+	Tag         string
+	SourceLabel string
+	TargetLabel string
+	Lines       string
+	SourceSize  int64
+	TargetSize  int64
+}
+
+// NewDiffRecord freezes one diff record over the given renderable fields,
+// so the CLI renderer tests can build records across the boundary.
+func NewDiffRecord(input DiffRecordInput) DiffRecord {
+	return DiffRecord{
+		status: StatusRecord{targetPath: input.TargetPath, kind: input.Kind, action: input.Action},
+		safe: diff.NewSafeRecord(diff.SafeRecordInput{
+			TargetPath:  input.TargetPath,
+			Tag:         parseDiffTag(input.Tag),
+			SourceLabel: input.SourceLabel,
+			TargetLabel: input.TargetLabel,
+			Lines:       input.Lines,
+			SourceSize:  input.SourceSize,
+			TargetSize:  input.TargetSize,
+		}),
+	}
+}
+
+// parseDiffTag maps one stable tag name to its diff value.
+func parseDiffTag(name string) diff.Tag {
+	switch name {
+	case "text":
+		return diff.TagText
+	case "binary":
+		return diff.TagBinary
+	case "secret":
+		return diff.TagSecret
+	}
+	return diff.TagNone
+}
+
+// DiffTagName returns the stable lowercase name of one record's safe tag.
+func DiffTagName(record DiffRecord) string {
+	switch record.safe.Tag() {
+	case diff.TagText:
+		return "text"
+	case diff.TagBinary:
+		return "binary"
+	case diff.TagSecret:
+		return "secret"
+	}
+	return "none"
+}
+
 func (record DiffRecord) TargetPath() string  { return record.status.TargetPath() }
 func (record DiffRecord) Kind() StatusKind    { return record.status.Kind() }
 func (record DiffRecord) Action() string      { return record.status.Action() }
@@ -48,6 +104,23 @@ type DiffResult struct {
 	aliases   int
 	retired   int
 	converged bool
+}
+
+// NewDiffResult freezes one diff result over the given records and the
+// convergence flag, keeping the record slice defensive.
+func NewDiffResult(records []DiffRecord, converged bool) DiffResult {
+	result := DiffResult{records: append([]DiffRecord(nil), records...), converged: converged}
+	for _, record := range result.records {
+		switch record.status.kind {
+		case StatusKindAlias:
+			result.aliases++
+		case StatusKindRetired:
+			result.retired++
+		default:
+			result.files++
+		}
+	}
+	return result
 }
 
 // Records returns a defensive copy of the path-sorted diff records.

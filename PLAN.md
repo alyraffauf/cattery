@@ -2659,7 +2659,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Owns:** `internal/diff/safe.go`, `internal/diff/safe_test.go`.
 
-**Deliverable:** Build the exact tagged `SafeRecord` variants for printable text, binary/large ordinary files, metadata-only changes, and secrets.
+**Deliverable:** Build the exact tagged `SafeRecord` variants for printable text, binary/large ordinary files, metadata-only changes, and secrets; export `NewSafeRecord` so renderers can freeze records across the boundary.
 
 **Tests:** `TestSafeDiffRecord` covers controls, bidi, invalid UTF-8, size limits, escaped labels, hashes, and secret zero fields.
 
@@ -2771,7 +2771,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Owns:** `internal/application/inspect/status.go`, `internal/application/inspect/status_test.go`.
 
-**Deliverable:** Translate one evaluation into sorted semantic status/retired records, counts, convergence, and `Difference` error.
+**Deliverable:** Translate one evaluation into sorted semantic status/retired records, counts, convergence, and `Difference` error; export `NewStatusRecord` and `NewStatusResult` so the CLI renderer tests can build frozen records.
 
 **Tests:** `TestStatusService` covers files, aliases, retirement-only drift, convergence, and partial evaluation errors.
 
@@ -2787,7 +2787,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Owns:** `internal/application/inspect/diff.go`, `internal/application/inspect/diff_test.go`.
 
-**Deliverable:** Translate the same evaluation into sorted safe diff/status records, counts, convergence, and `Difference` error.
+**Deliverable:** Translate the same evaluation into sorted safe diff/status records, counts, convergence, and `Difference` error; export `NewDiffRecord`, `NewDiffResult`, and `DiffTagName` so the CLI renderer tests can build frozen records.
 
 **Tests:** `TestDiffService` proves status parity, text/binary/secret behavior, alias-only drift, and no secret fields.
 
