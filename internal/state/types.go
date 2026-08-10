@@ -77,6 +77,13 @@ func (l AliasLayer) Valid() bool {
 	return false
 }
 
+// InactiveOn reports whether layer targets a platform other than platform. The
+// "all" layer applies on every runtime so it is never inactive; a named platform
+// layer is inactive when it does not equal the runtime platform.
+func (l AliasLayer) InactiveOn(platform string) bool {
+	return l != LayerAll && string(l) != platform
+}
+
 // Repository is one registered (root, home) pair tracked by state. RootPath and
 // HomePath are canonical absolute identity anchors; all other paths are
 // relative.

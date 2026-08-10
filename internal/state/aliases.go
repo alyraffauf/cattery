@@ -24,20 +24,17 @@ const aliasRetireSQL = "UPDATE aliases SET status = 'retired', retired_at = ? WH
 const aliasReactivateSQL = "UPDATE aliases SET status = 'active', retired_at = NULL, applied_at = ? WHERE repository_id = ? AND alias_path = ?"
 
 const aliasByPairPathSQL = `
-SELECT a.repository_id, a.alias_path, a.canonical_target_path, a.group_name, a.layer,
-       a.status, a.applied_at, a.retired_at
+SELECT ` + aliasColumns + `
 FROM aliases a JOIN repositories r ON r.id = a.repository_id
 WHERE r.root_path = ? AND r.home_path = ? AND a.alias_path = ?`
 
 const allAliasBaselinesSQL = `
-SELECT a.repository_id, a.alias_path, a.canonical_target_path, a.group_name, a.layer,
-       a.status, a.applied_at, a.retired_at
+SELECT ` + aliasColumns + `
 FROM aliases a JOIN repositories r ON r.id = a.repository_id
 WHERE r.root_path = ? AND r.home_path = ? ORDER BY a.alias_path`
 
 const activeAliasBaselinesSQL = `
-SELECT a.repository_id, a.alias_path, a.canonical_target_path, a.group_name, a.layer,
-       a.status, a.applied_at, a.retired_at
+SELECT ` + aliasColumns + `
 FROM aliases a JOIN repositories r ON r.id = a.repository_id
 WHERE r.root_path = ? AND r.home_path = ? AND a.status = 'active' ORDER BY a.alias_path`
 

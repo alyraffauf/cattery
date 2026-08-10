@@ -59,29 +59,26 @@ func (store *Store) setAliasStatus(key aliasBaselineKey, statement string) (Alia
 		return AliasBaseline{}, fmt.Errorf("state: alias path %q is not a slash-relative path", key.alias)
 	}
 	now := formatTimestamp(store.now())
-	transaction, err := store.database.conn.Begin()
-	if err != nil {
-		return AliasBaseline{}, err
+	return runStateTransaction(store.database.conn,
+		func(transaction *sql.Tx) error { return execIn(transaction, statement, now, repository.ID, key.alias) },
+		func(transaction *sql.Tx) (AliasBaseline, error) { return readAliasBaselineAt(transaction, key) })
+}
+
+// readAliasBaselineAt scans one alias row of the pair, translating a missing
+// row into errMissingAliasBaseline so callers get the path-specific error.
+func readAliasBaselineAt(transaction *sql.Tx, key aliasBaselineKey) (AliasBaseline, error) {
+	baseline, err := scanAliasBaseline(transaction.QueryRow(aliasByPairPathSQL, key.root, key.home, key.alias))
+	if errors.Is(err, sql.ErrNoRows) {
+		return AliasBaseline{}, errMissingAliasBaseline(key.alias)
 	}
-	if err := execIn(transaction, statement, now, repository.ID, key.alias); err != nil {
-		return AliasBaseline{}, err
-	}
-	row, err := scanAndCommitAlias(transaction, key)
-	if err != nil {
-		return AliasBaseline{}, err
-	}
-	return row, nil
+	return baseline, err
 }
 
 // scanAndCommitAlias reads the row back through the transaction and commits,
 // rolling back when the read fails so no open transaction leaks.
 func scanAndCommitAlias(transaction *sql.Tx, key aliasBaselineKey) (AliasBaseline, error) {
 	return commitStateRead(transaction, func(transaction *sql.Tx) (AliasBaseline, error) {
-		baseline, err := scanAliasBaseline(transaction.QueryRow(aliasByPairPathSQL, key.root, key.home, key.alias))
-		if errors.Is(err, sql.ErrNoRows) {
-			return AliasBaseline{}, errMissingAliasBaseline(key.alias)
-		}
-		return baseline, err
+		return readAliasBaselineAt(transaction, key)
 	})
 }
 
@@ -109,23 +106,7 @@ func (store *Store) readAliasBaselines(statement, root, home string) ([]AliasBas
 }
 
 func (store *Store) readAliasGroups(statement, root, home string) ([]string, error) {
-	rows, err := store.database.conn.Query(statement, root, home)
-	if err != nil {
-		return nil, fmt.Errorf("state: list alias groups: %w", err)
-	}
-	defer rows.Close()
-	var groups []string
-	for rows.Next() {
-		var group string
-		if err := rows.Scan(&group); err != nil {
-			return nil, err
-		}
-		groups = append(groups, group)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("state: list alias groups: %w", err)
-	}
-	return groups, nil
+	return store.queryStrings(statement, "alias groups", root, home)
 }
 
 func errMissingAliasBaseline(aliasPath string) error {

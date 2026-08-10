@@ -88,8 +88,3 @@ func errKeyRecoveryBlocked(path string, keyErr, idErr error) error {
 		"state: hash key %q cannot be used; restore the matching hash.key or reset state (key: %v, identifier: %v)",
 		path, keyErr, idErr)
 }
-
-// errKeyMissing reports that no usable key exists, helping operators recover.
-func errKeyMissing(path string) error {
-	return fmt.Errorf("state: hash key %q is missing; restore it or reset state", path)
-}
