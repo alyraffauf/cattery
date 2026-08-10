@@ -41,6 +41,7 @@ var allowedFamilies = map[string][]string{
 	"application/apply":      {"deployment", "diff", "failure", "filesystem", "hooks", "pathsafe", "reconcile", "repository", "secrets", "selection", "state"},
 	"application/add":        {"deployment", "failure", "filesystem", "pathsafe", "reconcile", "repository", "secrets", "selection", "state"},
 	"application/version":    {"buildinfo"},
+	"bootstrap":              {"application/initialize", "application/validate", "application/inspect", "application/apply", "application/add", "application/version", "cli", "deployment", "failure", "filesystem", "hooks", "repository", "secrets", "selection", "state"},
 	"cmd/cattery":            {"bootstrap", "cli", "failure"},
 }
 
