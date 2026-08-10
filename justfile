@@ -1,4 +1,4 @@
-# Cattery development recipes. Frozen by Task 4; no later card edits this file.
+# Cattery development recipes.
 
 # default: show available recipes.
 default:

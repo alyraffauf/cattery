@@ -74,7 +74,7 @@ func validateFile(file ManagedFile) error {
 	return nil
 }
 
-// ExecutableBitMask is the POSIX executable-bit mask (PLAN.md Section 7.1).
+// ExecutableBitMask is the POSIX executable-bit mask.
 // Source and target modes preserve read/write bits and reconcile only these bits.
 const ExecutableBitMask fs.FileMode = 0o111
 

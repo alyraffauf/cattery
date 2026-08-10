@@ -41,8 +41,8 @@ type PrepareInput struct {
 }
 
 // Prepare combines the resolved candidates and decisions into one immutable
-// action plan with dry-run records and stable per-target kinds (PLAN.md
-// Section 11.5). No hook or managed mutation occurs, and refusal paths
+// action plan with dry-run records and stable per-target kinds. No hook or
+// managed mutation occurs, and refusal paths
 // register nothing.
 func (service *Service) Prepare(ctx context.Context, input PrepareInput) (PreparedPlan, error) {
 	if err := ctx.Err(); err != nil {

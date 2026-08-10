@@ -1,4 +1,4 @@
-// Package add implements `cattery add` (PLAN.md Section 11.6): the sole
+// Package add implements `cattery add`: the sole
 // target-to-repository content path. Each regular file beneath $HOME is
 // adopted as an ordinary or SOPS-encrypted source under the root scope or an
 // explicit group, and the repository recompiles to the same target. The

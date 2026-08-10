@@ -1,4 +1,4 @@
-// Package diff owns the output-safe diff records of PLAN.md Section 9.6:
+// Package diff owns the output-safe diff records:
 // tagged SafeRecord values carrying only precomputed printable unified-diff
 // lines, ordinary-file sizes and hashes, or secret classification. No ANSI
 // sequence, terminal width, writer, raw secret byte, or go-difflib type
@@ -97,7 +97,7 @@ func NewSafeRecord(input SafeRecordInput) SafeRecord {
 // SafeRecord is one immutable, output-safe diff record for a destination.
 // Text records carry precomputed printable unified-diff lines, binary records
 // carry ordinary-file sizes and hashes, and secret records carry no payload
-// at all (PLAN.md Sections 9.6 and 12.4).
+// at all.
 type SafeRecord struct {
 	targetPath  string
 	tag         Tag
@@ -125,7 +125,7 @@ func (r SafeRecord) TargetHash() deployment.Digest {
 }
 
 // maxTextBytes caps one diff side at 1 MiB; larger content is binary for
-// output purposes (PLAN.md Section 9.6).
+// output purposes.
 const maxTextBytes = 1 << 20
 
 const unifiedContextLines = 3
@@ -153,8 +153,7 @@ func textEligible(data []byte) bool {
 // must be the exact bytes captured beside the target snapshot; the record
 // never retains them. Equal content yields TagNone, printable text at most
 // maxTextBytes per side yields a TagText unified diff with escaped labels,
-// and every other content difference yields TagBinary or TagSecret facts
-// (PLAN.md Section 9.6).
+// and every other content difference yields TagBinary or TagSecret facts.
 func Build(evaluation reconcile.Evaluation, targetBytes []byte) (SafeRecord, error) {
 	if evaluation.Entry != reconcile.PlanEntryFile {
 		return SafeRecord{}, fmt.Errorf("diff: record requires a file plan entry at %q", evaluation.TargetPath)

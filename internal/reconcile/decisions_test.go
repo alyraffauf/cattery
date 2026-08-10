@@ -17,8 +17,8 @@ var (
 	diffOverwriteSkipAbort = []DecisionChoice{ChoiceDiff, ChoiceOverwrite, ChoiceSkip, ChoiceAbort}
 )
 
-// TestDecisionSpecification pins the decision-spec contract of PLAN.md
-// Section 9.4: overwrite/skip/abort/diff eligibility by action, reason, and
+// TestDecisionSpecification pins the decision-spec contract:
+// overwrite/skip/abort/diff eligibility by action, reason, and
 // source kind, bytewise target-path ordering of produced specs, and
 // rejection of specs whose choices are not exactly the allowed set.
 func TestDecisionSpecification(t *testing.T) {

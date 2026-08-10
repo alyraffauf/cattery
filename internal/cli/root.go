@@ -8,7 +8,7 @@ import (
 )
 
 // Dependencies carries one explicitly named one-method service field per
-// operational command (PLAN.md Section 12.1).
+// operational command.
 type Dependencies struct {
 	Initialize InitializeService
 	Validate   ValidateService

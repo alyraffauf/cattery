@@ -7,8 +7,8 @@ import (
 )
 
 // ProtectedTree reports whether target equals or descends into the protected
-// tree, checking the relation in both directions (PLAN.md Sections 6.1 and
-// 6.3). Each relation is evaluated twice: once with canonical native absolute
+// tree, checking the relation in both directions. Each relation is evaluated
+// twice: once with canonical native absolute
 // path segments compared by string equality, and once with the portable
 // NFC-plus-EqualFold segment equivalence. The trees collide when either
 // comparison overlaps, so case-only or NFC/NFD aliases are rejected even on a

@@ -118,8 +118,8 @@ func (result DiffResult) Converged() bool { return result.converged }
 
 // Diff evaluates one request and translates the same evaluation as Status
 // into sorted safe diff/status records, counts, and convergence. A
-// Difference failure accompanies the partial result whenever drift remains
-// (PLAN.md Sections 9.6 and 11.4); no rendering, prompt, mutation, or
+// Difference failure accompanies the partial result whenever drift remains;
+// no rendering, prompt, mutation, or
 // second snapshot occurs.
 func (service *Service) Diff(ctx context.Context, request Request) (DiffResult, error) {
 	evaluation, err := service.evaluate(ctx, request)

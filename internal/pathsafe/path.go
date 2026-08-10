@@ -1,7 +1,7 @@
 // Package pathsafe owns the lexical, canonical, and portable-equivalence
 // checks that keep every Cattery destination inside its allowed root. The
-// rules come from PLAN.md Section 6: lexical validation (6.1), filesystem
-// containment (6.2), and deployment collisions (6.3).
+// rules cover lexical validation, filesystem containment, and deployment
+// collisions.
 //
 // Validation never silently rewrites unsafe input. A rejected path is reported
 // verbatim alongside the reason it was refused, so a caller can surface the

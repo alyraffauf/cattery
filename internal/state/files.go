@@ -38,7 +38,7 @@ FROM files f JOIN repositories r ON r.id = f.repository_id
 WHERE r.root_path = ? AND r.home_path = ? ORDER BY f.target_path`
 
 // dualActiveByPairSQL lists paths active in both representations of a pair,
-// which the schema cannot express as a constraint (PLAN.md Section 8.4).
+// which the schema cannot express as a constraint.
 const dualActiveByPairSQL = `
 SELECT f.target_path FROM files f
 JOIN repositories r ON r.id = f.repository_id
@@ -65,7 +65,7 @@ type fileBatch struct {
 // UpsertFileBaseline registers the canonical pair if needed and upserts one
 // active file row in a short transaction, stamping applied_at from the clock.
 // For a secret row it also commits the hash-key identifier in the same
-// transaction, per PLAN.md Section 8.1.
+// transaction.
 func (store *Store) UpsertFileBaseline(root, home string, baseline FileBaseline) (FileBaseline, error) {
 	root, home, err := prepareFileBaseline(root, home, baseline)
 	if err != nil {

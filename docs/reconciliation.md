@@ -6,7 +6,7 @@ local SQLite state database from the last successful apply. This three-way model
 is what lets Cattery distinguish an intentional edit from a conflict without
 ever silently destroying a file.
 
-This document mirrors PLAN.md Sections 7, 8.5, 9, and 14.
+This document describes reconciliation, retirement, and recovery behavior.
 
 ## The core matrix
 

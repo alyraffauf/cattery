@@ -14,8 +14,8 @@ type StatusService interface {
 }
 
 // newStatusCommand declares the status syntax and mechanically maps the
-// raw repository fields and group arguments into one status call (PLAN.md
-// Section 11.3). No classification or state import appears here.
+// raw repository fields and group arguments into one status call. No
+// classification or state import appears here.
 func newStatusCommand(service StatusService, runtime Runtime, options *Options) *cobra.Command {
 	command := &cobra.Command{
 		Use:   "status [GROUP ...]",

@@ -7,7 +7,7 @@ import (
 )
 
 // SegmentsEquivalent reports whether two single path segments are portably
-// equivalent for repository portability (PLAN.md Section 6.3). Each segment is
+// equivalent for repository portability. Each segment is
 // normalized to Unicode NFC and then compared with strings.EqualFold. This
 // deliberately treats case-only and NFC/NFD distinctions as collisions even on
 // a host filesystem that could store both, preventing common APFS aliases from

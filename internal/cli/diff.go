@@ -14,8 +14,8 @@ type DiffService interface {
 }
 
 // newDiffCommand declares the diff syntax and mechanically maps the raw
-// repository fields and group arguments into one diff call (PLAN.md
-// Section 11.4). No diff calculation or formatter import appears here.
+// repository fields and group arguments into one diff call. No diff calculation
+// or formatter import appears here.
 func newDiffCommand(service DiffService, runtime Runtime, options *Options) *cobra.Command {
 	command := &cobra.Command{
 		Use:   "diff [GROUP ...]",

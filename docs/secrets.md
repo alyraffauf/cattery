@@ -2,7 +2,7 @@
 
 Cattery stores file-level secrets as SOPS-encrypted binary payloads and
 decrypts them only in memory, only when a command needs secret semantics. This
-document mirrors PLAN.md Sections 4 and 8. Cattery does not embed or reimplement
+document describes the storage and state model. Cattery does not embed or reimplement
 SOPS cryptography; it shells out to the installed `sops` executable.
 
 ## Setup

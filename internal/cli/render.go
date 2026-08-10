@@ -12,7 +12,7 @@ import (
 )
 
 // renderAdd writes one line per item record and the summary line of one
-// add result (PLAN.md Section 11.6).
+// add result.
 func renderAdd(writer io.Writer, result add.Result) error {
 	for _, item := range result.Items {
 		if _, err := fmt.Fprintf(writer, "$HOME/%s %s %s\n",
@@ -26,7 +26,7 @@ func renderAdd(writer io.Writer, result add.Result) error {
 }
 
 // renderApply writes one line per item record and the summary line of one
-// apply result (PLAN.md Section 11.5).
+// apply result.
 func renderApply(writer io.Writer, result apply.Result) error {
 	for _, item := range result.Items {
 		if _, err := fmt.Fprintf(writer, "$HOME/%s %s %s\n",
@@ -40,7 +40,7 @@ func renderApply(writer io.Writer, result apply.Result) error {
 }
 
 // renderValidate writes the two deterministic platform count lines of one
-// validate result (PLAN.md Section 11.2).
+// validate result.
 func renderValidate(writer io.Writer, result validate.Result) error {
 	for _, record := range result.Platforms {
 		if _, err := fmt.Fprintf(writer, "%s files=%d secrets=%d aliases=%d groups=%d\n",
@@ -52,7 +52,7 @@ func renderValidate(writer io.Writer, result validate.Result) error {
 }
 
 // renderStatus writes one line per pending record and the summary line of
-// one status result (PLAN.md Sections 11.3 and 11.9).
+// one status result.
 func renderStatus(writer io.Writer, result inspect.StatusResult) error {
 	for _, record := range result.Records() {
 		if _, err := fmt.Fprintf(writer, "$HOME/%s %s %s\n",
@@ -66,7 +66,7 @@ func renderStatus(writer io.Writer, result inspect.StatusResult) error {
 }
 
 // renderDiff writes one line per tagged safe record plus the summary line
-// of one diff result (PLAN.md Section 11.4). Secret records render the
+// of one diff result. Secret records render the
 // marker only, with zero content, size, or hash fields.
 func renderDiff(writer io.Writer, result inspect.DiffResult) error {
 	for _, record := range result.Records() {

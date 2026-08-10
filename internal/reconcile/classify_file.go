@@ -6,7 +6,7 @@ import (
 
 // FileSemantics carries the current semantic fingerprints of one file
 // evaluation: unkeyed BLAKE3 digests for ordinary content, keyed digests for
-// secrets, computed by the caller on demand (PLAN.md Sections 8.3 and 9.1).
+// secrets, computed by the caller on demand.
 // The classifier never decrypts and never touches the filesystem.
 type FileSemantics struct {
 	Source deployment.Digest
@@ -23,8 +23,8 @@ type FileClassification struct {
 }
 
 // ClassifyFile purely classifies one complete file evaluation against its
-// persisted baseline: the five core matrix rows of PLAN.md Section 9.2, the
-// unbaselined safety rows of Section 9.3, independent executable-bit
+// persisted baseline: the five core matrix rows, the unbaselined safety rows,
+// independent executable-bit
 // reconciliation per Section 7.1, and unexpected target types per Section
 // 7.3. A retired row with a current producer reconciles against its retained
 // baseline (Section 9.5 reactivation). Records without a file producer
@@ -45,7 +45,7 @@ func ClassifyFile(record Evaluation, semantics FileSemantics) FileClassification
 
 // classifyUnexpectedType classifies a symlink, directory, or special entry
 // at a regular-file target: never written through, never replaced
-// automatically (PLAN.md Section 7.3). A symlink is drift subject to an
+// automatically. A symlink is drift subject to an
 // explicit decision; directories and special entries require manual
 // intervention and are rejected.
 func classifyUnexpectedType(record Evaluation) FileClassification {
@@ -56,8 +56,8 @@ func classifyUnexpectedType(record Evaluation) FileClassification {
 	return withPath(base, record)
 }
 
-// classifyUnbaselined classifies the database-loss rows of PLAN.md Section
-// 9.3: create from source, adopt equal content as an operational baseline,
+// classifyUnbaselined classifies the database-loss rows: create from source,
+// adopt equal content as an operational baseline,
 // or require an explicit decision for differing content.
 func classifyUnbaselined(record Evaluation, semantics FileSemantics) FileClassification {
 	if record.Target.Kind() != KindFile {
@@ -69,7 +69,7 @@ func classifyUnbaselined(record Evaluation, semantics FileSemantics) FileClassif
 	return withPath(applyModeCorrection(outcome(ActionEstablishBaseline, ReasonUnbaselinedEqual, ConvergenceConverged), record), record)
 }
 
-// classifyBaselined maps the five core matrix rows of PLAN.md Section 9.2.
+// classifyBaselined maps the five core matrix rows.
 // For a secret source, raw storage equality with the baseline source proves
 // the source unchanged without any semantic digest; raw change is a semantic
 // source change only when the keyed plaintext digest also differs, so a
@@ -97,8 +97,7 @@ func classifyBaselined(record Evaluation, row *FileState, semantics FileSemantic
 // applyModeCorrection upgrades a content-converged classification into a
 // mode-only correction when the target's executable bits differ from the
 // source's: automatic in both directions and independent of content drift
-// (PLAN.md Section 7.1), with exact 0600/0700 forced for secrets per
-// Section 4.5.
+// drift, with exact 0600/0700 forced for secrets.
 func applyModeCorrection(candidate FileClassification, record Evaluation) FileClassification {
 	if candidate.Action != ActionNoOp && candidate.Action != ActionEstablishBaseline {
 		return candidate

@@ -10,7 +10,7 @@ import (
 
 // Preflight verifies the external dependencies the selected candidates
 // require: SOPS is probed only when a secret candidate needs on-demand
-// decryption (PLAN.md Sections 9.1 and 11.5). No version probing, state
+// decryption. No version probing, state
 // registration, prompt, hook, or mutation occurs.
 func (service *Service) Preflight(ctx context.Context, candidates Candidates) error {
 	if err := ctx.Err(); err != nil {

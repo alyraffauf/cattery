@@ -11,7 +11,7 @@ import (
 const secretBaselinesSQL = "SELECT COUNT(*) FROM files WHERE source_kind = 'secret'"
 
 // RecoverHashKey guarantees a usable 32-byte hash key exists and matches its
-// committed identifier (PLAN.md Section 8.1), returning the key. It fails
+// committed identifier, returning the key. It fails
 // safely whenever the stored key cannot be proven correct: it never guesses,
 // and it never silently replaces a key that old baselines depend on.
 func (store *Store) RecoverHashKey() ([32]byte, error) {

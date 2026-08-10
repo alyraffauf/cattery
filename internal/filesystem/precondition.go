@@ -1,6 +1,6 @@
 // Package filesystem owns the atomic same-directory mutation primitives that
 // deploy files and aliases without ever publishing a partially written entry
-// (PLAN.md Section 7): freeze, rewrite, revalidate, rename, directory sync.
+// freeze, rewrite, revalidate, rename, directory sync.
 package filesystem
 
 import (

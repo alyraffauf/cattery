@@ -16,7 +16,7 @@ import (
 )
 
 // Filesystem placement and required modes for the Cattery state directory
-// (PLAN.md Section 8.1). The directory is private to the owning user; the
+// The directory is private to the owning user; the
 // database and lock files are read-write but never searchable by others.
 const (
 	catteryDirectoryName                 = "cattery"

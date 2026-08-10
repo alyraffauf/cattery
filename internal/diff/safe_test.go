@@ -14,7 +14,7 @@ import (
 
 const textLimit = 1 << 20
 
-// TestSafeDiffRecord pins the PLAN.md Section 9.6 record contract: the four
+// TestSafeDiffRecord pins the record contract: the four
 // tagged variants for printable text, binary/large ordinary files,
 // metadata-only changes, and secrets, with control/bidi/invalid-UTF-8 runes
 // demoted to binary, escaped labels, verified sizes and hashes, and zero

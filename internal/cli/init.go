@@ -15,7 +15,7 @@ type InitializeService interface {
 
 // newInitCommand declares the init syntax and mechanically maps one raw
 // path or the injected working directory into a single initialize call
-// (PLAN.md Section 11.1). No path resolution, registration, or backend
+// No path resolution, registration, or backend
 // import appears here.
 func newInitCommand(service InitializeService, runtime Runtime) *cobra.Command {
 	command := &cobra.Command{

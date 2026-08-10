@@ -15,7 +15,7 @@ type ApplyService interface {
 
 // newApplyCommand declares the apply syntax and mechanically maps the raw
 // repository fields, group arguments, and dry-run/noninteractive/no-hooks
-// policy into one apply call (PLAN.md Section 11.5). The service carries
+// policy into one apply call. The service carries
 // the prompt resolver; no decision policy or hook order appears here.
 func newApplyCommand(service ApplyService, runtime Runtime, options *Options) *cobra.Command {
 	command := &cobra.Command{

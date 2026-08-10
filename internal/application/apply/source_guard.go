@@ -9,8 +9,8 @@ import (
 )
 
 // Revalidate re-captures every selected source and target after before
-// hooks and compares each against the evaluated facts (PLAN.md Section
-// 11.5). Any mismatch stops the apply with zero executor or managed-row
+// hooks and compares each against the evaluated facts. Any mismatch stops the
+// apply with zero executor or managed-row
 // change.
 func (service *Service) Revalidate(ctx context.Context, candidates Candidates) error {
 	if err := ctx.Err(); err != nil {

@@ -14,7 +14,7 @@ import (
 	"github.com/alyraffauf/cattery/internal/state"
 )
 
-// Directory and file names mirror PLAN.md Section 8.1. The fixture duplicates
+// Directory and file names mirror the state layout. The fixture duplicates
 // them so tests can reach the concrete state paths without widening state's
 // public surface.
 const (

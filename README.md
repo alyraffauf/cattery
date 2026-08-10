@@ -11,7 +11,7 @@ state database so it can tell an intentional edit from a conflict.
 
 ## Install
 
-Cattery is a single static binary. Build it with Go 1.25 or newer:
+Cattery is a single static binary. Build it with Go 1.26 or newer:
 
 ```
 go build ./cmd/cattery

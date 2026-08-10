@@ -23,7 +23,7 @@ type PromptInput struct {
 
 // DecisionPrompt is the interactive resolver of one decision request: it
 // renders the allowed choices, reads one answer, and maps it to a response,
-// re-prompting on invalid input (PLAN.md Section 11.5). It imports only the
+// re-prompting on invalid input. It imports only the
 // apply DTOs and failure categories; no Cobra command or backend adapter.
 type DecisionPrompt struct {
 	stdin      io.Reader

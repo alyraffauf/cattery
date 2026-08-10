@@ -1,4 +1,4 @@
-// Package version implements `cattery version` (PLAN.md Section 11.7): it
+// Package version implements `cattery version`: it
 // returns the linker-populated build identity and the current runtime
 // environment as typed fields. The package is Cobra-free: no CLI type
 // appears here, and the CLI talks to the service through the frozen Result

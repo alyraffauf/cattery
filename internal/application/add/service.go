@@ -12,7 +12,7 @@ import (
 )
 
 // WriteDependencies carries the secret-specific ports required by add's
-// execution phases. They remain separate from Task 75's frozen Dependencies
+// execution phases. They remain separate from Dependencies
 // so the contract owner can finish without a shared-file change.
 type WriteDependencies struct {
 	Secrets *secrets.Client
@@ -42,7 +42,7 @@ func NewService(deps Dependencies) *Service {
 }
 
 // NewServiceWithWrites binds the additional secret execution ports while
-// preserving the frozen Task 75 construction seam for ordinary callers.
+// preserving the construction seam for ordinary callers.
 func NewServiceWithWrites(deps Dependencies, writes WriteDependencies) *Service {
 	return newService(deps, writes)
 }
@@ -61,8 +61,8 @@ func runtimeLayer() deployment.Layer {
 	return layer
 }
 
-// Add runs the full target-to-repository pipeline for one batch (PLAN.md
-// Section 11.6): resolve the repository, compile the current platform, infer
+// Add runs the full target-to-repository pipeline for one batch: resolve the
+// repository, compile the current platform, infer
 // ownership, preflight the batch, and either report a dry-run plan or write
 // sources and baselines sequentially.
 func (service *Service) Add(ctx context.Context, request Request) (Result, error) {

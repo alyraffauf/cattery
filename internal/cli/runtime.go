@@ -1,5 +1,5 @@
-// Package cli implements the Cobra adapters of `cattery` (PLAN.md Section
-// 11): every command mechanically maps raw values into one injected
+// Package cli implements the Cobra adapters of `cattery`: every command
+// mechanically maps raw values into one injected
 // application service call and renders its typed result. Cobra and x/term
 // stay confined to this package.
 package cli
@@ -31,7 +31,7 @@ type RuntimeInput struct {
 
 // Runtime carries the injected process-boundary values of one application:
 // the streams, working directory, environment, terminal predicate, and the
-// per-application verbosity callback (PLAN.md Section 12.1). Instances
+// per-application verbosity callback. Instances
 // never share mutable state.
 type Runtime struct {
 	stdin       io.Reader

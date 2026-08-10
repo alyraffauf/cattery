@@ -14,7 +14,7 @@ type ValidateService interface {
 
 // newValidateCommand declares the validate syntax and mechanically maps
 // the raw repository fields and group arguments into one validate call
-// (PLAN.md Section 11.2). No group or repository semantics appear here.
+// No group or repository semantics appear here.
 func newValidateCommand(service ValidateService, runtime Runtime, options *Options) *cobra.Command {
 	command := &cobra.Command{
 		Use:   "validate [GROUP ...]",

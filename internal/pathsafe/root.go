@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 )
 
-// CanonicalRoot resolves path to its canonical absolute form (PLAN.md Section
-// 6.2). Existing components are resolved with filepath.EvalSymlinks so symlinked
+// CanonicalRoot resolves path to its canonical absolute form. Existing
+// components are resolved with filepath.EvalSymlinks so symlinked
 // ancestors collapse to their real targets. When trailing components do not yet
 // exist, the nearest existing ancestor is resolved canonically and the missing
 // suffix is appended after validating each suffix segment.

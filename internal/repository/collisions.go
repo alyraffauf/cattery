@@ -178,7 +178,7 @@ func aliasPairError(first, second deployment.Alias) error {
 }
 
 // protectedTreeCollisions rejects file targets and alias destinations that
-// equal or descend into a protected tree beneath HOME (PLAN.md Section 6.1).
+// equal or descend into a protected tree beneath HOME.
 func protectedTreeCollisions(files []deployment.ManagedFile, aliases []deployment.Alias, scope CollisionScope) error {
 	if scope.HomeRoot == "" {
 		return nil
