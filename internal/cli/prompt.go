@@ -44,7 +44,7 @@ func NewDecisionPrompt(input PromptInput) *DecisionPrompt {
 // Resolve asks one decision request until a valid final answer arrives.
 func (p *DecisionPrompt) Resolve(ctx context.Context, request apply.DecisionRequest) (apply.DecisionResponse, error) {
 	if p.isTerminal == nil || !p.isTerminal(0) {
-		return apply.DecisionResponse{}, failure.New(failure.InvalidInput, "cli: decisions require an interactive terminal", nil)
+		return apply.DecisionResponse{}, failure.New(failure.Difference, "cli: decisions require an interactive terminal", nil)
 	}
 	scanner := bufio.NewScanner(p.stdin)
 	path := "$HOME/" + displayPath(request.TargetPath())
