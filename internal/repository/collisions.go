@@ -88,9 +88,7 @@ func destinationsCollide(first, second string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return pathsafe.PathsEquivalent(firstSegments, secondSegments) ||
-		pathsafe.IsParentEquivalent(firstSegments, secondSegments) ||
-		pathsafe.IsParentEquivalent(secondSegments, firstSegments), nil
+	return pathsafe.PortableOverlap(firstSegments, secondSegments), nil
 }
 
 // filePairError identifies both source owners and the colliding target.
@@ -146,9 +144,7 @@ func aliasFileCollide(alias deployment.Alias, file deployment.ManagedFile) (bool
 	if pathsafe.PathsEquivalent(destination, canonical) && pathsafe.PathsEquivalent(canonical, target) {
 		return false, nil
 	}
-	return pathsafe.PathsEquivalent(destination, target) ||
-		pathsafe.IsParentEquivalent(destination, target) ||
-		pathsafe.IsParentEquivalent(target, destination), nil
+	return pathsafe.PortableOverlap(destination, target), nil
 }
 
 // aliasFilePairError identifies the alias scope, the file owner, and the

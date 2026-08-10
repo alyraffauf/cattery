@@ -56,6 +56,11 @@ type layerView struct {
 	dirs  map[string]bool
 }
 
+// covers reports whether any base-layer entry suppresses the platform layer
+// for target. A file entry at any ancestor path prefix covers the target: a
+// single platform FILE at an ancestor suppresses the entire base subtree
+// beneath it. That is why covers walks prefixes of the target rather than only
+// exact file/dir matches.
 func (view layerView) covers(target string) bool {
 	if _, ok := view.files[target]; ok || view.dirs[target] {
 		return true
@@ -95,6 +100,17 @@ func resolveScopeFiles(base ScanResult, scope deployment.Scope, platform layerVi
 	return recordsFor(merged.files)
 }
 
+// representableRootSecretTarget reports whether target can be produced by a
+// root-scope secret source under Section 2.1: a root secret must target either
+// a dot-prefixed tree (ungrouped HOME tree) or a single non-underscore segment.
+// Multi-segment non-dot paths (e.g. bin/...) and leading-underscore targets are
+// not representable at the root layer and require a group or a platform overlay.
+func representableRootSecretTarget(target string) bool {
+	first := strings.Split(target, "/")[0]
+	return strings.HasPrefix(first, ".") ||
+		(!strings.Contains(target, "/") && !strings.HasPrefix(first, "_"))
+}
+
 func baseTarget(candidate Candidate) (string, error) {
 	target := candidate.SourceRepoPath
 	if !candidate.Scope.IsRoot() {
@@ -104,13 +120,8 @@ func baseTarget(candidate Candidate) (string, error) {
 		return target, nil
 	}
 	target = strings.TrimPrefix(target, "_secrets/")
-	if candidate.Scope.IsRoot() {
-		first := strings.Split(target, "/")[0]
-		representable := strings.HasPrefix(first, ".") ||
-			(!strings.Contains(target, "/") && !strings.HasPrefix(first, "_"))
-		if !representable {
-			return "", fmt.Errorf("repository: root secret target %q is not representable at the root layer", target)
-		}
+	if candidate.Scope.IsRoot() && !representableRootSecretTarget(target) {
+		return "", fmt.Errorf("repository: root secret target %q is not representable at the root layer", target)
 	}
 	return target, nil
 }
@@ -217,7 +228,7 @@ func (walker *layerWalker) visit(path string, entry os.DirEntry, kind deployment
 	candidate := Candidate{
 		Scope: walker.scope, Layer: walker.layer, Kind: kind,
 		SourceRepoPath: filepath.Join(walker.relative, path), SourceAbsPath: filepath.Join(walker.absolute, path),
-		ExecutableBits: info.Mode() & 0o111,
+		ExecutableBits: info.Mode() & deployment.ExecutableBitMask,
 	}
 	existing, ok := walker.view.files[target]
 	if ok && existing.Kind != kind {
@@ -232,13 +243,8 @@ func (walker *layerWalker) target(path string, kind deployment.FileKind) (string
 		return path, nil
 	}
 	target := strings.TrimPrefix(strings.TrimPrefix(path, "_secrets"), "/")
-	if walker.scope.IsRoot() {
-		first := strings.Split(target, "/")[0]
-		representable := strings.HasPrefix(first, ".") ||
-			(!strings.Contains(target, "/") && !strings.HasPrefix(first, "_"))
-		if !representable {
-			return "", fmt.Errorf("repository: root secret target %q is not representable at the root layer", target)
-		}
+	if walker.scope.IsRoot() && !representableRootSecretTarget(target) {
+		return "", fmt.Errorf("repository: root secret target %q is not representable at the root layer", target)
 	}
 	return target, nil
 }
