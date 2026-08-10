@@ -82,7 +82,7 @@ func (semanticState *semanticState) secretSemanticFingerprints(ctx context.Conte
 		semantics.Target = deployment.SecretSemantic(content, semanticState.key)
 	}
 	if SecretDecryptionNeeded(record) {
-		source, err := record.Source.KeyedSemantic(ctx, semanticState.key)
+		source, err := record.Source.KeyedSecretSemantic(ctx, semanticState.key)
 		if err != nil {
 			return semantics, categorized(err, semanticState.commandLabel+": decrypt source "+record.File.SourceRepositoryPath)
 		}

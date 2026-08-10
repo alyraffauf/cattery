@@ -197,7 +197,7 @@ func testSourceDecrypt(t *testing.T) {
 		t.Fatal("capture decrypted before keyed semantics")
 	}
 	var key [32]byte
-	digest, err := observation.KeyedSemantic(context.Background(), key)
+	digest, err := observation.KeyedSecretSemantic(context.Background(), key)
 	if err != nil || digest != deployment.SecretSemantic([]byte("plain"), key) {
 		t.Fatalf("keyed semantic = %v, %v", digest, err)
 	}
@@ -219,7 +219,7 @@ func testSourceKeyedOrdinary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := observation.KeyedSemantic(context.Background(), [32]byte{}); err == nil {
+	if _, err := observation.KeyedSecretSemantic(context.Background(), [32]byte{}); err == nil {
 		t.Fatal("ordinary source accepted keyed semantics")
 	}
 }

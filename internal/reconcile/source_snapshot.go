@@ -223,22 +223,22 @@ func sourceFacts(file deployment.ManagedFile, identity pathsafe.Identity, data [
 }
 
 // Snapshot returns the immutable facts captured from the source.
-func (o SourceObservation) Snapshot() SourceSnapshot { return o.snapshot }
+func (observation SourceObservation) Snapshot() SourceSnapshot { return observation.snapshot }
 
 // Bytes returns the captured bytes. Callers must not modify them and must
 // call Clear when the observation is no longer needed.
-func (o SourceObservation) Bytes() []byte { return o.bytes }
+func (observation SourceObservation) Bytes() []byte { return observation.bytes }
 
-// KeyedSemantic decrypts a secret only when semantic comparison is requested.
+// KeyedSecretSemantic decrypts a secret only when semantic comparison is requested.
 // The plaintext is cleared before returning, including when hashing succeeds.
-func (o *SourceObservation) KeyedSemantic(ctx context.Context, key [32]byte) (digest deployment.Digest, err error) {
-	if !o.secret {
-		return deployment.Digest{}, fmt.Errorf("reconcile: keyed semantics require a secret source %s", o.snapshot.path)
+func (observation *SourceObservation) KeyedSecretSemantic(ctx context.Context, key [32]byte) (digest deployment.Digest, err error) {
+	if !observation.secret {
+		return deployment.Digest{}, fmt.Errorf("reconcile: keyed semantics require a secret source %s", observation.snapshot.path)
 	}
-	if o.client == nil || len(o.bytes) == 0 {
-		return deployment.Digest{}, fmt.Errorf("reconcile: secret source %s cannot decrypt", o.snapshot.path)
+	if observation.client == nil || len(observation.bytes) == 0 {
+		return deployment.Digest{}, fmt.Errorf("reconcile: secret source %s cannot decrypt", observation.snapshot.path)
 	}
-	plaintext, err := o.client.Decrypt(ctx, o.bytes, o.relative)
+	plaintext, err := observation.client.Decrypt(ctx, observation.bytes, observation.relative)
 	if err != nil {
 		return deployment.Digest{}, err
 	}
@@ -247,7 +247,7 @@ func (o *SourceObservation) KeyedSemantic(ctx context.Context, key [32]byte) (di
 }
 
 // Clear zeroes and releases the retained capture buffer.
-func (o *SourceObservation) Clear() {
-	clear(o.bytes)
-	o.bytes = nil
+func (observation *SourceObservation) Clear() {
+	clear(observation.bytes)
+	observation.bytes = nil
 }
