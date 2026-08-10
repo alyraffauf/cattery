@@ -2,21 +2,11 @@ package inspect
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
 
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/reconcile"
 )
-
-func compileFailure(message string, cause error) error {
-	var pathError *os.PathError
-	if errors.As(cause, &pathError) {
-		return failure.New(failure.Operational, message, cause)
-	}
-	return failure.New(failure.InvalidInput, message, cause)
-}
 
 // StatusKind names the representation class of one status record.
 type StatusKind int

@@ -61,6 +61,11 @@ type evalInput struct {
 	resolver    DecisionResolver
 }
 
+type stateRows struct {
+	files   []state.FileBaseline
+	aliases []state.AliasBaseline
+}
+
 // evalFixture builds an evaluation service over the frozen input.
 func evalFixture(t *testing.T, input evalInput) *Service {
 	t.Helper()

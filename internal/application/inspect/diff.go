@@ -2,10 +2,8 @@ package inspect
 
 import (
 	"context"
-	"io"
-	"os"
-	"path/filepath"
 
+	"github.com/alyraffauf/cattery/internal/application/evaluation"
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/diff"
 	"github.com/alyraffauf/cattery/internal/failure"
@@ -199,7 +197,7 @@ func fileDiffRecord(home string, evaluated evaluatedRecord) (DiffRecord, error) 
 		path: evaluated.file.TargetPath, kind: StatusKindFile,
 		action: evaluated.file.Action, reason: evaluated.file.Reason, convergence: evaluated.file.Convergence,
 	})
-	content, err := readTargetContent(home, evaluated.record)
+	content, err := evaluation.ReadTargetContent(home, evaluated.record, "diff")
 	if err != nil {
 		return DiffRecord{}, err
 	}
@@ -208,56 +206,6 @@ func fileDiffRecord(home string, evaluated evaluatedRecord) (DiffRecord, error) 
 		return DiffRecord{}, failure.New(failure.Operational, "diff: build record "+evaluated.record.TargetPath, err)
 	}
 	return DiffRecord{status: status, safe: safe}, nil
-}
-
-// readTargetContent reads the exact bytes of a regular-file target captured
-// beside the evaluation; every other target kind yields nil because no
-// content exists to render.
-func readTargetContent(home string, record reconcile.Evaluation) ([]byte, error) {
-	if record.Target.Kind() != reconcile.KindFile {
-		return nil, nil
-	}
-	path := filepath.Join(home, filepath.FromSlash(record.TargetPath))
-	file, err := openValidatedTarget(path, record)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	content, err := io.ReadAll(file)
-	if err != nil {
-		return nil, failure.New(failure.Operational, "diff: read target "+record.TargetPath, err)
-	}
-	if err := validateOpenedTarget(file, record, path); err != nil {
-		return nil, err
-	}
-	return content, nil
-}
-
-func openValidatedTarget(path string, record reconcile.Evaluation) (*os.File, error) {
-	entry, err := os.Lstat(path)
-	if err != nil {
-		return nil, failure.New(failure.Operational, "diff: read target "+record.TargetPath, err)
-	}
-	if !entry.Mode().IsRegular() || !record.Target.Identity().SameFileInfo(entry) {
-		return nil, failure.New(failure.Operational, "diff: target changed "+record.TargetPath, nil)
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, failure.New(failure.Operational, "diff: read target "+record.TargetPath, err)
-	}
-	if err := validateOpenedTarget(file, record, path); err != nil {
-		file.Close()
-		return nil, err
-	}
-	return file, nil
-}
-
-func validateOpenedTarget(file *os.File, record reconcile.Evaluation, path string) error {
-	info, err := file.Stat()
-	if err != nil || !record.Target.Identity().SameFileInfo(info) || info.Mode().Perm() != record.Target.Mode() {
-		return failure.New(failure.Operational, "diff: target changed "+path, err)
-	}
-	return nil
 }
 
 // diffCounts tallies the per-kind records of one diff result.
