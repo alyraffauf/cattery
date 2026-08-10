@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"log/slog"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/alyraffauf/cattery/internal/cli"
@@ -30,7 +29,7 @@ func Build(input BuildInput) *cli.Application {
 	adapters := NewAdapters(input.StateHome, input.Now)
 	services := BuildApplications(ApplicationsInput{
 		Adapters:   adapters,
-		Home:       envValue(input.Environment, "HOME"),
+		Home:       cli.EnvironmentValue(input.Environment, "HOME"),
 		Platform:   currentPlatform(),
 		Protected:  input.Protected,
 		Stdin:      input.Streams.Stdin,
@@ -59,17 +58,6 @@ func Build(input BuildInput) *cli.Application {
 		Add:        services.Add,
 		Apply:      services.Apply,
 	}, runtimeValues)
-}
-
-// envValue returns the value of one environment entry.
-func envValue(environment []string, name string) string {
-	prefix := name + "="
-	for _, entry := range environment {
-		if strings.HasPrefix(entry, prefix) {
-			return strings.TrimPrefix(entry, prefix)
-		}
-	}
-	return ""
 }
 
 // currentPlatform derives the deployment layer from the runtime GOOS.

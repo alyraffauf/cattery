@@ -113,3 +113,14 @@ func (r Runtime) EnvValue(name string) (string, bool) {
 	}
 	return "", false
 }
+
+// EnvironmentValue returns the value of the first matching environment entry.
+func EnvironmentValue(environment []string, name string) string {
+	prefix := name + "="
+	for _, entry := range environment {
+		if strings.HasPrefix(entry, prefix) {
+			return strings.TrimPrefix(entry, prefix)
+		}
+	}
+	return ""
+}

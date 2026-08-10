@@ -65,10 +65,6 @@ func ParseTag(name string) Tag {
 // Valid reports whether tag is one of the supported constants.
 func (t Tag) Valid() bool { return t >= TagNone && t <= TagSecret }
 
-// SafeRecord is one immutable, output-safe diff record for a destination.
-// Text records carry precomputed printable unified-diff lines, binary records
-// carry ordinary-file sizes and hashes, and secret records carry no payload
-// at all (PLAN.md Sections 9.6 and 12.4).
 // SafeRecordInput carries the renderable fields of one safe record.
 type SafeRecordInput struct {
 	TargetPath  string
@@ -98,6 +94,10 @@ func NewSafeRecord(input SafeRecordInput) SafeRecord {
 	}
 }
 
+// SafeRecord is one immutable, output-safe diff record for a destination.
+// Text records carry precomputed printable unified-diff lines, binary records
+// carry ordinary-file sizes and hashes, and secret records carry no payload
+// at all (PLAN.md Sections 9.6 and 12.4).
 type SafeRecord struct {
 	targetPath  string
 	tag         Tag
