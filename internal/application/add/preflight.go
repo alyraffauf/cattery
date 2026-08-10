@@ -2,6 +2,7 @@ package add
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/failure"
@@ -139,12 +140,27 @@ func rejectPlanCollisions(plan deployment.Plan, items []ItemPlanInput) error {
 func itemPlanCollides(plan deployment.Plan, item ItemPlanInput) error {
 	for _, file := range plan.Files() {
 		if file.SourceRepositoryPath == item.SourceRepositoryPath &&
-			file.TargetRelativePath != item.TargetRelativePath {
+			file.TargetRelativePath == item.TargetRelativePath {
+			continue
+		}
+		if sourcePathsOverlap(file.SourceRepositoryPath, item.SourceRepositoryPath) {
 			return failure.New(failure.InvalidInput,
 				"add: source "+item.SourceRepositoryPath+" is already owned by "+file.TargetRelativePath, nil)
 		}
 	}
+	for _, group := range plan.Groups() {
+		if group == item.SourceRepositoryPath {
+			return failure.New(failure.InvalidInput,
+				"add: source "+item.SourceRepositoryPath+" is an existing group directory", nil)
+		}
+	}
 	return nil
+}
+
+// sourcePathsOverlap reports exact or parent/child overlap for validated
+// slash-relative repository paths.
+func sourcePathsOverlap(first, second string) bool {
+	return first == second || strings.HasPrefix(first, second+"/") || strings.HasPrefix(second, first+"/")
 }
 
 // rejectBatchCollisions rejects two batch items that derive one source.

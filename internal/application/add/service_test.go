@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
@@ -93,10 +94,17 @@ func testServiceCrossPlatform(t *testing.T) {
 	stage.withTarget(t, ".bashrc", []byte("shell"))
 	request := stage.request()
 	request.PlatformSet = true
-	request.Platform = "darwin"
+	request.Platform = oppositePlatform()
 	if _, err := stage.service.Add(context.Background(), request); err == nil {
 		t.Fatal("cross-platform add was accepted")
 	}
+}
+
+func oppositePlatform() string {
+	if runtime.GOOS == "darwin" {
+		return "linux"
+	}
+	return "darwin"
 }
 
 // errInjected is a sentinel cause for the fake failure ports.

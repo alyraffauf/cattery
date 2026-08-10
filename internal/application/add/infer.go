@@ -116,7 +116,11 @@ func inferLocation(context inferContext, request Request) (sourceLocation, error
 	if err != nil {
 		return sourceLocation{}, err
 	}
-	return sourceLocation{scope: inferScope(request), layer: layer, kind: inferKind(request)}, nil
+	scope, err := inferScope(request)
+	if err != nil {
+		return sourceLocation{}, err
+	}
+	return sourceLocation{scope: scope, layer: layer, kind: inferKind(request)}, nil
 }
 
 // sourcePath inverts Section 2's grammar into a repository-relative source
@@ -149,11 +153,14 @@ func resolveTargetRef(identity RepositoryIdentity, target string) (targetRef, er
 }
 
 // inferScope selects an explicit group or the root default.
-func inferScope(request Request) deployment.Scope {
+func inferScope(request Request) (deployment.Scope, error) {
 	if request.GroupSet {
-		return deployment.NewScope(request.Group)
+		if err := pathsafe.GroupName(request.Group); err != nil {
+			return deployment.Scope{}, failure.New(failure.InvalidInput, "add: --group "+request.Group, err)
+		}
+		return deployment.NewScope(request.Group), nil
 	}
-	return deployment.NewScope("")
+	return deployment.NewScope(""), nil
 }
 
 // inferLayer selects an explicit platform layer that must match the runtime
