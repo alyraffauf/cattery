@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-linux:
+    name: native-linux
+    runs-on: ubuntu-22.04
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # cachix/install-nix-action v31.11.0
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
+      - run: nix develop -c just check
+
+  native-macos:
+    name: native-macos
+    runs-on: macos-15
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # cachix/install-nix-action v31.11.0
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
+      - run: nix develop -c just check
+
+  go-floor:
+    name: go-floor
+    runs-on: ubuntu-22.04
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # cachix/install-nix-action v31.11.0
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
+      - run: nix develop -c bash -euo pipefail -c 'CATTERY_GO=go_1_25 just fmt-check && CATTERY_GO=go_1_25 just quality && CATTERY_GO=go_1_25 just test && CATTERY_GO=go_1_25 just build'
+
+  cross-build:
+    name: cross-build-${{ matrix.goos }}-${{ matrix.goarch }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # cachix/install-nix-action v31.11.0
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
+      - run: nix develop -c bash -euo pipefail -c 'CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -buildvcs=false ./...'
+
+  sops:
+    name: sops
+    runs-on: ubuntu-22.04
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # cachix/install-nix-action v31.11.0
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
+      - run: nix develop -c just test-sops
+
+  documentation:
+    name: documentation
+    runs-on: ubuntu-22.04
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # cachix/install-nix-action v31.11.0
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
+      - run: nix develop -c just check-docs
+      - run: nix develop -c just check-credentials
