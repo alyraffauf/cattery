@@ -24,6 +24,9 @@ const (
 	KindSpecial
 )
 
+// Valid reports whether the kind is one of the known filesystem entry kinds.
+func (k EntryKind) Valid() bool { return k >= KindAbsent && k <= KindSpecial }
+
 // ContentToken is an immutable digest of exact bytes; equal tokens prove
 // equal content without retaining the bytes themselves.
 type ContentToken [32]byte

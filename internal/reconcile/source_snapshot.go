@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
+	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/pathsafe"
 	"github.com/alyraffauf/cattery/internal/secrets"
 )
@@ -94,7 +95,7 @@ func validateCapture(input captureInput) error {
 }
 
 func requireRegularSource(path string, identity pathsafe.Identity) error {
-	if KindOfIdentity(identity) != KindFile {
+	if filesystem.KindOfIdentity(identity) != KindFile {
 		return fmt.Errorf("reconcile: source %s is not a regular file", path)
 	}
 	return nil
@@ -184,7 +185,7 @@ func checkStableSource(read sourceRead) error {
 	if !pathsafe.SameIdentity(read.before, read.after) {
 		return fmt.Errorf("reconcile: source %s replaced while reading", read.path)
 	}
-	if KindOfIdentity(read.after) != KindFile {
+	if filesystem.KindOfIdentity(read.after) != KindFile {
 		return fmt.Errorf("reconcile: source %s is no longer a regular file", read.path)
 	}
 	if read.after.Size() != int64(len(read.data)) {
@@ -212,7 +213,7 @@ func checkSecretEnvelope(path string, data []byte) error {
 func sourceFacts(file deployment.ManagedFile, identity pathsafe.Identity, data []byte) SourceSnapshot {
 	snapshot := SourceSnapshot{
 		path: file.SourceAbsolutePath, identity: identity, kind: KindFile,
-		token: TokenOfContent(data), executable: identity.Mode().Perm() & deployment.ExecutableBitMask,
+		token: filesystem.TokenOfContent(data), executable: identity.Mode().Perm() & deployment.ExecutableBitMask,
 	}
 	if file.Kind == deployment.FileOrdinary {
 		snapshot.semantic = deployment.Ordinary(data)

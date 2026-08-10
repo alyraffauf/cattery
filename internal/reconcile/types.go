@@ -4,40 +4,32 @@
 package reconcile
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"io/fs"
 	"time"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
+	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/pathsafe"
 	"github.com/alyraffauf/cattery/internal/state"
 )
 
-// Destination names one HOME-relative target beneath a canonical root.
-type Destination struct {
-	Root     string
-	Relative string
-}
-
-// EntryKind names the object type observed at one destination path.
-type EntryKind int
+// These low-level values are owned by filesystem. Aliases keep reconciliation
+// records and their exported vocabulary readable without duplicating types.
+type Destination = filesystem.Destination
+type EntryKind = filesystem.EntryKind
+type ContentToken = filesystem.ContentToken
 
 const (
-	KindAbsent EntryKind = iota
-	KindFile
-	KindDirectory
-	KindSymlink
-	KindSpecial
+	KindAbsent    = filesystem.KindAbsent
+	KindFile      = filesystem.KindFile
+	KindDirectory = filesystem.KindDirectory
+	KindSymlink   = filesystem.KindSymlink
+	KindSpecial   = filesystem.KindSpecial
 )
 
-func (k EntryKind) Valid() bool { return k >= KindAbsent && k <= KindSpecial }
-
-// ContentToken is an immutable digest of exact bytes.
-type ContentToken [32]byte
-
-// TokenOfContent derives the content token of data.
-func TokenOfContent(data []byte) ContentToken { return sha256.Sum256(data) }
+// TokenOfContent preserves the reconcile API while delegating to filesystem.
+func TokenOfContent(data []byte) ContentToken { return filesystem.TokenOfContent(data) }
 
 // Action names the reconciliation step a classified representation requires.
 type Action int
