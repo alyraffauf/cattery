@@ -2,6 +2,7 @@ package add
 
 import (
 	"context"
+	"github.com/alyraffauf/cattery/internal/failure"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -38,8 +39,8 @@ func testServiceDryRun(t *testing.T) {
 	request := stage.request()
 	request.DryRun = true
 	result, err := stage.service.Add(context.Background(), request)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || !kindIs(err, failure.Difference) {
+		t.Fatalf("add: %v, want a difference failure for a pending dry run", err)
 	}
 	if result.Summary.Planned != 1 {
 		t.Fatalf("planned = %d, want 1", result.Summary.Planned)
@@ -180,4 +181,10 @@ func (stage serviceStage) request() Request {
 		Repository: RepositoryInput{WorkingDir: stage.home},
 		Targets:    []string{".bashrc"},
 	}
+}
+
+// kindIs reports whether err carries the given failure kind.
+func kindIs(err error, want failure.Kind) bool {
+	kind, ok := failure.HasKind(err)
+	return ok && kind == want
 }

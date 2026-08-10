@@ -142,7 +142,11 @@ func (service *Service) complete(ctx context.Context, batch resolvedBatch, reque
 		return Result{}, err
 	}
 	if request.DryRun {
-		return DryRun(planned), nil
+		result := DryRun(planned)
+		if result.Summary.Planned > 0 {
+			return result, failure.New(failure.Difference, "add: dry run reports pending changes", nil)
+		}
+		return result, nil
 	}
 	return service.execute(ctx, batch.identity, planned)
 }
