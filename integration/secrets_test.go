@@ -205,6 +205,7 @@ func testSecretsDependency(t *testing.T) {
 	env := newExecEnv(t)
 	env.initRepository(t)
 	writeFile(t, filepath.Join(env.repo, "_secrets", "token"), []byte(`{"data":"eA==","sops":{"version":"3.9.0"}}`))
+	writeFile(t, filepath.Join(env.repo, ".ordinary"), []byte("ordinary source"))
 	writeFile(t, filepath.Join(env.home, "token"), []byte("plaintext"))
 	env.extraEnv = append(env.extraEnv, "PATH="+sopsFreePath())
 	result := env.secretRun(t, nil, "apply")
@@ -217,6 +218,16 @@ func testSecretsDependency(t *testing.T) {
 	}
 	if string(readTargetFile(t, env.home, "token")) != "plaintext" {
 		t.Fatal("verification changed the target")
+	}
+	skippedSecrets := env.secretRun(t, nil, "apply", "--skip-secrets")
+	if skippedSecrets.Code != 0 {
+		t.Fatalf("apply --skip-secrets = %+v", skippedSecrets)
+	}
+	if string(readTargetFile(t, env.home, ".ordinary")) != "ordinary source" {
+		t.Fatal("ordinary target was not applied")
+	}
+	if string(readTargetFile(t, env.home, "token")) != "plaintext" {
+		t.Fatal("apply --skip-secrets changed the secret target")
 	}
 }
 

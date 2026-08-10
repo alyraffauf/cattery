@@ -46,6 +46,16 @@ repo/app/_darwin/_secrets/.config/example/token
 Use `--group` or `--platform` with `add` when you need to choose where the
 source belongs. Run `cattery status` and `cattery apply` as usual afterward.
 
+To deploy ordinary files while leaving every secret target and secret baseline
+untouched, run:
+
+```sh
+cattery apply --skip-secrets
+```
+
+The flag also prevents secret decryption and SOPS dependency checks. Group
+selection still applies normally to the remaining ordinary files and aliases.
+
 `cattery add --secret` is the adoption workflow. The lifecycle commands below
 inventory, verify, or rotate sources that are already managed; they do not
 create, edit, or delete plaintext secrets.

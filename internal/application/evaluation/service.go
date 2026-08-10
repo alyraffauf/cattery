@@ -73,13 +73,16 @@ func (service *Service) Evaluate(ctx context.Context, request Request) (Result, 
 	if err != nil {
 		return Result{}, err
 	}
-	return service.evaluateRows(ctx, evaluationInput{identity: identity, rows: rows, groups: request.Groups})
+	return service.evaluateRows(ctx, evaluationInput{
+		identity: identity, rows: rows, groups: request.Groups, excludeSecrets: request.ExcludeSecrets,
+	})
 }
 
 type evaluationInput struct {
-	identity RepositoryIdentity
-	rows     stateRows
-	groups   []string
+	identity       RepositoryIdentity
+	rows           stateRows
+	groups         []string
+	excludeSecrets bool
 }
 
 func (service *Service) evaluateRows(ctx context.Context, input evaluationInput) (Result, error) {
@@ -125,11 +128,50 @@ func (service *Service) selected(input evaluationInput, full deployment.Plan, ch
 	if err != nil {
 		return deployment.Plan{}, reconcile.StateSnapshot{}, err
 	}
-	snapshot, err := reconcile.NewStateSnapshot(selectedRows(input.identity, input.rows, chosen))
+	rows := selectedRows(input.identity, input.rows, chosen)
+	if input.excludeSecrets {
+		plan, rows, err = excludeSecrets(plan, rows)
+		if err != nil {
+			return deployment.Plan{}, reconcile.StateSnapshot{}, failure.New(failure.InvalidInput, service.commandLabel+": exclude secrets", err)
+		}
+	}
+	snapshot, err := reconcile.NewStateSnapshot(rows)
 	if err != nil {
 		return deployment.Plan{}, reconcile.StateSnapshot{}, failure.New(failure.Operational, service.commandLabel+": snapshot state", err)
 	}
 	return plan, snapshot, nil
+}
+
+func excludeSecrets(plan deployment.Plan, rows reconcile.StateRows) (deployment.Plan, reconcile.StateRows, error) {
+	secretTargets := make(map[string]bool)
+	for _, file := range plan.Files() {
+		if file.Kind == deployment.FileSecret {
+			secretTargets[file.TargetRelativePath] = true
+		}
+	}
+	for _, row := range rows.Files {
+		if row.SourceKind == deployment.FileSecret {
+			secretTargets[row.TargetPath] = true
+		}
+	}
+
+	files := slices.DeleteFunc(plan.Files(), func(file deployment.ManagedFile) bool {
+		return file.Kind == deployment.FileSecret
+	})
+	aliases := slices.DeleteFunc(plan.Aliases(), func(alias deployment.Alias) bool {
+		return secretTargets[alias.CanonicalTargetRelativePath] || secretTargets[alias.AliasRelativePath]
+	})
+	rows.Files = slices.DeleteFunc(rows.Files, func(row state.FileBaseline) bool {
+		return row.SourceKind == deployment.FileSecret
+	})
+	rows.Aliases = slices.DeleteFunc(rows.Aliases, func(row state.AliasBaseline) bool {
+		return secretTargets[row.CanonicalTargetPath] || secretTargets[row.AliasPath]
+	})
+	filtered, err := deployment.NewPlan(deployment.PlanInput{
+		RepositoryRoot: plan.RepositoryRoot(), Platform: plan.Platform(), Groups: plan.Groups(),
+		Files: files, Aliases: aliases, Hooks: plan.Hooks(),
+	})
+	return filtered, rows, err
 }
 
 func (service *Service) resolve(input RepositoryInput) (RepositoryIdentity, error) {

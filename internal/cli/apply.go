@@ -14,7 +14,7 @@ type ApplyService interface {
 }
 
 // newApplyCommand declares the apply syntax and mechanically maps the raw
-// repository fields, group arguments, and dry-run/noninteractive/no-hooks
+// repository fields, group arguments, and dry-run/noninteractive/no-hooks/skip-secrets
 // policy into one apply call. The service carries
 // the prompt resolver; no decision policy or hook order appears here.
 func newApplyCommand(service ApplyService, runtime Runtime, options *Options) *cobra.Command {
@@ -37,6 +37,7 @@ func newApplyCommand(service ApplyService, runtime Runtime, options *Options) *c
 	command.Flags().Bool("dry-run", false, "show the plan without writing")
 	command.Flags().Bool("non-interactive", false, "refuse unresolved decisions")
 	command.Flags().Bool("no-hooks", false, "skip trusted hooks")
+	command.Flags().Bool("skip-secrets", false, "skip encrypted secret targets")
 	return command
 }
 
@@ -55,12 +56,14 @@ func applyRequest(command *cobra.Command, input applyInput) apply.Request {
 	dryRun, _ := command.Flags().GetBool("dry-run")
 	nonInteractive, _ := command.Flags().GetBool("non-interactive")
 	noHooks, _ := command.Flags().GetBool("no-hooks")
+	skipSecrets, _ := command.Flags().GetBool("skip-secrets")
 	return apply.Request{
 		Repository:     applyRepository(options, input.runtime),
 		Groups:         append([]string(nil), input.groups...),
 		DryRun:         dryRun,
 		NonInteractive: nonInteractive,
 		NoHooks:        noHooks,
+		SkipSecrets:    skipSecrets,
 	}
 }
 

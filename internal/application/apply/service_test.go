@@ -24,6 +24,7 @@ func TestApplyService(t *testing.T) {
 		{"partial results preserved", testServicePartialPreserved},
 		{"verification downgrades", testServiceVerifyDowngrade},
 		{"cancellation", testServiceCancellation},
+		{"secrets skipped", testServiceSkipSecrets},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
@@ -195,5 +196,32 @@ func testServiceCancellation(t *testing.T) {
 	_, err := pair.service.Apply(ctx, Request{})
 	if err == nil {
 		t.Fatal("cancelled apply must fail")
+	}
+}
+
+func testServiceSkipSecrets(t *testing.T) {
+	repo, home := t.TempDir(), t.TempDir()
+	ordinary := ordinarySource(t, fileSpec{Repo: repo, Target: "ordinary", Relative: "files/ordinary"}, []byte("ordinary source"))
+	secret := secretSource(t, fileSpec{Repo: repo, Target: "secret", Relative: "files/secret"})
+	writeTarget(t, targetPath(home, "secret"), []byte("keep secret target"))
+	probe := &probeFake{err: failure.New(failure.Dependency, "sops unavailable", nil)}
+	baselines, replacer := &baselineFake{}, &replacerFake{}
+	service := evalFixture(t, evalInput{
+		repo: repo, home: home, plan: evalPlan(t, repo, ordinary, secret),
+		probe: probe, baselines: baselines, replacer: replacer,
+	})
+
+	result, err := service.Apply(context.Background(), Request{SkipSecrets: true})
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	if result.Summary.Completed != 1 || len(result.Items) != 1 || result.Items[0].TargetPath != "ordinary" {
+		t.Fatalf("result = %+v", result)
+	}
+	if probe.calls != 0 || replacer.calls != 1 || baselines.calls != 1 {
+		t.Fatalf("calls: probe=%d replacer=%d baselines=%d", probe.calls, replacer.calls, baselines.calls)
+	}
+	if got := string(targetContent(t, home, "secret")); got != "keep secret target" {
+		t.Fatalf("secret target = %q", got)
 	}
 }

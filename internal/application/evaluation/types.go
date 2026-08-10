@@ -42,8 +42,9 @@ type RepositoryInput = applicationrepository.RepositoryInput
 
 // Request is the shared input of one evaluation.
 type Request struct {
-	Repository RepositoryInput
-	Groups     []string
+	Repository     RepositoryInput
+	Groups         []string
+	ExcludeSecrets bool
 }
 
 // Record joins one immutable reconciliation evaluation with all classifications

@@ -77,7 +77,7 @@ configuration directory—in `_routes.toml`.
 | `cattery version` | Print build information. |
 
 Global options are `--repo PATH` and `--verbose`. `apply` supports `--dry-run`,
-`--non-interactive`, and `--no-hooks`; `add` supports `--group`, `--platform`,
+`--non-interactive`, `--no-hooks`, and `--skip-secrets`; `add` supports `--group`, `--platform`,
 `--secret`, and `--dry-run`; `forget` supports `--dry-run` and requires `--yes`
 to remove repository sources. Secret lifecycle commands accept repeatable
 `--source REPOSITORY_PATH` selectors; `secrets reencrypt` previews by default

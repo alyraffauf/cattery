@@ -51,7 +51,7 @@ func applyFixture(t *testing.T, service *applyServiceFake, options Options) (*co
 func testApplyFlags(t *testing.T) {
 	service := &applyServiceFake{result: applyResult()}
 	command, _ := applyFixture(t, service, Options{})
-	command.SetArgs([]string{"-r", "repo", "--non-interactive", "--no-hooks", "apps", "tools"})
+	command.SetArgs([]string{"-r", "repo", "--non-interactive", "--no-hooks", "--skip-secrets", "apps", "tools"})
 	if err := command.Execute(); err != nil {
 		t.Fatalf("run: %v", err)
 	}
@@ -59,7 +59,7 @@ func testApplyFlags(t *testing.T) {
 	if request.Repository.RawExplicit != "repo" || !request.Repository.ExplicitSet {
 		t.Fatalf("repository = %+v, want the flag value", request.Repository)
 	}
-	if !request.NonInteractive || !request.NoHooks {
+	if !request.NonInteractive || !request.NoHooks || !request.SkipSecrets {
 		t.Fatalf("policy = %+v, want the explicit flags", request)
 	}
 	if len(request.Groups) != 2 || request.Groups[0] != "apps" || request.Groups[1] != "tools" {

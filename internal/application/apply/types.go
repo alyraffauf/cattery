@@ -130,6 +130,7 @@ type Request struct {
 	DryRun         bool
 	NonInteractive bool
 	NoHooks        bool
+	SkipSecrets    bool
 }
 
 // DecisionChoice is the application-owned choice vocabulary one prompt may
