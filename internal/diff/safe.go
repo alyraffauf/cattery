@@ -41,6 +41,35 @@ func (t Tag) Valid() bool { return t >= TagNone && t <= TagSecret }
 // Text records carry precomputed printable unified-diff lines, binary records
 // carry ordinary-file sizes and hashes, and secret records carry no payload
 // at all (PLAN.md Sections 9.6 and 12.4).
+// SafeRecordInput carries the renderable fields of one safe record.
+type SafeRecordInput struct {
+	TargetPath  string
+	Tag         Tag
+	SourceLabel string
+	TargetLabel string
+	Lines       string
+	SourceSize  int64
+	TargetSize  int64
+	SourceHash  deployment.Digest
+	TargetHash  deployment.Digest
+}
+
+// NewSafeRecord freezes one safe record over the given fields, so the
+// inspection and CLI renderers can build records across the boundary.
+func NewSafeRecord(input SafeRecordInput) SafeRecord {
+	return SafeRecord{
+		targetPath:  input.TargetPath,
+		tag:         input.Tag,
+		sourceLabel: input.SourceLabel,
+		targetLabel: input.TargetLabel,
+		lines:       input.Lines,
+		sourceSize:  input.SourceSize,
+		targetSize:  input.TargetSize,
+		sourceHash:  input.SourceHash,
+		targetHash:  input.TargetHash,
+	}
+}
+
 type SafeRecord struct {
 	targetPath  string
 	tag         Tag
