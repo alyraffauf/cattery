@@ -26,6 +26,10 @@ require_commands() {
     done
 }
 
+require_clean_tree() {
+    [[ -z $(git status --porcelain) ]] || die "checkout is dirty"
+}
+
 release_tag() {
     local tag
     tag=$(git describe --exact-match --tags --match 'v[0-9]*' HEAD 2>/dev/null) || die "HEAD must be an exact vX.Y.Z tag"
@@ -67,7 +71,7 @@ build_target() {
     local epoch=$6
     local archive_name="cattery_${tag#v}_${goos}_${goarch}"
     local binary="$DIST/build/$goos-$goarch/cattery"
-    local tree="$DIST/tree/$archive_name"
+    local tree="$DIST/tree"
     local ldflags
     ldflags="-s -w -buildid= -X github.com/alyraffauf/cattery/internal/buildinfo.Version=$tag -X github.com/alyraffauf/cattery/internal/buildinfo.Commit=$commit -X github.com/alyraffauf/cattery/internal/buildinfo.BuildTimestamp=$timestamp"
 
@@ -98,6 +102,7 @@ package_release() {
     commit=$(git rev-parse HEAD)
     timestamp=$(release_time "$epoch")
     rm -rf "$DIST/build" "$DIST/tree"
+    rm -f "$DIST"/cattery_*.tar.gz "$DIST/SHA256SUMS"
     mkdir -p "$DIST"
     local target
     for target in "${TARGETS[@]}"; do
@@ -126,6 +131,7 @@ main() {
     fi
     [[ $# -eq 0 ]] || die "unknown argument: $1"
     require_commands
+    require_clean_tree
     [[ -f "$ROOT/LICENSE" ]] || die "missing LICENSE"
     local tag epoch
     tag=$(release_tag)
