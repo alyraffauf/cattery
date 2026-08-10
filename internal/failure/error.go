@@ -3,6 +3,7 @@ package failure
 import (
 	"errors"
 	"fmt"
+	"os"
 )
 
 // Kind categorizes a failure for the CLI exit mapper. It carries no numeric
@@ -50,6 +51,16 @@ func (e *Error) Unwrap() error {
 // is a leaf; pass a lower-level error to preserve its chain.
 func New(kind Kind, message string, cause error) *Error {
 	return &Error{Kind: kind, Message: message, Cause: cause}
+}
+
+// FromPathError categorizes a compile failure: filesystem path errors are
+// operational, while repository validation errors are invalid input.
+func FromPathError(message string, cause error) *Error {
+	var pathError *os.PathError
+	if errors.As(cause, &pathError) {
+		return New(Operational, message, cause)
+	}
+	return New(InvalidInput, message, cause)
 }
 
 // HasKind walks an error chain and any errors.Join group, returning the first

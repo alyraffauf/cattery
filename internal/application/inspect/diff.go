@@ -49,30 +49,15 @@ func NewDiffRecord(input DiffRecordInput) DiffRecord {
 	}
 }
 
-// parseDiffTag maps one stable tag name to its diff value.
+// parseDiffTag preserves the application boundary while delegating the tag
+// vocabulary to the diff package.
 func parseDiffTag(name string) diff.Tag {
-	switch name {
-	case "text":
-		return diff.TagText
-	case "binary":
-		return diff.TagBinary
-	case "secret":
-		return diff.TagSecret
-	}
-	return diff.TagNone
+	return diff.ParseTag(name)
 }
 
 // DiffTagName returns the stable lowercase name of one record's safe tag.
 func DiffTagName(record DiffRecord) string {
-	switch record.safe.Tag() {
-	case diff.TagText:
-		return "text"
-	case diff.TagBinary:
-		return "binary"
-	case diff.TagSecret:
-		return "secret"
-	}
-	return "none"
+	return record.safe.Tag().String()
 }
 
 func (record DiffRecord) TargetPath() string  { return record.status.TargetPath() }

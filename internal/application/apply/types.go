@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/alyraffauf/cattery/internal/application/evaluation"
+	"github.com/alyraffauf/cattery/internal/application/outcome"
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/hooks"
@@ -287,15 +288,12 @@ func (p ActionPlan) Items() []PlanAction {
 }
 
 // ItemStatus marks the outcome of one per-target apply record.
-type ItemStatus string
+type ItemStatus = outcome.ItemStatus
 
 const (
-	// StatusPlanned marks a dry-run or not-yet-executed record.
-	StatusPlanned ItemStatus = "planned"
-	// StatusCompleted marks a durable target with an equal baseline.
-	StatusCompleted ItemStatus = "completed"
-	// StatusPartial marks a durable target without an equal baseline.
-	StatusPartial ItemStatus = "partial"
+	StatusPlanned   = outcome.StatusPlanned
+	StatusCompleted = outcome.StatusCompleted
+	StatusPartial   = outcome.StatusPartial
 )
 
 // ItemResult is one per-target apply record: the HOME-relative target, the
@@ -308,11 +306,7 @@ type ItemResult struct {
 }
 
 // Summary counts the per-target outcome records of one apply.
-type Summary struct {
-	Planned   int
-	Completed int
-	Partial   int
-}
+type Summary = outcome.Summary
 
 // Result is the frozen outcome of one apply: the target-sorted per-target
 // records and the outcome counts.

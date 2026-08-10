@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/fs"
 
+	"github.com/alyraffauf/cattery/internal/application/outcome"
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/repository"
@@ -238,15 +239,12 @@ func (p BatchPlan) ExecutionOrder() []int {
 }
 
 // ItemStatus marks the outcome of one per-target add record.
-type ItemStatus string
+type ItemStatus = outcome.ItemStatus
 
 const (
-	// StatusPlanned marks a dry-run or not-yet-executed record.
-	StatusPlanned ItemStatus = "planned"
-	// StatusCompleted marks a fully adopted target with an established baseline.
-	StatusCompleted ItemStatus = "completed"
-	// StatusPartial marks a source update kept without an equal baseline.
-	StatusPartial ItemStatus = "partial"
+	StatusPlanned   = outcome.StatusPlanned
+	StatusCompleted = outcome.StatusCompleted
+	StatusPartial   = outcome.StatusPartial
 )
 
 // ItemResult is one per-target add record: the HOME-relative target, the
@@ -259,11 +257,7 @@ type ItemResult struct {
 }
 
 // Summary counts the per-target outcome records of one add.
-type Summary struct {
-	Planned   int
-	Completed int
-	Partial   int
-}
+type Summary = outcome.Summary
 
 // Result is the frozen outcome of one add: the target-sorted per-target
 // records and the outcome counts.

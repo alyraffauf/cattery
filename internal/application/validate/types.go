@@ -7,22 +7,10 @@
 package validate
 
 import (
-	"errors"
-	"os"
-
 	"github.com/alyraffauf/cattery/internal/deployment"
-	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/repository"
 	"github.com/alyraffauf/cattery/internal/selection"
 )
-
-func compileFailure(message string, cause error) error {
-	var pathError *os.PathError
-	if errors.As(cause, &pathError) {
-		return failure.New(failure.Operational, message, cause)
-	}
-	return failure.New(failure.InvalidInput, message, cause)
-}
 
 // Dependencies bundles the injectable seams of the validation service.
 // RepositorySource resolves the canonical repository pair for a raw request;
