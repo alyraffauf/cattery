@@ -144,7 +144,7 @@ func (service *Service) resolveRepeatedly(ctx context.Context, request DecisionR
 		if err := ctx.Err(); err != nil {
 			return DecisionResponse{}, err
 		}
-		response, err := service.resolveOnce(ctx, request, difference)
+		response, err := service.resolveOnce(decisionResolution{context: ctx, request: request, difference: difference})
 		if err != nil {
 			return DecisionResponse{}, err
 		}
@@ -156,11 +156,20 @@ func (service *Service) resolveRepeatedly(ctx context.Context, request DecisionR
 
 // resolveOnce asks the resolver once and validates its response against the
 // allowed choices of the request.
-func (service *Service) resolveOnce(ctx context.Context, request DecisionRequest, difference DifferenceProvider) (DecisionResponse, error) {
+type decisionResolution struct {
+	context    context.Context
+	request    DecisionRequest
+	difference DifferenceProvider
+}
+
+func (service *Service) resolveOnce(input decisionResolution) (DecisionResponse, error) {
+	ctx, request, difference := input.context, input.request, input.difference
 	if service.resolver == nil {
 		return DecisionResponse{}, failure.New(failure.Operational, "apply: decision resolver is unavailable", nil)
 	}
-	response, err := resolveDecision(service.resolver, ctx, request, difference)
+	response, err := resolveDecision(decisionResolutionInput{
+		resolver: service.resolver, context: ctx, request: request, difference: difference,
+	})
 	if err != nil {
 		return DecisionResponse{}, err
 	}
@@ -172,9 +181,16 @@ func (service *Service) resolveOnce(ctx context.Context, request DecisionRequest
 	return DecisionResponse{}, failure.New(failure.InvalidInput, "apply: invalid decision response for "+request.TargetPath(), nil)
 }
 
-func resolveDecision(resolver DecisionResolver, ctx context.Context, request DecisionRequest, difference DifferenceProvider) (DecisionResponse, error) {
-	if differenceResolver, ok := resolver.(DifferenceResolver); ok {
-		return differenceResolver.ResolveWithDifference(ctx, request, difference)
+type decisionResolutionInput struct {
+	resolver   DecisionResolver
+	context    context.Context
+	request    DecisionRequest
+	difference DifferenceProvider
+}
+
+func resolveDecision(input decisionResolutionInput) (DecisionResponse, error) {
+	if differenceResolver, ok := input.resolver.(DifferenceResolver); ok {
+		return differenceResolver.ResolveWithDifference(input.context, input.request, input.difference)
 	}
-	return resolver.Resolve(ctx, request)
+	return input.resolver.Resolve(input.context, input.request)
 }
