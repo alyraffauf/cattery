@@ -81,14 +81,6 @@ func (adapter stateReaderAdapter) RecoverHashKey() ([32]byte, error) {
 	return adapter.store.RecoverHashKey()
 }
 
-// DefaultRepository returns the default repository of one home.
-func (adapter stateReaderAdapter) DefaultRepository(home string) (state.Repository, error) {
-	if err := adapter.store.EnsureAcquired(); err != nil {
-		return state.Repository{}, err
-	}
-	return adapter.store.DefaultRepository(home)
-}
-
 // baselineAdapter exposes the baseline port over one store.
 type baselineAdapter struct {
 	store *state.Store

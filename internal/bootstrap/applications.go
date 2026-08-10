@@ -56,7 +56,7 @@ func newShared(input ApplicationsInput) shared {
 		baselines:   baselineAdapter{store: input.Adapters.Store},
 		transitions: transitionAdapter{store: input.Adapters.Store},
 		retirements: retirementAdapter{store: input.Adapters.Store},
-		resolver:    selection.NewRepositoryResolver(input.Home, stateReader),
+		resolver:    selection.NewRepositoryResolver(input.Home, input.Adapters.Store),
 		prompt: cli.NewDecisionPrompt(cli.PromptInput{
 			Stdin:      input.Stdin,
 			Stderr:     input.Stderr,
@@ -142,7 +142,7 @@ func buildAdd(input ApplicationsInput, shared shared) *add.Service {
 		Baselines:        shared.baselines,
 	}, add.WriteDependencies{
 		Secrets: input.Adapters.SOPS,
-		HashKey: shared.state,
+		HashKey: input.Adapters.Store,
 	})
 }
 
