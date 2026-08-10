@@ -2,7 +2,6 @@ package reconcile
 
 import (
 	"fmt"
-	"io/fs"
 	"strings"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
@@ -103,13 +102,9 @@ func representationIntact(record Evaluation, semantics FileSemantics) bool {
 		return false
 	}
 	if row.SourceKind() == deployment.FileSecret {
-		expected := fs.FileMode(0o600)
-		if row.ExecutableBits() != 0 {
-			expected = 0o700
-		}
-		return record.Target.Mode() == expected
+		return record.Target.Mode() == deployment.SecretTargetMode(row.ExecutableBits())
 	}
-	return record.Target.Mode()&0o111 == row.ExecutableBits()
+	return record.Target.Mode()&deployment.ExecutableBitMask == row.ExecutableBits()
 }
 
 // activeFileRow reports whether the record carries an active file row.

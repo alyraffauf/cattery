@@ -163,7 +163,7 @@ func checkHandle(path string, before pathsafe.Identity, info os.FileInfo) error 
 	if info.Size() != before.Size() {
 		return fmt.Errorf("reconcile: source %s changed size while opening", path)
 	}
-	if info.Mode().Perm()&0o111 != before.Mode().Perm()&0o111 {
+	if info.Mode().Perm()&deployment.ExecutableBitMask != before.Mode().Perm()&deployment.ExecutableBitMask {
 		return fmt.Errorf("reconcile: source %s executable bits changed while reading", path)
 	}
 	return nil
@@ -185,7 +185,7 @@ func checkStableSource(read sourceRead) error {
 	if read.after.Size() != int64(len(read.data)) {
 		return fmt.Errorf("reconcile: source %s changed size while reading", read.path)
 	}
-	if read.after.Mode().Perm()&0o111 != read.before.Mode().Perm()&0o111 {
+	if read.after.Mode().Perm()&deployment.ExecutableBitMask != read.before.Mode().Perm()&deployment.ExecutableBitMask {
 		return fmt.Errorf("reconcile: source %s executable bits changed while reading", read.path)
 	}
 	return nil
@@ -207,7 +207,7 @@ func checkSecretEnvelope(path string, data []byte) error {
 func sourceFacts(file deployment.ManagedFile, identity pathsafe.Identity, data []byte) SourceSnapshot {
 	snapshot := SourceSnapshot{
 		path: file.SourceAbsolutePath, identity: identity, kind: KindFile,
-		token: TokenOfContent(data), executable: identity.Mode().Perm() & 0o111,
+		token: TokenOfContent(data), executable: identity.Mode().Perm() & deployment.ExecutableBitMask,
 	}
 	if file.Kind == deployment.FileOrdinary {
 		snapshot.semantic = deployment.Ordinary(data)

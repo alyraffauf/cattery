@@ -20,6 +20,10 @@ type StateRows struct {
 	Aliases        []state.AliasBaseline
 }
 
+// maxExecutableBits bounds the executable-bit field stored on a file row.
+// Only the low nine bits are valid; anything wider is corruption.
+const maxExecutableBits uint32 = 0o777
+
 // NewStateSnapshot converts the persisted file and alias rows of one
 // canonical repository pair into immutable evaluation records. Active and
 // retired rows are preserved verbatim so state-only and deleted scopes stay
@@ -96,7 +100,7 @@ func validateFileRow(row state.FileBaseline) error {
 	if row.BaselineContentHash == (deployment.Digest{}) || row.BaselineSourceHash == (deployment.Digest{}) {
 		return fmt.Errorf("reconcile: file row %q has an unset digest", row.TargetPath)
 	}
-	if row.ExecutableBits > 0o777 {
+	if row.ExecutableBits > maxExecutableBits {
 		return fmt.Errorf("reconcile: file row %q has invalid executable bits %o", row.TargetPath, row.ExecutableBits)
 	}
 	if !row.Status.Valid() {

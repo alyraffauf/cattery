@@ -39,7 +39,7 @@ func ClassifyRetirement(record Evaluation, platform string) RetirementClassifica
 // retirement on the current platform, no action on an inactive platform
 // layer.
 func fileRetirement(record Evaluation, platform string) RetirementClassification {
-	if rowLayerInactive(string(record.FileState.Layer()), platform) {
+	if record.FileState.Layer().InactiveOn(platform) {
 		return withRetirementPath(retirementOutcome(ActionNoOp, ReasonInactivePlatform, Converged), record)
 	}
 	return withRetirementPath(retirementOutcome(ActionRetireState, ReasonSourceRemoved, ActionPending), record)
@@ -47,20 +47,10 @@ func fileRetirement(record Evaluation, platform string) RetirementClassification
 
 // aliasRetirement classifies one active alias row without a producer.
 func aliasRetirement(record Evaluation, platform string) RetirementClassification {
-	if rowLayerInactive(string(record.AliasState.Layer()), platform) {
+	if record.AliasState.Layer().InactiveOn(platform) {
 		return withRetirementPath(retirementOutcome(ActionNoOp, ReasonInactivePlatform, Converged), record)
 	}
 	return withRetirementPath(retirementOutcome(ActionRetireAliasState, ReasonSourceRemoved, ActionPending), record)
-}
-
-// rowLayerInactive reports whether a persisted row layer targets another
-// platform: the file base layer and the alias all layer apply on every
-// runtime, while a named layer applies only on its own platform.
-func rowLayerInactive(layer string, platform string) bool {
-	if layer == "base" || layer == "all" {
-		return false
-	}
-	return layer != platform
 }
 
 // retirementOutcome builds a bare classification from its three enum fields.
