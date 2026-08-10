@@ -16,7 +16,7 @@ import (
 	"github.com/alyraffauf/cattery/internal/subprocess"
 )
 
-// maxStderr is the Section 4.3 stderr capture bound. Excess stderr is drained
+// maxStderr is the stderr capture bound. Excess stderr is drained
 // and discarded so a chatty process can never block its pipe.
 const maxStderr = 64 * 1024
 
@@ -36,7 +36,7 @@ func NewClient(executable string, directory string, environment []string) *Clien
 	return &Client{executable: executable, directory: directory, environment: slices.Clone(environment)}
 }
 
-// SetDirectory rebinds the client to the repository root that Section 4.3
+// SetDirectory rebinds the client to the repository root where
 // SOPS invocations must run in. Bootstrap cannot know the repository, so the
 // binding happens once the selected command resolves it; the client is used
 // by one single-use application for exactly one repository.
@@ -123,7 +123,7 @@ func classifyRun(stdout *boundedCapture, outcome runOutcome, diag diagnosis) err
 	return failure.New(failure.Operational, diag.operation+" "+diag.source+" launch failed", outcome.err)
 }
 
-// exitFailure reports a nonzero exit with the Section 4.3 diagnostic shape.
+// exitFailure reports a nonzero exit with the diagnostic shape.
 func exitFailure(result subprocess.Result, diag diagnosis) error {
 	if result.ExitCode == 0 {
 		return nil

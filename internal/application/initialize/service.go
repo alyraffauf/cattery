@@ -97,7 +97,7 @@ type roots struct {
 }
 
 // ensureRoot returns the canonical repository root, creating it first when
-// missing, after validating the Section 6.1 overlaps.
+// missing, after validating the repository/home/state overlaps.
 func ensureRoot(anchors roots) (string, error) {
 	existing, err := existingDirectory(anchors.repository)
 	if err != nil {
@@ -114,7 +114,7 @@ func existingRoot(anchors roots) (string, error) {
 	return canonicalRepositoryRoot(anchors)
 }
 
-// createdRoot materializes a missing root, validating the Section 6.1 overlaps
+// createdRoot materializes a missing root, validating the repository/home/state overlaps
 // before MkdirAll and rechecking the canonical form after creation.
 func createdRoot(anchors roots) (string, error) {
 	canonical, err := canonicalRepositoryRoot(anchors)
@@ -140,7 +140,7 @@ func recheckRoot(anchors roots) (string, error) {
 }
 
 // canonicalRepositoryRoot canonicalizes the repository path and rejects the
-// Section 6.1 repository/home/state overlaps in one step.
+// repository/home/state overlaps in one step.
 func canonicalRepositoryRoot(anchors roots) (string, error) {
 	canonical, err := canonicalPath(anchors.repository)
 	if err != nil {
@@ -152,7 +152,7 @@ func canonicalRepositoryRoot(anchors roots) (string, error) {
 	return canonical, nil
 }
 
-// canonicalHome resolves the home to canonical form, requiring an existing real directory (Section 6.2).
+// canonicalHome resolves the home to canonical form, requiring an existing real directory.
 func canonicalHome(home string) (string, error) {
 	canonical, err := pathsafe.CanonicalRoot(home)
 	if err != nil {
@@ -173,7 +173,7 @@ func canonicalPath(path string) (string, error) {
 	return canonical, nil
 }
 
-// stateDirectory returns the canonical directory holding the store's database, the protected state tree for the Section 6.1 overlap checks.
+// stateDirectory returns the canonical directory holding the store's database, the protected state tree for overlap checks.
 func (service *Service) stateDirectory() (string, error) {
 	database := service.store.Database()
 	if database == nil {

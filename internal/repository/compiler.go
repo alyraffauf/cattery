@@ -123,8 +123,8 @@ func scopeKept(group string, selected []string) bool {
 // hookKept applies the documented asymmetry between repository-scope hooks
 // and root files under explicit group selection. Repository-scope (root)
 // hooks — identified by scope.Group == "" — always run even when a subset of
-// groups is selected, whereas root files are dropped, because Section 10.1
-// mandates that repository hooks run for every apply.
+// groups is selected, whereas root files are dropped, because repository hooks
+// run for every apply.
 func hookKept(scope deployment.Scope, selected []string) bool {
 	if scope.Group == "" {
 		return true

@@ -44,7 +44,7 @@ type sourceLocation struct {
 // Infer derives one ItemPlanInput per target in raw command-line order. It is
 // pure and read-only: each canonical absolute target is mapped to its owner
 // when the plan already manages it, or to the inferred scope, layer, kind, and
-// repository-relative source path under Section 2's grammar. ExecutableBits
+// repository-relative source path under the path grammar. ExecutableBits
 // stays zero; preflight fills it from the live target mode.
 func Infer(context inferContext, request Request) ([]ItemPlanInput, error) {
 	items := make([]ItemPlanInput, 0, len(context.targets))
@@ -93,7 +93,7 @@ func inferManaged(request Request, ref targetRef, owner deployment.ManagedFile) 
 }
 
 // inferUnmanaged derives the default location, proves the target is
-// representable there, and inverts Section 2's grammar to produce the source.
+// representable there, and inverts the path grammar to produce the source.
 func inferUnmanaged(context inferContext, request Request, ref targetRef) (ItemPlanInput, error) {
 	location, err := inferLocation(context, request)
 	if err != nil {
@@ -130,7 +130,7 @@ func inferLocation(context inferContext, request Request) (sourceLocation, error
 	return sourceLocation{scope: scope, layer: layer, kind: inferKind(request)}, nil
 }
 
-// sourcePath inverts Section 2's grammar into a repository-relative source
+// sourcePath inverts the path grammar into a repository-relative source
 // path from the location and the HOME-relative target.
 func (location sourceLocation) sourcePath(target string) string {
 	var builder strings.Builder
@@ -195,7 +195,7 @@ func inferKind(request Request) deployment.FileKind {
 	return deployment.FileOrdinary
 }
 
-// checkRepresentable enforces Section 2.1: underscore-prefixed targets are
+// checkRepresentable enforces the path rules: underscore-prefixed targets are
 // unrepresentable everywhere; root base additionally rejects metadata names
 // and multi-segment non-dot targets that the grammar would route to a group.
 func checkRepresentable(scope deployment.Scope, layer deployment.Layer, relative string) error {

@@ -42,7 +42,7 @@ type safeDiffCase struct {
 	wantLines   []string
 }
 
-// safeDiffCases enumerates the Section 9.6 rules: printable text produces a
+// safeDiffCases enumerates the rules: printable text produces a
 // unified diff, equal content produces a metadata-only record, carriage
 // return/ESC/bidi/invalid UTF-8 or an oversized side demotes to binary,
 // secrets carry only classification, and labels never expose control runes.

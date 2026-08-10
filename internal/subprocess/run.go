@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-// gracePeriod is the SIGTERM-to-SIGKILL interval mandated by Section 10.4.
+// gracePeriod is the SIGTERM-to-SIGKILL interval for canceled processes.
 const gracePeriod = 5 * time.Second
 
 // groupPollInterval paces the bounded wait for a canceled process group to
@@ -75,7 +75,7 @@ func (e *LaunchError) Unwrap() error {
 	return e.Cause
 }
 
-// Run executes request synchronously, applying the Section 10.4 process-group
+// Run executes request synchronously, applying the process-group
 // cancellation policy: SIGTERM to the child group on ctx cancellation, a
 // gracePeriod wait, then SIGKILL. Nonzero exit codes return (Result, nil);
 // only launch failures and cancellation return an error.

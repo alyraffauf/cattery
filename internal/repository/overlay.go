@@ -114,7 +114,7 @@ func mergeCandidate(files map[string]Candidate, target string, candidate Candida
 }
 
 // representableRootSecretTarget reports whether target can be produced by a
-// root-scope secret source under Section 2.1: a root secret must target either
+// root-scope secret source: a root secret must target either
 // a dot-prefixed tree (ungrouped HOME tree) or a single non-underscore segment.
 // Multi-segment non-dot paths (e.g. bin/...) and leading-underscore targets are
 // not representable at the root layer and require a group or a platform overlay.

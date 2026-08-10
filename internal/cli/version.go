@@ -8,7 +8,7 @@ import (
 )
 
 // newVersionCommand declares only the version subcommand and renders the
-// typed build fields in the exact Section 11.7 single-line format, without
+// typed build fields in the exact single-line format, without
 // touching the Cobra root Version field.
 func newVersionCommand(runtime Runtime) *cobra.Command {
 	command := &cobra.Command{

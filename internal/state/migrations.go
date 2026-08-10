@@ -7,8 +7,8 @@ import (
 	_ "embed"
 )
 
-// initialMigrationSQL is the embedded Section 8.4 schema. It is one of the two
-// package-variable exceptions permitted by Section 12.1.
+// initialMigrationSQL is the embedded schema. It is one of the two
+// package-variable exceptions permitted in this package.
 //
 //go:embed migrations/001_initial.sql
 var initialMigrationSQL string

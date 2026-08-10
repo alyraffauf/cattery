@@ -20,7 +20,7 @@ const (
 
 // Execute runs one application over the given arguments, writes one
 // diagnostic on failure, and maps every joined category and signal to the
-// Section 11.8 exit status. Status constants stay here and os.Exit remains in
+// exit status. Status constants stay here and os.Exit remains in
 // the process entrypoint.
 func Execute(ctx context.Context, application *Application, args []string) int {
 	err := application.Execute(ctx, args)

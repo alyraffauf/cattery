@@ -47,7 +47,7 @@ func run() (exitStatus int) {
 }
 
 // exitCode runs the application and maps an interrupted context to the
-// Section 11.8 signal status.
+// signal status.
 func exitCode(ctx context.Context, application *cli.Application, args []string) int {
 	code := cli.Execute(ctx, application, args)
 	if ctx.Err() == nil {

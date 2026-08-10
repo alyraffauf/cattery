@@ -177,7 +177,7 @@ func testSecretsRealRoundTrip(t *testing.T) {
 	env.applyRealSecret(t, keyHome, payload)
 }
 
-// realSecretPayload builds the Section 13 27-byte fixture containing NUL
+// realSecretPayload builds the 27-byte fixture containing NUL
 // and invalid UTF-8 bytes.
 func realSecretPayload() []byte {
 	payload := make([]byte, 27)

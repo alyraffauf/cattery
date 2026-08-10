@@ -1,6 +1,6 @@
 //go:build unix
 
-// This file exercises the Section 10.4 cancellation contract of Execute:
+// This file exercises the cancellation contract of Execute:
 // a canceled context stops execution, signals each started hook's process
 // group, and kills descendants, and neither phase starts further hooks.
 package hooks

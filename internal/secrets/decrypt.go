@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-// Decrypt runs the Section 4.3 sops decrypt shape against /dev/stdin with the
+// Decrypt runs the sops decrypt shape against /dev/stdin with the
 // repository-relative source name as the filename override. The ciphertext
 // bytes are caller-validated; sops never reopens a repository source path.
 // The returned plaintext slice is caller-owned, and the client retains
@@ -20,7 +20,7 @@ func (client *Client) Decrypt(ctx context.Context, ciphertext []byte, relativePa
 	})
 }
 
-// decryptArguments is the exact Section 4.3 decryption invocation.
+// decryptArguments is the exact decryption invocation.
 func decryptArguments(relativePath string) []string {
 	return []string{
 		"decrypt",

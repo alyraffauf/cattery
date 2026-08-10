@@ -8,10 +8,10 @@ import (
 	"github.com/alyraffauf/cattery/internal/failure"
 )
 
-// outputSlack is the Section 4.3 allowance added to expected output sizes.
+// outputSlack is the allowance added to expected output sizes.
 const outputSlack = 1024 * 1024
 
-// Encrypt runs the Section 4.3 sops encrypt shape against /dev/stdin with the
+// Encrypt runs the sops encrypt shape against /dev/stdin with the
 // repository-relative source name as the filename override. It requires
 // nonempty valid JSON output, clears and rejects anything else, and never
 // writes plaintext anywhere but the caller-supplied stdin. The returned
@@ -34,7 +34,7 @@ func (client *Client) Encrypt(ctx context.Context, plaintext []byte, relativePat
 	return output, nil
 }
 
-// encryptArguments is the exact Section 4.3 encryption invocation.
+// encryptArguments is the exact encryption invocation.
 func encryptArguments(relativePath string) []string {
 	return []string{
 		"encrypt",

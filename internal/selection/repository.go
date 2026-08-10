@@ -26,7 +26,7 @@ type RepositoryRequest struct {
 	WorkingDir  string
 }
 
-// RepositoryResolver applies the Section 8.2 precedence and returns the
+// RepositoryResolver applies the configured precedence and returns the
 // canonical repository identity. Explicit and environment paths are resolved
 // against the initial working directory; only the default lookup may touch
 // state, and it never registers a row.

@@ -1,7 +1,7 @@
-// This file exercises the Section 10.4 execution contract of Execute:
+// This file exercises the execution contract of Execute:
 // suppression for empty sequences, dry-run, and no-hooks, inherited streams
 // and environment, before-stop versus after-aggregate failures, and the
-// order the Section 12.2 comparators produce.
+// order the comparators produce.
 package hooks
 
 import (
