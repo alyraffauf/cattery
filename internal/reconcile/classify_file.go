@@ -49,9 +49,9 @@ func ClassifyFile(record Evaluation, semantics FileSemantics) FileClassification
 // explicit decision; directories and special entries require manual
 // intervention and are rejected.
 func classifyUnexpectedType(record Evaluation) FileClassification {
-	base := outcome(ActionNeedsDecision, ReasonUnexpectedTargetType, DecisionRequired)
+	base := outcome(ActionNeedsDecision, ReasonUnexpectedTargetType, ConvergenceDecisionRequired)
 	if record.Target.Kind() == KindDirectory || record.Target.Kind() == KindSpecial {
-		base.Convergence = Rejected
+		base.Convergence = ConvergenceRejected
 	}
 	return withPath(base, record)
 }
@@ -61,12 +61,12 @@ func classifyUnexpectedType(record Evaluation) FileClassification {
 // or require an explicit decision for differing content.
 func classifyUnbaselined(record Evaluation, semantics FileSemantics) FileClassification {
 	if record.Target.Kind() != KindFile {
-		return withPath(outcome(ActionCreateTarget, ReasonUnbaselinedAbsent, ActionPending), record)
+		return withPath(outcome(ActionCreateTarget, ReasonUnbaselinedAbsent, ConvergencePending), record)
 	}
 	if semantics.Source != semantics.Target {
-		return withPath(outcome(ActionNeedsDecision, ReasonUnbaselinedDiffer, DecisionRequired), record)
+		return withPath(outcome(ActionNeedsDecision, ReasonUnbaselinedDiffer, ConvergenceDecisionRequired), record)
 	}
-	return withPath(applyModeCorrection(outcome(ActionEstablishBaseline, ReasonUnbaselinedEqual, Converged), record), record)
+	return withPath(applyModeCorrection(outcome(ActionEstablishBaseline, ReasonUnbaselinedEqual, ConvergenceConverged), record), record)
 }
 
 // classifyBaselined maps the five core matrix rows of PLAN.md Section 9.2.
@@ -83,15 +83,15 @@ func classifyBaselined(record Evaluation, row *FileState, semantics FileSemantic
 	targetChanged := semantics.Target != row.BaselineContent()
 	switch {
 	case !sourceChanged && !targetChanged:
-		return withPath(applyModeCorrection(outcome(ActionNoOp, ReasonNoChange, Converged), record), record)
+		return withPath(applyModeCorrection(outcome(ActionNoOp, ReasonNoChange, ConvergenceConverged), record), record)
 	case sourceChanged && !targetChanged:
-		return withPath(outcome(ActionWriteSourceToTarget, ReasonSourceChanged, ActionPending), record)
+		return withPath(outcome(ActionWriteSourceToTarget, ReasonSourceChanged, ConvergencePending), record)
 	case !sourceChanged && targetChanged:
-		return withPath(outcome(ActionNeedsDecision, ReasonTargetDrift, DecisionRequired), record)
+		return withPath(outcome(ActionNeedsDecision, ReasonTargetDrift, ConvergenceDecisionRequired), record)
 	case semantics.Source == semantics.Target:
-		return withPath(applyModeCorrection(outcome(ActionEstablishBaseline, ReasonAlreadyConverged, Converged), record), record)
+		return withPath(applyModeCorrection(outcome(ActionEstablishBaseline, ReasonAlreadyConverged, ConvergenceConverged), record), record)
 	}
-	return withPath(outcome(ActionNeedsDecision, ReasonConflict, DecisionRequired), record)
+	return withPath(outcome(ActionNeedsDecision, ReasonConflict, ConvergenceDecisionRequired), record)
 }
 
 // applyModeCorrection upgrades a content-converged classification into a
@@ -108,7 +108,7 @@ func applyModeCorrection(candidate FileClassification, record Evaluation) FileCl
 	}
 	candidate.Action = ActionCorrectMode
 	candidate.Reason = ReasonModeCorrection
-	candidate.Convergence = ActionPending
+	candidate.Convergence = ConvergencePending
 	return candidate
 }
 

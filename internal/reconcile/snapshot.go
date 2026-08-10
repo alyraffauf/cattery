@@ -53,16 +53,16 @@ type EvaluationSnapshot struct {
 // union path, and persisted state rows join their paths. Plan and state
 // inputs may arrive in any order; records always return sorted. Secret
 // sources keep ciphertext only; no decryption ever happens here.
-func Assemble(plan deployment.Plan, state StateSnapshot, client *secrets.Client) (EvaluationSnapshot, error) {
-	if err := requireAssemblyPlan(plan, state); err != nil {
+func Assemble(plan deployment.Plan, stateSnapshot StateSnapshot, client *secrets.Client) (EvaluationSnapshot, error) {
+	if err := requireAssemblyPlan(plan, stateSnapshot); err != nil {
 		return EvaluationSnapshot{}, err
 	}
 	files, aliases, err := entryIndexes(plan)
 	if err != nil {
 		return EvaluationSnapshot{}, err
 	}
-	input := joinInput{home: state.HomePath(), files: files, aliases: aliases,
-		fileRows: byFileState(state.AllFiles()), aliasRows: byAliasState(state.AllAliases()), client: client}
+	input := joinInput{home: stateSnapshot.HomePath(), files: files, aliases: aliases,
+		fileRows: byFileState(stateSnapshot.AllFiles()), aliasRows: byAliasState(stateSnapshot.AllAliases()), client: client}
 	records, err := joinedRecords(input)
 	if err != nil {
 		return EvaluationSnapshot{}, err
@@ -70,7 +70,7 @@ func Assemble(plan deployment.Plan, state StateSnapshot, client *secrets.Client)
 	sort.SliceStable(records, func(first, second int) bool {
 		return records[first].TargetPath < records[second].TargetPath
 	})
-	return EvaluationSnapshot{RepositoryRoot: plan.RepositoryRoot(), HomePath: state.HomePath(),
+	return EvaluationSnapshot{RepositoryRoot: plan.RepositoryRoot(), HomePath: stateSnapshot.HomePath(),
 		Platform: plan.Platform(), records: records}, nil
 }
 
@@ -224,11 +224,11 @@ func cloneAliasRecord(record *AliasState) *AliasState {
 
 // All returns a defensive copy of every joined record in bytewise path
 // order, cloning the persisted rows so callers cannot reach the snapshot.
-func (s EvaluationSnapshot) All() []Evaluation {
-	if s.records == nil {
+func (snapshot EvaluationSnapshot) All() []Evaluation {
+	if snapshot.records == nil {
 		return nil
 	}
-	records := append([]Evaluation(nil), s.records...)
+	records := append([]Evaluation(nil), snapshot.records...)
 	for index := range records {
 		records[index].FileState = cloneFileRecord(records[index].FileState)
 		records[index].AliasState = cloneAliasRecord(records[index].AliasState)

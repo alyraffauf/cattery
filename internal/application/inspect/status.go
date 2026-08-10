@@ -172,7 +172,7 @@ type classificationInput struct {
 // statusRecord projects one classification onto its immutable status row.
 func statusRecord(input classificationInput) StatusRecord {
 	return StatusRecord{targetPath: input.path, kind: input.kind, action: actionName(input.action),
-		reason: reasonName(input.reason), converged: input.convergence == reconcile.Converged}
+		reason: reasonName(input.reason), converged: input.convergence == reconcile.ConvergenceConverged}
 }
 
 // statusCounts tallies the per-kind records of one status result.
@@ -219,7 +219,7 @@ func actionName(action reconcile.Action) string {
 		reconcile.ActionWriteSourceToTarget: "write-source-to-target",
 		reconcile.ActionEstablishBaseline:   "establish-baseline",
 		reconcile.ActionNeedsDecision:       "needs-decision",
-		reconcile.ActionRetireState:         "retire-state",
+		reconcile.ActionRetireFileState:     "retire-state",
 		reconcile.ActionCreateAlias:         "create-alias",
 		reconcile.ActionReplaceAlias:        "replace-alias",
 		reconcile.ActionVerifyAlias:         "verify-alias",

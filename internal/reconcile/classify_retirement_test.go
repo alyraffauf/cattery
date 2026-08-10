@@ -43,27 +43,27 @@ type retirementCase struct {
 // classifiers.
 var retirementClassificationCases = []retirementCase{
 	{name: "file source removed", fileRow: fileRowState(deployment.LayerBase),
-		want: retirementWant(ActionRetireState, ReasonSourceRemoved, ActionPending)},
+		want: retirementWant(ActionRetireFileState, ReasonSourceRemoved, ConvergencePending)},
 	{name: "linux file source removed", fileRow: fileRowState(deployment.LayerLinux),
-		want: retirementWant(ActionRetireState, ReasonSourceRemoved, ActionPending)},
+		want: retirementWant(ActionRetireFileState, ReasonSourceRemoved, ConvergencePending)},
 	{name: "base file row on darwin", platform: "darwin", fileRow: fileRowState(deployment.LayerBase),
-		want: retirementWant(ActionRetireState, ReasonSourceRemoved, ActionPending)},
+		want: retirementWant(ActionRetireFileState, ReasonSourceRemoved, ConvergencePending)},
 	{name: "darwin file row on linux", platform: "linux", fileRow: fileRowState(deployment.LayerDarwin),
-		want: retirementWant(ActionNoOp, ReasonInactivePlatform, Converged)},
+		want: retirementWant(ActionNoOp, ReasonInactivePlatform, ConvergenceConverged)},
 	{name: "linux file row on darwin", platform: "darwin", fileRow: fileRowState(deployment.LayerLinux),
-		want: retirementWant(ActionNoOp, ReasonInactivePlatform, Converged)},
+		want: retirementWant(ActionNoOp, ReasonInactivePlatform, ConvergenceConverged)},
 	{name: "file already retired", fileRow: retiredFileRow(deployment.LayerBase),
-		want: retirementWant(ActionNoOp, ReasonAlreadyRetired, Converged)},
+		want: retirementWant(ActionNoOp, ReasonAlreadyRetired, ConvergenceConverged)},
 	{name: "alias source removed", aliasRow: aliasRowState(state.LayerAll),
-		want: retirementWant(ActionRetireAliasState, ReasonSourceRemoved, ActionPending)},
+		want: retirementWant(ActionRetireAliasState, ReasonSourceRemoved, ConvergencePending)},
 	{name: "linux alias source removed", aliasRow: aliasRowState(state.LayerLinux),
-		want: retirementWant(ActionRetireAliasState, ReasonSourceRemoved, ActionPending)},
+		want: retirementWant(ActionRetireAliasState, ReasonSourceRemoved, ConvergencePending)},
 	{name: "darwin alias row on linux", platform: "linux", aliasRow: aliasRowState(state.LayerDarwin),
-		want: retirementWant(ActionNoOp, ReasonInactivePlatform, Converged)},
+		want: retirementWant(ActionNoOp, ReasonInactivePlatform, ConvergenceConverged)},
 	{name: "linux alias row on darwin", platform: "darwin", aliasRow: aliasRowState(state.LayerLinux),
-		want: retirementWant(ActionNoOp, ReasonInactivePlatform, Converged)},
+		want: retirementWant(ActionNoOp, ReasonInactivePlatform, ConvergenceConverged)},
 	{name: "alias already retired", aliasRow: retiredAliasRow(state.LayerAll),
-		want: retirementWant(ActionNoOp, ReasonAlreadyRetired, Converged)},
+		want: retirementWant(ActionNoOp, ReasonAlreadyRetired, ConvergenceConverged)},
 	{name: "moved file ownership", entry: PlanEntryFile, fileRow: fileRowState(deployment.LayerBase),
 		want: retirementUntouched},
 	{name: "moved alias ownership", entry: PlanEntryAlias, aliasRow: aliasRowState(state.LayerAll),
@@ -185,12 +185,12 @@ func retirementWant(action Action, reason Reason, convergence Convergence) Retir
 
 // retiring is the source-removal classification of one file target.
 func retiring(path string) RetirementClassification {
-	return RetirementClassification{TargetPath: path, Action: ActionRetireState, Reason: ReasonSourceRemoved, Convergence: ActionPending}
+	return RetirementClassification{TargetPath: path, Action: ActionRetireFileState, Reason: ReasonSourceRemoved, Convergence: ConvergencePending}
 }
 
 // retiringAlias is the source-removal classification of one alias target.
 func retiringAlias(path string) RetirementClassification {
-	return RetirementClassification{TargetPath: path, Action: ActionRetireAliasState, Reason: ReasonSourceRemoved, Convergence: ActionPending}
+	return RetirementClassification{TargetPath: path, Action: ActionRetireAliasState, Reason: ReasonSourceRemoved, Convergence: ConvergencePending}
 }
 
 // retirementZero is the untouched classification of a record another

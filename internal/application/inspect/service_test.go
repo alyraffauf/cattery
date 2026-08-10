@@ -231,7 +231,7 @@ func testEvaluationStateOnlySelection(t *testing.T) {
 func assertRetirement(t *testing.T, evaluation Result) {
 	t.Helper()
 	retirement := evaluation.records[0].retirement
-	if retirement.Action != reconcile.ActionRetireState || retirement.Reason != reconcile.ReasonSourceRemoved {
+	if retirement.Action != reconcile.ActionRetireFileState || retirement.Reason != reconcile.ReasonSourceRemoved {
 		t.Fatalf("retirement = %+v, want pending retire-state", retirement)
 	}
 }
@@ -336,7 +336,7 @@ func testDecryptClassifies(t *testing.T) {
 	}}
 	evaluation := mustEvaluate(t, fx.service, Request{})
 	classification := evaluation.records[2].file
-	if classification.Action != reconcile.ActionNoOp || classification.Convergence != reconcile.Converged {
+	if classification.Action != reconcile.ActionNoOp || classification.Convergence != reconcile.ConvergenceConverged {
 		t.Fatalf("classification = %+v, want converged no-op", classification)
 	}
 }

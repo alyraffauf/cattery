@@ -226,7 +226,7 @@ func testApplyEvaluationStateOnly(t *testing.T) {
 		t.Fatalf("evaluate: %v", err)
 	}
 	requirePaths(t, candidates, "gone")
-	if candidates.All()[0].retirement.Action != reconcile.ActionRetireState {
+	if candidates.All()[0].retirement.Action != reconcile.ActionRetireFileState {
 		t.Fatalf("retirement action = %v, want retire state", candidates.All()[0].retirement.Action)
 	}
 }

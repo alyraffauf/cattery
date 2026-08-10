@@ -52,7 +52,7 @@ func (service *Service) Initialize(ctx context.Context, request Request) (Result
 		home:           environment.home,
 		stateDirectory: environment.stateDirectory,
 	}
-	repository, err := resolveRoot(anchors)
+	repository, err := ensureRoot(anchors)
 	if err != nil {
 		return Result{}, err
 	}
@@ -96,10 +96,10 @@ type roots struct {
 	stateDirectory string
 }
 
-// resolveRoot returns the canonical repository root, creating it first when
+// ensureRoot returns the canonical repository root, creating it first when
 // missing, after validating the Section 6.1 overlaps.
-func resolveRoot(anchors roots) (string, error) {
-	existing, err := directoryKind(anchors.repository)
+func ensureRoot(anchors roots) (string, error) {
+	existing, err := existingDirectory(anchors.repository)
 	if err != nil {
 		return "", err
 	}
@@ -194,10 +194,10 @@ func resolvePath(requested string) (string, error) {
 	return working, nil
 }
 
-// directoryKind reports whether path names an existing real directory. An
+// existingDirectory reports whether path names an existing real directory. An
 // existing non-directory is rejected as InvalidInput; a missing path returns
 // false so the caller can create it.
-func directoryKind(path string) (bool, error) {
+func existingDirectory(path string) (bool, error) {
 	info, err := os.Stat(path)
 	if err == nil {
 		if !info.IsDir() {

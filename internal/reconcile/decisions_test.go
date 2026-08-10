@@ -92,19 +92,19 @@ type specCase struct {
 // classification: only DecisionRequired outcomes produce a spec, carrying
 // exactly the allowed choices of their action, reason, and source kind.
 var decisionSpecCases = []specCase{
-	{name: "file drift", path: decisionPath, action: ActionNeedsDecision, reason: ReasonTargetDrift, convergence: DecisionRequired, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
-	{name: "file drift secret", path: decisionPath, action: ActionNeedsDecision, reason: ReasonTargetDrift, convergence: DecisionRequired, kind: deployment.FileSecret, want: overwriteSkipAbort},
-	{name: "file conflict", path: decisionPath, action: ActionNeedsDecision, reason: ReasonConflict, convergence: DecisionRequired, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
-	{name: "file unbaselined differ", path: decisionPath, action: ActionNeedsDecision, reason: ReasonUnbaselinedDiffer, convergence: DecisionRequired, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
-	{name: "file unexpected type", path: decisionPath, action: ActionNeedsDecision, reason: ReasonUnexpectedTargetType, convergence: DecisionRequired, kind: deployment.FileOrdinary, want: overwriteSkipAbort},
-	{name: "file converged rejected", path: decisionPath, action: ActionNoOp, reason: ReasonNoChange, convergence: Converged, kind: deployment.FileOrdinary, wantErr: true},
-	{name: "file pending rejected", path: decisionPath, action: ActionWriteSourceToTarget, reason: ReasonSourceChanged, convergence: ActionPending, kind: deployment.FileOrdinary, wantErr: true},
-	{name: "file rejected rejected", path: decisionPath, action: ActionNeedsDecision, reason: ReasonUnexpectedTargetType, convergence: Rejected, kind: deployment.FileOrdinary, wantErr: true},
-	{name: "alias wrong", path: aliasDecisionPath, action: ActionNeedsDecision, reason: ReasonAliasWrong, convergence: DecisionRequired, kind: deployment.FileOrdinary, alias: true, want: overwriteSkipAbort},
-	{name: "alias occupied", path: aliasDecisionPath, action: ActionNeedsDecision, reason: ReasonAliasOccupied, convergence: DecisionRequired, kind: deployment.FileSecret, alias: true, want: overwriteSkipAbort},
-	{name: "alias representation drift", path: aliasDecisionPath, action: ActionNeedsDecision, reason: ReasonRepresentationDrift, convergence: DecisionRequired, kind: deployment.FileOrdinary, alias: true, want: overwriteSkipAbort},
-	{name: "alias converged rejected", path: aliasDecisionPath, action: ActionNoOp, reason: ReasonAliasExact, convergence: Converged, alias: true, wantErr: true},
-	{name: "alias rejected rejected", path: aliasDecisionPath, action: ActionNeedsDecision, reason: ReasonAliasOccupied, convergence: Rejected, alias: true, wantErr: true},
+	{name: "file drift", path: decisionPath, action: ActionNeedsDecision, reason: ReasonTargetDrift, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
+	{name: "file drift secret", path: decisionPath, action: ActionNeedsDecision, reason: ReasonTargetDrift, convergence: ConvergenceDecisionRequired, kind: deployment.FileSecret, want: overwriteSkipAbort},
+	{name: "file conflict", path: decisionPath, action: ActionNeedsDecision, reason: ReasonConflict, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
+	{name: "file unbaselined differ", path: decisionPath, action: ActionNeedsDecision, reason: ReasonUnbaselinedDiffer, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
+	{name: "file unexpected type", path: decisionPath, action: ActionNeedsDecision, reason: ReasonUnexpectedTargetType, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: overwriteSkipAbort},
+	{name: "file converged rejected", path: decisionPath, action: ActionNoOp, reason: ReasonNoChange, convergence: ConvergenceConverged, kind: deployment.FileOrdinary, wantErr: true},
+	{name: "file pending rejected", path: decisionPath, action: ActionWriteSourceToTarget, reason: ReasonSourceChanged, convergence: ConvergencePending, kind: deployment.FileOrdinary, wantErr: true},
+	{name: "file rejected rejected", path: decisionPath, action: ActionNeedsDecision, reason: ReasonUnexpectedTargetType, convergence: ConvergenceRejected, kind: deployment.FileOrdinary, wantErr: true},
+	{name: "alias wrong", path: aliasDecisionPath, action: ActionNeedsDecision, reason: ReasonAliasWrong, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, alias: true, want: overwriteSkipAbort},
+	{name: "alias occupied", path: aliasDecisionPath, action: ActionNeedsDecision, reason: ReasonAliasOccupied, convergence: ConvergenceDecisionRequired, kind: deployment.FileSecret, alias: true, want: overwriteSkipAbort},
+	{name: "alias representation drift", path: aliasDecisionPath, action: ActionNeedsDecision, reason: ReasonRepresentationDrift, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, alias: true, want: overwriteSkipAbort},
+	{name: "alias converged rejected", path: aliasDecisionPath, action: ActionNoOp, reason: ReasonAliasExact, convergence: ConvergenceConverged, alias: true, wantErr: true},
+	{name: "alias rejected rejected", path: aliasDecisionPath, action: ActionNeedsDecision, reason: ReasonAliasOccupied, convergence: ConvergenceRejected, alias: true, wantErr: true},
 }
 
 // invalidCase is one row of the choice-validation matrix.

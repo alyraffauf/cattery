@@ -36,7 +36,7 @@ func TestReconciliationContract(t *testing.T) {
 func testEnumValidity(t *testing.T) {
 	actions := []Action{
 		ActionNoOp, ActionCorrectMode, ActionCreateTarget, ActionWriteSourceToTarget,
-		ActionEstablishBaseline, ActionNeedsDecision, ActionRetireState, ActionCreateAlias,
+		ActionEstablishBaseline, ActionNeedsDecision, ActionRetireFileState, ActionCreateAlias,
 		ActionReplaceAlias, ActionVerifyAlias, ActionRetireAliasState,
 	}
 	for _, action := range actions {
@@ -66,7 +66,7 @@ func testSmallEnumValidity(t *testing.T) {
 			t.Fatalf("known kind %d must be valid", kind)
 		}
 	}
-	convergences := []Convergence{Converged, ActionPending, DecisionRequired, Rejected}
+	convergences := []Convergence{ConvergenceConverged, ConvergencePending, ConvergenceDecisionRequired, ConvergenceRejected}
 	for _, convergence := range convergences {
 		if !convergence.Valid() {
 			t.Fatalf("known convergence %d must be valid", convergence)
