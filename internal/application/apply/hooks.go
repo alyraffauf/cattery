@@ -29,6 +29,21 @@ func (service *Service) RunHookPipeline(ctx context.Context, input PipelineInput
 			return nil, failure.New(failure.Hook, "apply: before hooks failed", err)
 		}
 	}
+	if err := service.Revalidate(ctx, input.Candidates); err != nil {
+		return nil, err
+	}
+	records, err := service.runExecutors(ctx, input, records)
+	if err != nil {
+		return records, err
+	}
+	if input.Plan.WithHooks() {
+		return service.runAfterHooks(ctx, input, records)
+	}
+	return records, nil
+}
+
+// runExecutors performs the all-source guarded file and alias phases.
+func (service *Service) runExecutors(ctx context.Context, input PipelineInput, records []ItemResult) ([]ItemResult, error) {
 	files, err := service.ExecuteFiles(ctx, input.Plan, input.Candidates)
 	records = append(records, files...)
 	if err != nil {
@@ -38,9 +53,6 @@ func (service *Service) RunHookPipeline(ctx context.Context, input PipelineInput
 	records = append(records, aliases...)
 	if err != nil {
 		return records, err
-	}
-	if input.Plan.WithHooks() {
-		return service.runAfterHooks(ctx, input, records)
 	}
 	return records, nil
 }

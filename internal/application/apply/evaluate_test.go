@@ -57,6 +57,8 @@ type evalInput struct {
 	transitions TransitionStore
 	retirements RetirementStore
 	hooks       HookExecutor
+	compilerErr error
+	resolver    DecisionResolver
 }
 
 // evalFixture builds an evaluation service over the frozen input.
@@ -64,7 +66,7 @@ func evalFixture(t *testing.T, input evalInput) *Service {
 	t.Helper()
 	return NewService(Dependencies{
 		RepositorySource: fakeRepositorySource{identity: RepositoryIdentity{Root: input.repo, Home: input.home}},
-		Compiler:         planCompiler{plan: input.plan},
+		Compiler:         planCompiler{plan: input.plan, err: input.compilerErr},
 		State:            fakeStateReader{files: input.rows.files, aliases: input.rows.aliases, key: [32]byte{7}, keyErr: input.keyErr},
 		Baselines:        input.baselines,
 		Transitions:      input.transitions,
@@ -73,6 +75,7 @@ func evalFixture(t *testing.T, input evalInput) *Service {
 		Secrets:          input.client,
 		Replacer:         input.replacer,
 		Probe:            input.probe,
+		Resolver:         input.resolver,
 		ProtectedTrees:   []string{filepath.Join(input.repo, "state")},
 		Platform:         "linux",
 	})
