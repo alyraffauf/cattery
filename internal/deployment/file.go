@@ -73,3 +73,26 @@ func validateFile(file ManagedFile) error {
 	}
 	return nil
 }
+
+// ExecutableBitMask is the POSIX executable-bit mask (PLAN.md Section 7.1).
+// Source and target modes preserve read/write bits and reconcile only these bits.
+const ExecutableBitMask fs.FileMode = 0o111
+
+// SecretMode and SecretExecutableMode are the exact modes enforced on every
+// secret target (Section 4.5): non-executable secrets are 0600, executable
+// secrets are 0700. These are POSIX guarantees only.
+const (
+	SecretMode           fs.FileMode = 0o600
+	SecretExecutableMode fs.FileMode = 0o700
+)
+
+// SecretTargetMode returns the exact mode a secret target must hold: SecretMode,
+// or SecretExecutableMode when any executable bit is set (Section 4.5). This is
+// the single source of truth for secret-target mode policy; upper layers
+// (filesystem, reconcile) delegate here so the rule cannot drift between them.
+func SecretTargetMode(sourceExec fs.FileMode) fs.FileMode {
+	if sourceExec&ExecutableBitMask != 0 {
+		return SecretExecutableMode
+	}
+	return SecretMode
+}

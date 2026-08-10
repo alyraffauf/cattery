@@ -47,3 +47,15 @@ func (l Layer) Valid() bool {
 	}
 	return false
 }
+
+// InactiveOn reports whether layer targets a platform other than platform. The
+// base layer applies on every runtime so it is never inactive; a named platform
+// layer is inactive when it does not equal the runtime platform. This replaces
+// ad-hoc string comparisons so the file-layer "base" and alias-layer "all"
+// rules cannot be conflated.
+func (l Layer) InactiveOn(platform string) bool {
+	if l == LayerBase {
+		return false
+	}
+	return string(l) != platform
+}
