@@ -72,7 +72,9 @@ func (p *DecisionPrompt) resolve(ctx context.Context, request apply.DecisionRequ
 		if err != nil {
 			return apply.DecisionResponse{}, failure.New(failure.InvalidInput, "cli: EOF before a valid answer", err)
 		}
-		response, done, err := p.answer(ctx, request, answer, difference)
+		response, done, err := p.answer(promptAnswer{
+			context: ctx, request: request, answer: answer, difference: difference,
+		})
 		if err != nil {
 			return apply.DecisionResponse{}, err
 		}
@@ -110,24 +112,31 @@ func readAnswer(scanner *bufio.Scanner) (string, error) {
 
 // answer maps one raw answer to a response, displaying the safe difference
 // and re-prompting on diff or invalid input.
-func (p *DecisionPrompt) answer(ctx context.Context, request apply.DecisionRequest, answer string, difference apply.DifferenceProvider) (apply.DecisionResponse, bool, error) {
-	if answer == "" {
-		return apply.DecisionResponse{Choice: request.Choices()[0]}, true, nil
+type promptAnswer struct {
+	context    context.Context
+	request    apply.DecisionRequest
+	answer     string
+	difference apply.DifferenceProvider
+}
+
+func (p *DecisionPrompt) answer(input promptAnswer) (apply.DecisionResponse, bool, error) {
+	if input.answer == "" {
+		return apply.DecisionResponse{Choice: input.request.Choices()[0]}, true, nil
 	}
-	choice := apply.DecisionChoice(answer)
-	for _, allowed := range request.Choices() {
+	choice := apply.DecisionChoice(input.answer)
+	for _, allowed := range input.request.Choices() {
 		if choice != allowed {
 			continue
 		}
 		if choice != apply.ChoiceDiff {
 			return apply.DecisionResponse{Choice: choice}, true, nil
 		}
-		if err := p.renderDifference(ctx, request.TargetPath(), difference); err != nil {
+		if err := p.renderDifference(input.context, input.request.TargetPath(), input.difference); err != nil {
 			return apply.DecisionResponse{}, false, err
 		}
 		return apply.DecisionResponse{}, false, nil
 	}
-	_, err := fmt.Fprintf(p.stderr, "invalid answer %q\n", answer)
+	_, err := fmt.Fprintf(p.stderr, "invalid answer %q\n", input.answer)
 	return apply.DecisionResponse{}, false, err
 }
 
