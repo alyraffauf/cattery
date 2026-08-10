@@ -1455,7 +1455,7 @@ The diagram describes policy flow, not permission for bootstrap to move behavior
 | `application/initialize` | `failure`, `pathsafe`, `state` |
 | `application/validate` | `deployment`, `failure`, `repository`, `selection` |
 | `application/inspect` | `deployment`, `diff`, `failure`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
-| `application/apply` | `deployment`, `diff`, `failure`, `filesystem`, `hooks`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
+| `application/apply` | `deployment`, `diff`, `failure`, `filesystem`, `hooks`, `pathsafe`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
 | `application/add` | `deployment`, `failure`, `filesystem`, `pathsafe`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
 | `application/version` | `buildinfo` |
 | `cli` | `application/...`, `failure` only, subject to the per-file restrictions in Section 12.1 |
