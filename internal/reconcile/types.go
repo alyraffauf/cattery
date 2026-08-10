@@ -172,9 +172,13 @@ func (snapshot SourceSnapshot) Path() string                { return snapshot.pa
 func (snapshot SourceSnapshot) Identity() pathsafe.Identity { return snapshot.identity }
 func (snapshot SourceSnapshot) Kind() EntryKind             { return snapshot.kind }
 func (snapshot SourceSnapshot) Token() ContentToken         { return snapshot.token }
+
+// Semantic returns the ordinary semantic digest; secret snapshots leave it zero.
 func (snapshot SourceSnapshot) Semantic() deployment.Digest { return snapshot.semantic }
-func (snapshot SourceSnapshot) Storage() deployment.Digest  { return snapshot.storage }
-func (snapshot SourceSnapshot) Executable() fs.FileMode     { return snapshot.executable }
+
+// Storage returns the encrypted storage digest; ordinary snapshots leave it zero.
+func (snapshot SourceSnapshot) Storage() deployment.Digest { return snapshot.storage }
+func (snapshot SourceSnapshot) Executable() fs.FileMode    { return snapshot.executable }
 
 // TargetSnapshot freezes the immutable facts of one destination observation
 // and doubles as the immutable target precondition (PLAN.md Section 12.4).

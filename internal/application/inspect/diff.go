@@ -143,7 +143,7 @@ func diffOutcome(evaluation Result) (DiffResult, error) {
 	}
 	files, aliases, retired := diffCounts(records)
 	result := DiffResult{records: records, files: files, aliases: aliases,
-		retired: retired, converged: diffConverged(records)}
+		retired: retired, converged: recordsConvergedGeneric(records)}
 	if !result.converged {
 		return result, failure.New(failure.Difference, "diff: selected state is not converged", nil)
 	}
@@ -197,5 +197,3 @@ func fileDiffRecord(home string, evaluated evaluatedRecord) (DiffRecord, error) 
 func diffCounts(records []DiffRecord) (files, aliases, retired int) {
 	return countRecordKinds(records)
 }
-
-func diffConverged(records []DiffRecord) bool { return recordsConvergedGeneric(records) }

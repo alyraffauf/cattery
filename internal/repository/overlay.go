@@ -92,16 +92,25 @@ func resolveScopeFiles(base ScanResult, scope deployment.Scope, platform layerVi
 		if platform.covers(target) {
 			continue
 		}
-		existing, ok := merged.files[target]
-		if ok && existing.Kind != candidate.Kind {
-			return nil, fmt.Errorf("repository: ordinary and secret sources collide at %q", target)
+		if err := mergeCandidate(merged.files, target, candidate); err != nil {
+			return nil, err
 		}
-		merged.files[target] = candidate
 	}
 	for target, candidate := range platform.files {
-		merged.files[target] = candidate
+		if err := mergeCandidate(merged.files, target, candidate); err != nil {
+			return nil, err
+		}
 	}
 	return recordsFor(merged.files)
+}
+
+func mergeCandidate(files map[string]Candidate, target string, candidate Candidate) error {
+	existing, ok := files[target]
+	if ok && existing.Kind != candidate.Kind {
+		return fmt.Errorf("repository: ordinary and secret sources collide at %q", target)
+	}
+	files[target] = candidate
+	return nil
 }
 
 // representableRootSecretTarget reports whether target can be produced by a
@@ -236,12 +245,7 @@ func (walker *layerWalker) visit(path string, entry os.DirEntry, kind deployment
 		SourceRepoPath: filepath.Join(walker.relative, path), SourceAbsPath: filepath.Join(walker.absolute, path),
 		ExecutableBits: info.Mode() & deployment.ExecutableBitMask,
 	}
-	existing, ok := walker.view.files[target]
-	if ok && existing.Kind != kind {
-		return fmt.Errorf("repository: ordinary and secret sources collide at %q", target)
-	}
-	walker.view.files[target] = candidate
-	return nil
+	return mergeCandidate(walker.view.files, target, candidate)
 }
 
 func (walker *layerWalker) target(path string, kind deployment.FileKind) (string, error) {

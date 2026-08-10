@@ -12,7 +12,10 @@ import (
 	"github.com/alyraffauf/cattery/internal/secrets"
 )
 
-const sourceGrowthDetectionSlack int64 = 1
+const (
+	sourceGrowthDetectionSlack int64 = 1
+	jsonNullLiteral                  = "null"
+)
 
 // SourceObservation pairs a frozen source snapshot with the exact bytes read
 // during capture. The bytes are retained for the write phase and can be
@@ -200,7 +203,7 @@ func checkSecretEnvelope(path string, data []byte) error {
 	if err := json.Unmarshal(data, &envelope); err != nil {
 		return fmt.Errorf("reconcile: secret source %s is not a sops JSON document: %w", path, err)
 	}
-	if len(envelope.Sops) == 0 || string(envelope.Sops) == "null" {
+	if len(envelope.Sops) == 0 || string(envelope.Sops) == jsonNullLiteral {
 		return fmt.Errorf("reconcile: secret source %s lacks sops metadata", path)
 	}
 	return nil

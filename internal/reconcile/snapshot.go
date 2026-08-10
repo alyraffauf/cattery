@@ -139,18 +139,18 @@ func joinedRecords(input joinInput) ([]Evaluation, error) {
 
 // unionPaths merges plan and state paths into one deduplicated list.
 func unionPaths(input joinInput) []string {
-	paths := make(map[string]bool, len(input.files)+len(input.aliases)+len(input.fileRows)+len(input.aliasRows))
+	paths := make(map[string]struct{}, len(input.files)+len(input.aliases)+len(input.fileRows)+len(input.aliasRows))
 	for path := range input.files {
-		paths[path] = true
+		paths[path] = struct{}{}
 	}
 	for path := range input.aliases {
-		paths[path] = true
+		paths[path] = struct{}{}
 	}
 	for path := range input.fileRows {
-		paths[path] = true
+		paths[path] = struct{}{}
 	}
 	for path := range input.aliasRows {
-		paths[path] = true
+		paths[path] = struct{}{}
 	}
 	joined := make([]string, 0, len(paths))
 	for path := range paths {

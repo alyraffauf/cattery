@@ -94,6 +94,7 @@ func (scanner *scopeScanner) scanEntry(entry os.DirEntry) error {
 		return scanner.scanHooks(entry)
 	case control == ControlMetadata:
 		if scanner.rootTree {
+			// Repository metadata is ignored only at the repository root.
 			return nil
 		}
 		return scanner.scanOrdinary(entry)
@@ -103,6 +104,7 @@ func (scanner *scopeScanner) scanEntry(entry os.DirEntry) error {
 }
 
 func (scanner *scopeScanner) beginGroup(entry os.DirEntry) error {
+	// Save and restore scope state so recursive scanning returns to the parent.
 	name := entry.Name()
 	if err := pathsafe.GroupName(name); err != nil {
 		return err

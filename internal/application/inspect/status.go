@@ -25,24 +25,14 @@ func NewStatusRecord(targetPath string, kind StatusKind, action string) StatusRe
 // NewStatusResult freezes one status result over the given records and the
 // convergence flag, keeping the record slice defensive.
 func NewStatusResult(records []StatusRecord, converged bool) StatusResult {
+	files, aliases, retired := countRecordKinds(records)
 	return StatusResult{
 		records:   append([]StatusRecord(nil), records...),
-		files:     countKind(records, StatusKindFile),
-		aliases:   countKind(records, StatusKindAlias),
-		retired:   countKind(records, StatusKindRetired),
+		files:     files,
+		aliases:   aliases,
+		retired:   retired,
 		converged: converged,
 	}
-}
-
-// countKind counts the records of one status kind.
-func countKind(records []StatusRecord, kind StatusKind) int {
-	count := 0
-	for _, record := range records {
-		if record.kind == kind {
-			count++
-		}
-	}
-	return count
 }
 
 // String returns the stable lowercase name of the kind.
@@ -115,9 +105,9 @@ func statusOutcome(evaluation Result) (StatusResult, error) {
 	for _, evaluated := range evaluation.records {
 		records = append(records, statusRecordsOf(evaluated)...)
 	}
-	files, aliases, retired := statusCounts(records)
+	files, aliases, retired := countRecordKinds(records)
 	result := StatusResult{records: records, files: files, aliases: aliases,
-		retired: retired, converged: recordsConverged(records)}
+		retired: retired, converged: recordsConvergedGeneric(records)}
 	if !result.converged {
 		return result, failure.New(failure.Difference, "status: selected state is not converged", nil)
 	}
@@ -176,10 +166,6 @@ func statusRecord(input classificationInput) StatusRecord {
 }
 
 // statusCounts tallies the per-kind records of one status result.
-func statusCounts(records []StatusRecord) (files, aliases, retired int) {
-	return countRecordKinds(records)
-}
-
 func countRecordKinds[T interface{ Kind() StatusKind }](records []T) (files, aliases, retired int) {
 	for _, record := range records {
 		switch record.Kind() {
@@ -192,12 +178,6 @@ func countRecordKinds[T interface{ Kind() StatusKind }](records []T) (files, ali
 		}
 	}
 	return files, aliases, retired
-}
-
-// recordsConverged reports whether every status record is converged; a
-// record-free evaluation is converged by definition.
-func recordsConverged(records []StatusRecord) bool {
-	return recordsConvergedGeneric(records)
 }
 
 func recordsConvergedGeneric[T interface{ Converged() bool }](records []T) bool {
