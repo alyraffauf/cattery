@@ -120,11 +120,3 @@ func testVersionNoBackend(t *testing.T) {
 		t.Fatalf("calls = %d, want two independent invocations", service.calls)
 	}
 }
-
-// unsupportedRepoVersion guards against accidental flag handling.
-func unsupportedRepoVersion(t *testing.T, command *cobra.Command) {
-	t.Helper()
-	if command.Flags().Lookup("repo") != nil {
-		t.Fatal("version must not declare repository flags")
-	}
-}
