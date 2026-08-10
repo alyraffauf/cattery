@@ -178,7 +178,7 @@ func (service *Service) compile(identity RepositoryIdentity, selected []string) 
 		Selected:       selected,
 	})
 	if err != nil {
-		return deployment.Plan{}, failure.New(failure.InvalidInput, "apply: compile plan", err)
+		return deployment.Plan{}, compileFailure("apply: compile plan", err)
 	}
 	return plan, nil
 }

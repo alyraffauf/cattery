@@ -2,10 +2,20 @@ package apply
 
 import (
 	"context"
+	"errors"
+	"os"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/failure"
 )
+
+func compileFailure(message string, cause error) error {
+	var pathError *os.PathError
+	if errors.As(cause, &pathError) {
+		return failure.New(failure.Operational, message, cause)
+	}
+	return failure.New(failure.InvalidInput, message, cause)
+}
 
 // Preflight verifies the external dependencies the selected candidates
 // require: SOPS is probed only when a secret candidate needs on-demand

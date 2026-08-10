@@ -121,7 +121,7 @@ func (service *Service) compile(identity RepositoryIdentity, layer deployment.La
 		Selected:       selected,
 	})
 	if err != nil {
-		return deployment.Plan{}, failure.New(failure.InvalidInput, "validate: compile plan", err)
+		return deployment.Plan{}, compileFailure("validate: compile plan", err)
 	}
 	return plan, nil
 }

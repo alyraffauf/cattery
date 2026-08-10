@@ -2,10 +2,21 @@ package inspect
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
 
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/reconcile"
 )
+
+func compileFailure(message string, cause error) error {
+	var pathError *os.PathError
+	if errors.As(cause, &pathError) {
+		return failure.New(failure.Operational, message, cause)
+	}
+	return failure.New(failure.InvalidInput, message, cause)
+}
 
 // StatusKind names the representation class of one status record.
 type StatusKind int
@@ -52,7 +63,10 @@ func (kind StatusKind) String() string {
 	case StatusKindRetired:
 		return "retired"
 	}
-	return "file"
+	if kind == StatusKindFile {
+		return "file"
+	}
+	return fmt.Sprintf("unknown-kind-%d", kind)
 }
 
 // StatusRecord is one immutable semantic status row of a destination: its
@@ -206,8 +220,7 @@ func recordsConvergedGeneric[T interface{ Converged() bool }](records []T) bool 
 }
 
 // actionName returns the stable status name of one reconciliation action.
-// The keyed array literal names every constant explicitly, so a reordered or
-// extended enum cannot silently rename a record.
+// Unknown values are rendered explicitly instead of being mistaken for no-op.
 func actionName(action reconcile.Action) string {
 	names := [reconcile.ActionRetireAliasState + 1]string{
 		reconcile.ActionNoOp:                "no-op",
@@ -223,14 +236,13 @@ func actionName(action reconcile.Action) string {
 		reconcile.ActionRetireAliasState:    "retire-alias-state",
 	}
 	if int(action) < 0 || int(action) >= len(names) {
-		return "no-op"
+		return fmt.Sprintf("unknown-action-%d", action)
 	}
 	return names[action]
 }
 
 // reasonName returns the stable status name of one reconciliation reason.
-// The keyed array literal names every constant explicitly, so a reordered or
-// extended enum cannot silently rename a record.
+// Unknown values are rendered explicitly instead of being mistaken for no-change.
 func reasonName(reason reconcile.Reason) string {
 	names := [reconcile.ReasonAlreadyRetired + 1]string{
 		reconcile.ReasonNoChange:             "no-change",
@@ -253,7 +265,7 @@ func reasonName(reason reconcile.Reason) string {
 		reconcile.ReasonAlreadyRetired:       "already-retired",
 	}
 	if int(reason) < 0 || int(reason) >= len(names) {
-		return "no-change"
+		return fmt.Sprintf("unknown-reason-%d", reason)
 	}
 	return names[reason]
 }
