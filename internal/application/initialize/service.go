@@ -44,7 +44,12 @@ func (service *Service) Initialize(ctx context.Context, request Request) (Result
 	if err != nil {
 		return Result{}, err
 	}
-	repository, err := resolveRoot(environment.path, environment.home, environment.stateDirectory)
+	anchors := roots{
+		repository:     environment.path,
+		home:           environment.home,
+		stateDirectory: environment.stateDirectory,
+	}
+	repository, err := resolveRoot(anchors)
 	if err != nil {
 		return Result{}, err
 	}
@@ -79,60 +84,67 @@ func (service *Service) prepare(request Request) (environment, error) {
 	return environment{home: home, stateDirectory: stateDirectory, path: path}, nil
 }
 
+// roots bundles the canonical identity anchors threaded through initialization.
+type roots struct {
+	repository     string
+	home           string
+	stateDirectory string
+}
+
 // resolveRoot returns the canonical repository root, creating it first when
 // missing, after validating the Section 6.1 overlaps.
-func resolveRoot(path, home, stateDirectory string) (string, error) {
-	existing, err := directoryKind(path)
+func resolveRoot(anchors roots) (string, error) {
+	existing, err := directoryKind(anchors.repository)
 	if err != nil {
 		return "", err
 	}
 	if existing {
-		return existingRoot(path, home, stateDirectory)
+		return existingRoot(anchors)
 	}
-	return createdRoot(path, home, stateDirectory)
+	return createdRoot(anchors)
 }
 
 // existingRoot canonicalizes and validates an existing repository directory.
-func existingRoot(path, home, stateDirectory string) (string, error) {
-	canonical, err := canonicalPath(path)
-	if err != nil {
-		return "", err
-	}
-	if err := checkOverlaps(canonical, home, stateDirectory); err != nil {
-		return "", err
-	}
-	return canonical, nil
+func existingRoot(anchors roots) (string, error) {
+	return canonicalRepositoryRoot(anchors)
 }
 
 // createdRoot materializes a missing root, validating the Section 6.1 overlaps
 // before MkdirAll and rechecking the canonical form after creation.
-func createdRoot(path, home, stateDirectory string) (string, error) {
-	canonical, err := canonicalPath(path)
+func createdRoot(anchors roots) (string, error) {
+	canonical, err := canonicalRepositoryRoot(anchors)
 	if err != nil {
-		return "", err
-	}
-	if err := checkOverlaps(canonical, home, stateDirectory); err != nil {
 		return "", err
 	}
 	if err := os.MkdirAll(canonical, repositoryDirectoryMode); err != nil {
 		return "", failure.New(failure.Operational, "initialize: create repository directory", err)
 	}
-	return recheckRoot(canonical, home, stateDirectory)
+	return recheckRoot(anchors)
 }
 
 // recheckRoot re-canonicalizes a just-created root and revalidates the overlaps before registration.
-func recheckRoot(canonical, home, stateDirectory string) (string, error) {
-	rechecked, err := canonicalPath(canonical)
+func recheckRoot(anchors roots) (string, error) {
+	rechecked, err := canonicalRepositoryRoot(anchors)
 	if err != nil {
-		return "", err
-	}
-	if err := checkOverlaps(rechecked, home, stateDirectory); err != nil {
 		return "", err
 	}
 	if err := requireDirectory(rechecked); err != nil {
 		return "", failure.New(failure.Operational, "initialize: recheck repository directory", err)
 	}
 	return rechecked, nil
+}
+
+// canonicalRepositoryRoot canonicalizes the repository path and rejects the
+// Section 6.1 repository/home/state overlaps in one step.
+func canonicalRepositoryRoot(anchors roots) (string, error) {
+	canonical, err := canonicalPath(anchors.repository)
+	if err != nil {
+		return "", err
+	}
+	if err := checkOverlaps(canonical, anchors.home, anchors.stateDirectory); err != nil {
+		return "", err
+	}
+	return canonical, nil
 }
 
 // canonicalHome resolves the home to canonical form, requiring an existing real directory (Section 6.2).

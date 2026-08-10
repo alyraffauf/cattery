@@ -16,11 +16,11 @@ const outputSlack = 1024 * 1024
 // nonempty valid JSON output, clears and rejects anything else, and never
 // writes plaintext anywhere but the caller-supplied stdin. The returned
 // ciphertext slice is caller-owned.
-func (client *Client) Encrypt(ctx context.Context, plaintext []byte, relative string) ([]byte, error) {
+func (client *Client) Encrypt(ctx context.Context, plaintext []byte, relativePath string) ([]byte, error) {
 	output, err := client.Run(ctx, Request{
 		Operation:   "encrypt",
-		SourcePath:  relative,
-		Arguments:   encryptArguments(relative),
+		SourcePath:  relativePath,
+		Arguments:   encryptArguments(relativePath),
 		Stdin:       plaintext,
 		StdoutLimit: encryptLimit(len(plaintext)),
 	})
@@ -29,16 +29,16 @@ func (client *Client) Encrypt(ctx context.Context, plaintext []byte, relative st
 	}
 	if len(output) == 0 || !json.Valid(output) {
 		zeroBytes(output)
-		return nil, failure.New(failure.Operational, "sops encrypt "+relative+" produced invalid JSON", nil)
+		return nil, failure.New(failure.Operational, "sops encrypt "+relativePath+" produced invalid JSON", nil)
 	}
 	return output, nil
 }
 
 // encryptArguments is the exact Section 4.3 encryption invocation.
-func encryptArguments(relative string) []string {
+func encryptArguments(relativePath string) []string {
 	return []string{
 		"encrypt",
-		"--filename-override", relative,
+		"--filename-override", relativePath,
 		"--input-type", "binary",
 		"--output-type", "json",
 		"/dev/stdin",

@@ -10,21 +10,21 @@ import (
 // bytes are caller-validated; sops never reopens a repository source path.
 // The returned plaintext slice is caller-owned, and the client retains
 // nothing after the call.
-func (client *Client) Decrypt(ctx context.Context, ciphertext []byte, relative string) ([]byte, error) {
+func (client *Client) Decrypt(ctx context.Context, ciphertext []byte, relativePath string) ([]byte, error) {
 	return client.Run(ctx, Request{
 		Operation:   "decrypt",
-		SourcePath:  relative,
-		Arguments:   decryptArguments(relative),
+		SourcePath:  relativePath,
+		Arguments:   decryptArguments(relativePath),
 		Stdin:       ciphertext,
 		StdoutLimit: decryptLimit(len(ciphertext)),
 	})
 }
 
 // decryptArguments is the exact Section 4.3 decryption invocation.
-func decryptArguments(relative string) []string {
+func decryptArguments(relativePath string) []string {
 	return []string{
 		"decrypt",
-		"--filename-override", relative,
+		"--filename-override", relativePath,
 		"--input-type", "json",
 		"--output-type", "binary",
 		"/dev/stdin",
