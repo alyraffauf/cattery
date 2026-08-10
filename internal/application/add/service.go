@@ -7,8 +7,22 @@ import (
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/repository"
+	"github.com/alyraffauf/cattery/internal/secrets"
 	"github.com/alyraffauf/cattery/internal/selection"
 )
+
+// WriteDependencies carries the secret-specific ports required by add's
+// execution phases. They remain separate from Task 75's frozen Dependencies
+// so the contract owner can finish without a shared-file change.
+type WriteDependencies struct {
+	Secrets *secrets.Client
+	HashKey Recoverer
+}
+
+// Recoverer loads the per-installation secret hash key for keyed baselines.
+type Recoverer interface {
+	RecoverHashKey() ([32]byte, error)
+}
 
 // Service performs one add batch against the injectable ports. Construction
 // is side-effect-free: every repository, filesystem, secret, and state effect
@@ -16,6 +30,7 @@ import (
 // construction via runtime.GOOS so an explicit --platform must equal it.
 type Service struct {
 	deps     Dependencies
+	write    WriteDependencies
 	platform deployment.Layer
 }
 
@@ -23,7 +38,17 @@ type Service struct {
 // (linux or darwin on a supported host; the zero layer otherwise, which Add
 // rejects).
 func NewService(deps Dependencies) *Service {
-	return &Service{deps: deps, platform: runtimeLayer()}
+	return newService(deps, WriteDependencies{})
+}
+
+// NewServiceWithWrites binds the additional secret execution ports while
+// preserving the frozen Task 75 construction seam for ordinary callers.
+func NewServiceWithWrites(deps Dependencies, writes WriteDependencies) *Service {
+	return newService(deps, writes)
+}
+
+func newService(deps Dependencies, writes WriteDependencies) *Service {
+	return &Service{deps: deps, write: writes, platform: runtimeLayer()}
 }
 
 // runtimeLayer resolves the host platform layer, returning the zero layer

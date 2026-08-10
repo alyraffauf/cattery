@@ -12,7 +12,6 @@ import (
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/repository"
-	"github.com/alyraffauf/cattery/internal/secrets"
 	"github.com/alyraffauf/cattery/internal/selection"
 	"github.com/alyraffauf/cattery/internal/state"
 )
@@ -210,8 +209,6 @@ func assertDependencySeams(t *testing.T) {
 		"Compiler":         reflect.TypeOf((*Compiler)(nil)).Elem(),
 		"Writer":           reflect.TypeOf((*AtomicWriter)(nil)).Elem(),
 		"Baselines":        reflect.TypeOf((*BaselineStore)(nil)).Elem(),
-		"Secrets":          reflect.TypeOf((*secrets.Client)(nil)),
-		"HashKey":          reflect.TypeOf((*Recoverer)(nil)).Elem(),
 	}
 	if dependencies.NumField() != len(ports) {
 		t.Fatalf("Dependencies has %d fields, want %d", dependencies.NumField(), len(ports))

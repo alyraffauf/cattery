@@ -14,29 +14,18 @@ import (
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/repository"
-	"github.com/alyraffauf/cattery/internal/secrets"
 	"github.com/alyraffauf/cattery/internal/selection"
 	"github.com/alyraffauf/cattery/internal/state"
 )
 
 // Dependencies bundles the injectable seams of the add service: repository
-// resolution, plan compilation, atomic source replacement, baseline
-// persistence, secret encryption, and the per-installation hash key. The
-// concrete secrets client mirrors inspect; construction is side-effect-free
-// and effects begin inside Add.
+// resolution, plan compilation, atomic source replacement, and baseline
+// persistence. Construction is side-effect-free; effects begin inside Add.
 type Dependencies struct {
 	RepositorySource RepositorySource
 	Compiler         Compiler
 	Writer           AtomicWriter
 	Baselines        BaselineStore
-	Secrets          *secrets.Client
-	HashKey          Recoverer
-}
-
-// Recoverer loads the per-installation secret hash key for keyed baselines.
-// The state store satisfies it; add recovers the key once per batch.
-type Recoverer interface {
-	RecoverHashKey() ([32]byte, error)
 }
 
 // RepositorySource resolves the canonical repository pair for a selection

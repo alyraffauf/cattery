@@ -116,7 +116,10 @@ func (exec *executor) recoverKey() ([32]byte, error) {
 	if exec.haveKey {
 		return exec.key, nil
 	}
-	key, err := exec.service.deps.HashKey.RecoverHashKey()
+	if exec.service.write.HashKey == nil {
+		return [32]byte{}, failure.New(failure.Operational, "add: recover hash key", errors.New("hash key recovery is not configured"))
+	}
+	key, err := exec.service.write.HashKey.RecoverHashKey()
 	if err != nil {
 		return [32]byte{}, failure.New(failure.Operational, "add: recover hash key", err)
 	}

@@ -92,7 +92,10 @@ func newSecretStage(t *testing.T, roundTrip bool) secretStage {
 		t.Fatal(err)
 	}
 	client := newFakeSopsClient(t, fakeSopsTarget{repo: repo, plaintext: plaintext, roundTrip: roundTrip})
-	service := NewService(Dependencies{Writer: filesystem.NewReplacer(), Secrets: client})
+	service := NewServiceWithWrites(
+		Dependencies{Writer: filesystem.NewReplacer()},
+		WriteDependencies{Secrets: client},
+	)
 	return secretStage{
 		service: service, identity: RepositoryIdentity{Root: repo, Home: home},
 		item: item, plaintext: plaintext, repo: repo,

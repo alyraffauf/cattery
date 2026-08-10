@@ -150,7 +150,7 @@ func newServiceStage(t *testing.T) serviceStage {
 	compiler := &fakeCompiler{plan: plan}
 	deps := Dependencies{
 		RepositorySource: source, Compiler: compiler,
-		Writer: filesystem.NewReplacer(), Baselines: fixture.Store, HashKey: fixture.Store,
+		Writer: filesystem.NewReplacer(), Baselines: fixture.Store,
 	}
 	return serviceStage{
 		service: NewService(deps), source: source, compiler: compiler,

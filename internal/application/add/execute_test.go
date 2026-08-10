@@ -135,13 +135,13 @@ func newExecutionStage(t *testing.T, payloads ...ordinaryPayload) executionStage
 	deps := Dependencies{
 		Writer:    filesystem.NewReplacer(),
 		Baselines: fixture.Store,
-		HashKey:   fixture.Store,
 	}
+	writes := WriteDependencies{HashKey: fixture.Store}
 	if anySecret(payloads) {
-		deps.Secrets = roundTripClient(t, repo)
+		writes.Secrets = roundTripClient(t, repo)
 	}
 	return executionStage{
-		service: NewService(deps), identity: RepositoryIdentity{Root: repo, Home: fixture.Home},
+		service: NewServiceWithWrites(deps, writes), identity: RepositoryIdentity{Root: repo, Home: fixture.Home},
 		plan: plan, fixture: fixture, repo: repo,
 	}
 }
