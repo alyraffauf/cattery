@@ -48,9 +48,9 @@ func CompiledOnly(current []string, arguments []string) (Selection, error) {
 // duplicate arguments are errors.
 func CompiledAndPersisted(current []string, persisted PersistedGroups, arguments []string) (Selection, error) {
 	if len(arguments) == 0 {
-		return Selection{Root: true, Groups: sortedUnique(union(current, persisted.Active))}, nil
+		return Selection{Root: true, Groups: sortedUnique(concat(current, persisted.Active))}, nil
 	}
-	known := union(current, persisted.All)
+	known := concat(current, persisted.All)
 	if err := rejectUnknown(arguments, known); err != nil {
 		return Selection{}, err
 	}
@@ -80,7 +80,7 @@ func rejectDuplicates(arguments []string) error {
 	return nil
 }
 
-func union(first, second []string) []string {
+func concat(first, second []string) []string {
 	return append(append([]string(nil), first...), second...)
 }
 
