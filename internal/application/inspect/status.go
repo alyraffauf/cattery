@@ -16,6 +16,34 @@ const (
 	StatusKindRetired
 )
 
+// NewStatusRecord freezes one pending status record.
+func NewStatusRecord(targetPath string, kind StatusKind, action string) StatusRecord {
+	return StatusRecord{targetPath: targetPath, kind: kind, action: action}
+}
+
+// NewStatusResult freezes one status result over the given records and the
+// convergence flag, keeping the record slice defensive.
+func NewStatusResult(records []StatusRecord, converged bool) StatusResult {
+	return StatusResult{
+		records:   append([]StatusRecord(nil), records...),
+		files:     countKind(records, StatusKindFile),
+		aliases:   countKind(records, StatusKindAlias),
+		retired:   countKind(records, StatusKindRetired),
+		converged: converged,
+	}
+}
+
+// countKind counts the records of one status kind.
+func countKind(records []StatusRecord, kind StatusKind) int {
+	count := 0
+	for _, record := range records {
+		if record.kind == kind {
+			count++
+		}
+	}
+	return count
+}
+
 // String returns the stable lowercase name of the kind.
 func (kind StatusKind) String() string {
 	switch kind {

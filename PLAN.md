@@ -2771,7 +2771,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Owns:** `internal/application/inspect/status.go`, `internal/application/inspect/status_test.go`.
 
-**Deliverable:** Translate one evaluation into sorted semantic status/retired records, counts, convergence, and `Difference` error.
+**Deliverable:** Translate one evaluation into sorted semantic status/retired records, counts, convergence, and `Difference` error; export `NewStatusRecord` and `NewStatusResult` so the CLI renderer tests can build frozen records.
 
 **Tests:** `TestStatusService` covers files, aliases, retirement-only drift, convergence, and partial evaluation errors.
 
