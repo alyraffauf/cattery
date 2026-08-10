@@ -187,7 +187,7 @@ func classificationAction(candidate Candidate) (reconcile.Action, string, bool) 
 // mapKind projects one reconcile action into the apply action vocabulary.
 func mapKind(action reconcile.Action) (ActionKind, bool) {
 	switch action {
-	case reconcile.ActionCreateTarget, reconcile.ActionWriteSourceToTarget:
+	case reconcile.ActionCreateTarget, reconcile.ActionWriteSourceToTarget, reconcile.ActionEstablishBaseline:
 		return ActionKindWriteSource, true
 	case reconcile.ActionCorrectMode:
 		return ActionKindReplaceFile, true

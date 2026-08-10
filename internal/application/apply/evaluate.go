@@ -80,7 +80,6 @@ func (service *Service) evaluate(ctx context.Context, request Request) (Candidat
 	return service.evaluateRows(ctx, scopeInput{identity: identity, rows: rows, groups: request.Groups})
 }
 
-// scopeInput bundles the repository pair, its rows, and the requested groups of one evaluation.
 type scopeInput struct {
 	identity RepositoryIdentity
 	rows     stateRows
@@ -105,10 +104,9 @@ func (service *Service) evaluateRows(ctx context.Context, input scopeInput) (Can
 	if err != nil {
 		return Candidates{}, err
 	}
-	return Candidates{home: input.identity.Home, records: candidates}, nil
+	return Candidates{root: input.identity.Root, home: input.identity.Home, records: candidates}, nil
 }
 
-// chosen compiles the full plan and validates the group selection.
 func (service *Service) chosen(input scopeInput) (deployment.Plan, selection.Selection, error) {
 	full, err := service.compile(input.identity, nil)
 	if err != nil {
@@ -121,7 +119,6 @@ func (service *Service) chosen(input scopeInput) (deployment.Plan, selection.Sel
 	return full, chosen, nil
 }
 
-// selected restricts the full plan and the rows to the selection and converts them into an immutable state snapshot.
 func (service *Service) selected(input scopeInput, full deployment.Plan, chosen selection.Selection) (deployment.Plan, reconcile.StateSnapshot, error) {
 	plan, err := service.selectedPlan(input.identity, full, chosen)
 	if err != nil {
@@ -277,7 +274,6 @@ func keepAliasRows(rows []state.AliasBaseline, chosen selection.Selection) []sta
 	return slices.DeleteFunc(kept, func(row state.AliasBaseline) bool { return !rowKept(row.GroupName, chosen) })
 }
 
-// rowKept reports whether a row group belongs to the selection.
 func rowKept(group string, chosen selection.Selection) bool {
 	if group == "" {
 		return chosen.Root
@@ -296,9 +292,13 @@ type Candidate struct {
 
 // Candidates freezes the evaluated records of one apply in deterministic target-path order.
 type Candidates struct {
+	root    string
 	home    string
 	records []Candidate
 }
+
+// Root returns the canonical repository root of the evaluated pair.
+func (c Candidates) Root() string { return c.root }
 
 func (c Candidates) Home() string { return c.home }
 

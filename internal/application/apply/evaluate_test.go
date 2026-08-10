@@ -45,11 +45,15 @@ func (c planCompiler) Compile(repository.CompileInput) (deployment.Plan, error) 
 // evalInput bundles the isolated directories, plan, rows, and key behavior
 // of one evaluation fixture.
 type evalInput struct {
-	repo   string
-	home   string
-	plan   deployment.Plan
-	rows   stateRows
-	keyErr error
+	repo      string
+	home      string
+	plan      deployment.Plan
+	rows      stateRows
+	keyErr    error
+	probe     DependencyProbe
+	client    *secrets.Client
+	replacer  AtomicReplacer
+	baselines BaselineStore
 }
 
 // evalFixture builds an evaluation service over the frozen input.
@@ -59,7 +63,11 @@ func evalFixture(t *testing.T, input evalInput) *Service {
 		RepositorySource: fakeRepositorySource{identity: RepositoryIdentity{Root: input.repo, Home: input.home}},
 		Compiler:         planCompiler{plan: input.plan},
 		State:            fakeStateReader{files: input.rows.files, aliases: input.rows.aliases, key: [32]byte{7}, keyErr: input.keyErr},
-		Secrets:          &secrets.Client{},
+		Baselines:        input.baselines,
+		Secrets:          input.client,
+		Replacer:         input.replacer,
+		Hooks:            fakeHookExecutor{},
+		Probe:            input.probe,
 		ProtectedTrees:   []string{filepath.Join(input.repo, "state")},
 		Platform:         "linux",
 	})
