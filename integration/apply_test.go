@@ -231,3 +231,9 @@ func testExecApplyRemoval(t *testing.T) {
 		t.Fatal("source removal must never delete the target")
 	}
 }
+
+// runInput executes the binary under one full process input.
+func (env execEnv) runInput(t *testing.T, input ProcessInput) ProcessResult {
+	t.Helper()
+	return env.fixture.Run(t, input)
+}
