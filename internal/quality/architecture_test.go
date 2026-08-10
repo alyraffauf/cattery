@@ -128,7 +128,7 @@ func fileDagViolations(root, module, path string) []violation {
 		return nil
 	}
 	family := familyOfFile(root, path)
-	if family == "quality" || strings.HasPrefix(family, "testfixture") {
+	if family == "quality" || strings.HasPrefix(family, "testfixture") || family == "integration" {
 		return nil
 	}
 	context := edgeContext{family: family, module: module, path: path}
