@@ -17,6 +17,12 @@ var initialMigrationSQL string
 // PRAGMA user_version is managed against it.
 const currentSchemaVersion = 1
 
+const (
+	lockingModeNormalSQL    = "PRAGMA locking_mode = NORMAL"
+	lockingModeExclusiveSQL = "PRAGMA locking_mode = EXCLUSIVE"
+	userVersionSQL          = "PRAGMA user_version"
+)
+
 // Migrate applies the embedded schema migration to the database when needed.
 // Re-running on a current database is a no-op. An unknown newer schema
 // (user_version greater than current) is rejected so a newer Cattery never
@@ -51,14 +57,14 @@ func applyMigration(database *Database) error {
 	if err := transaction.Commit(); err != nil {
 		return err
 	}
-	if _, err := database.conn.Exec("PRAGMA locking_mode = NORMAL"); err != nil {
+	if _, err := database.conn.Exec(lockingModeNormalSQL); err != nil {
 		return fmt.Errorf("state: restore normal locking mode: %w", err)
 	}
 	return nil
 }
 
 func beginExclusive(database *Database) (*sql.Tx, error) {
-	if _, err := database.conn.Exec("PRAGMA locking_mode = EXCLUSIVE"); err != nil {
+	if _, err := database.conn.Exec(lockingModeExclusiveSQL); err != nil {
 		return nil, fmt.Errorf("state: exclusive locking mode: %w", err)
 	}
 	return database.conn.Begin()
@@ -66,7 +72,7 @@ func beginExclusive(database *Database) (*sql.Tx, error) {
 
 func readUserVersion(database *Database) (int, error) {
 	var version int
-	if err := database.conn.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+	if err := database.conn.QueryRow(userVersionSQL).Scan(&version); err != nil {
 		return 0, fmt.Errorf("state: read user_version: %w", err)
 	}
 	return version, nil

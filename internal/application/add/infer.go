@@ -10,6 +10,13 @@ import (
 	"github.com/alyraffauf/cattery/internal/repository"
 )
 
+const (
+	repositoryPathSeparator      = "/"
+	platformLayerDirectoryPrefix = "_"
+	rootScopeName                = ""
+	dotPathPrefix                = "."
+)
+
 // inferContext bundles the read-only inputs of ownership inference so Infer
 // stays under the parameter limit. Targets are canonical absolute paths
 // resolved against the working directory before inference begins, so Infer
@@ -129,15 +136,15 @@ func (location sourceLocation) sourcePath(target string) string {
 	var builder strings.Builder
 	if !location.scope.IsRoot() {
 		builder.WriteString(location.scope.Group)
-		builder.WriteString("/")
+		builder.WriteString(repositoryPathSeparator)
 	}
 	if location.layer != deployment.LayerBase {
-		builder.WriteString("_")
+		builder.WriteString(platformLayerDirectoryPrefix)
 		builder.WriteString(string(location.layer))
-		builder.WriteString("/")
+		builder.WriteString(repositoryPathSeparator)
 	}
 	if location.kind == deployment.FileSecret {
-		builder.WriteString(repository.SecretDirectoryName + "/")
+		builder.WriteString(repository.SecretDirectoryName + repositoryPathSeparator)
 	}
 	builder.WriteString(target)
 	return builder.String()
@@ -160,7 +167,7 @@ func inferScope(request Request) (deployment.Scope, error) {
 		}
 		return deployment.NewScope(request.Group), nil
 	}
-	return deployment.NewScope(""), nil
+	return deployment.NewScope(rootScopeName), nil
 }
 
 // inferLayer selects an explicit platform layer that must match the runtime
@@ -204,7 +211,7 @@ func checkRepresentable(scope deployment.Scope, layer deployment.Layer, relative
 		return failure.New(failure.InvalidInput,
 			"add: target "+relative+" is a reserved metadata name; pass --group", nil)
 	}
-	if strings.Contains(relative, "/") && !strings.HasPrefix(first, ".") {
+	if strings.Contains(relative, repositoryPathSeparator) && !strings.HasPrefix(first, dotPathPrefix) {
 		return failure.New(failure.InvalidInput,
 			"add: target "+relative+" is unrepresentable at the root base layer; pass --group", nil)
 	}

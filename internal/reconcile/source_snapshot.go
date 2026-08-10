@@ -12,6 +12,8 @@ import (
 	"github.com/alyraffauf/cattery/internal/secrets"
 )
 
+const sourceGrowthDetectionSlack int64 = 1
+
 // SourceObservation pairs a frozen source snapshot with the exact bytes read
 // during capture. The bytes are retained for the write phase and can be
 // explicitly cleared when the observation is no longer needed.
@@ -104,7 +106,7 @@ func readVerifiedSource(path string, before pathsafe.Identity) ([]byte, pathsafe
 		return nil, pathsafe.Identity{}, err
 	}
 	defer handle.Close()
-	data, err := io.ReadAll(io.LimitReader(handle, before.Size()+1))
+	data, err := io.ReadAll(io.LimitReader(handle, before.Size()+sourceGrowthDetectionSlack))
 	if err != nil {
 		return data, pathsafe.Identity{}, fmt.Errorf("reconcile: read source %s: %w", path, err)
 	}

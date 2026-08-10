@@ -212,7 +212,7 @@ func recordsConvergedGeneric[T interface{ Converged() bool }](records []T) bool 
 // actionName returns the stable status name of one reconciliation action.
 // Unknown values are rendered explicitly instead of being mistaken for no-op.
 func actionName(action reconcile.Action) string {
-	names := [reconcile.ActionRetireAliasState + 1]string{
+	names := map[reconcile.Action]string{
 		reconcile.ActionNoOp:                "no-op",
 		reconcile.ActionCorrectMode:         "correct-mode",
 		reconcile.ActionCreateTarget:        "create-target",
@@ -225,16 +225,17 @@ func actionName(action reconcile.Action) string {
 		reconcile.ActionVerifyAlias:         "verify-alias",
 		reconcile.ActionRetireAliasState:    "retire-alias-state",
 	}
-	if int(action) < 0 || int(action) >= len(names) {
+	name, ok := names[action]
+	if !ok {
 		return fmt.Sprintf("unknown-action-%d", action)
 	}
-	return names[action]
+	return name
 }
 
 // reasonName returns the stable status name of one reconciliation reason.
 // Unknown values are rendered explicitly instead of being mistaken for no-change.
 func reasonName(reason reconcile.Reason) string {
-	names := [reconcile.ReasonAlreadyRetired + 1]string{
+	names := map[reconcile.Reason]string{
 		reconcile.ReasonNoChange:             "no-change",
 		reconcile.ReasonModeCorrection:       "mode-correction",
 		reconcile.ReasonSourceChanged:        "source-changed",
@@ -254,8 +255,9 @@ func reasonName(reason reconcile.Reason) string {
 		reconcile.ReasonInactivePlatform:     "inactive-platform",
 		reconcile.ReasonAlreadyRetired:       "already-retired",
 	}
-	if int(reason) < 0 || int(reason) >= len(names) {
+	name, ok := names[reason]
+	if !ok {
 		return fmt.Sprintf("unknown-reason-%d", reason)
 	}
-	return names[reason]
+	return name
 }

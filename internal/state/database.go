@@ -19,11 +19,13 @@ import (
 // (PLAN.md Section 8.1). The directory is private to the owning user; the
 // database and lock files are read-write but never searchable by others.
 const (
-	catteryDirectoryName              = "cattery"
-	stateDatabaseFileName             = "state.db"
-	stateLockFileName                 = "cattery.lock"
-	stateDirectoryMode    os.FileMode = 0o700
-	stateFileMode         os.FileMode = 0o600
+	catteryDirectoryName                 = "cattery"
+	stateDatabaseFileName                = "state.db"
+	stateLockFileName                    = "cattery.lock"
+	stateDirectoryMode       os.FileMode = 0o700
+	stateFileMode            os.FileMode = 0o600
+	singleDatabaseConnection             = 1
+	busyTimeoutMilliseconds              = 5000
 )
 
 // sqliteDriverName is the registration name modernc.org/sqlite uses.
@@ -158,7 +160,7 @@ func openConnection(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn.SetMaxOpenConns(1)
+	conn.SetMaxOpenConns(singleDatabaseConnection)
 	if err := applyPragmas(conn); err != nil {
 		_ = conn.Close()
 		return nil, err
@@ -178,7 +180,7 @@ func applyPragmas(conn *sql.DB) error {
 func sqlitePragmas() []string {
 	return []string{
 		"PRAGMA foreign_keys = ON",
-		"PRAGMA busy_timeout = 5000",
+		fmt.Sprintf("PRAGMA busy_timeout = %d", busyTimeoutMilliseconds),
 		"PRAGMA journal_mode = WAL",
 		"PRAGMA synchronous = FULL",
 	}
