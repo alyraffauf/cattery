@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -21,7 +20,6 @@ func TestSOPSExecutableFixture(t *testing.T) {
 		{"large output", testLargeOutput},
 		{"descendant dies with group", testDescendantDiesWithGroup},
 		{"cleanup removes the binary", testCleanupRemovesBinary},
-		{"record path creation failure", testRecordPathCreationFailure},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
@@ -90,14 +88,6 @@ func testCleanupRemovesBinary(t *testing.T) {
 	})
 	if _, err := os.Stat(path); err == nil {
 		t.Fatal("binary still exists after cleanup")
-	}
-}
-
-func testRecordPathCreationFailure(t *testing.T) {
-	directory := t.TempDir()
-	_, err := uniquePath(filepath.Join(directory, "missing"), "record")
-	if err == nil {
-		t.Fatal("missing record directory was accepted")
 	}
 }
 

@@ -27,27 +27,6 @@ func fixtureOrigin() time.Time {
 	return time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 }
 
-// Clock is a deterministic clock pinned to a fixed instant. Advance moves the
-// instant so tests can produce stable, ordered timestamps.
-type Clock struct {
-	now time.Time
-}
-
-// NewClock returns a Clock pinned at at.
-func NewClock(at time.Time) *Clock {
-	return &Clock{now: at}
-}
-
-// Now returns the pinned instant.
-func (clock *Clock) Now() time.Time {
-	return clock.now
-}
-
-// Advance moves the pinned instant forward by delta.
-func (clock *Clock) Advance(delta time.Duration) {
-	clock.now = clock.now.Add(delta)
-}
-
 // Fixture owns one fully isolated state tree. Root is the private container of
 // the fixture HOME (Home) and the state home (StateHome); Cleanup removes it
 // wholesale.
@@ -55,7 +34,6 @@ type Fixture struct {
 	Root      string
 	Home      string
 	StateHome string
-	Clock     *Clock
 	Store     *state.Store
 }
 
@@ -71,12 +49,12 @@ func New(t *testing.T) *Fixture {
 		t.Fatalf("fixture home: %v", err)
 	}
 	stateHome := filepath.Join(root, "state")
-	clock := NewClock(fixtureOrigin())
-	store := state.NewStore(state.Dependencies{StateHome: stateHome, Now: clock.Now})
+	now := fixtureOrigin()
+	store := state.NewStore(state.Dependencies{StateHome: stateHome, Now: func() time.Time { return now }})
 	if err := store.Acquire(context.Background()); err != nil {
 		t.Fatalf("fixture store acquire: %v", err)
 	}
-	fixture := &Fixture{Root: root, Home: home, StateHome: stateHome, Clock: clock, Store: store}
+	fixture := &Fixture{Root: root, Home: home, StateHome: stateHome, Store: store}
 	t.Cleanup(func() { _ = fixture.cleanup() })
 	return fixture
 }
