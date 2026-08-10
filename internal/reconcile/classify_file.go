@@ -1,8 +1,6 @@
 package reconcile
 
 import (
-	"io/fs"
-
 	"github.com/alyraffauf/cattery/internal/deployment"
 )
 
@@ -68,7 +66,7 @@ func classifyUnbaselined(record Evaluation, semantics FileSemantics) FileClassif
 	if semantics.Source != semantics.Target {
 		return withPath(outcome(ActionNeedsDecision, ReasonUnbaselinedDiffer, DecisionRequired), record)
 	}
-	return withPath(settle(outcome(ActionEstablishBaseline, ReasonUnbaselinedEqual, Converged), record), record)
+	return withPath(applyModeCorrection(outcome(ActionEstablishBaseline, ReasonUnbaselinedEqual, Converged), record), record)
 }
 
 // classifyBaselined maps the five core matrix rows of PLAN.md Section 9.2.
@@ -85,22 +83,23 @@ func classifyBaselined(record Evaluation, row *FileState, semantics FileSemantic
 	targetChanged := semantics.Target != row.BaselineContent()
 	switch {
 	case !sourceChanged && !targetChanged:
-		return withPath(settle(outcome(ActionNoOp, ReasonNoChange, Converged), record), record)
+		return withPath(applyModeCorrection(outcome(ActionNoOp, ReasonNoChange, Converged), record), record)
 	case sourceChanged && !targetChanged:
 		return withPath(outcome(ActionWriteSourceToTarget, ReasonSourceChanged, ActionPending), record)
-	case !sourceChanged:
+	case !sourceChanged && targetChanged:
 		return withPath(outcome(ActionNeedsDecision, ReasonTargetDrift, DecisionRequired), record)
 	case semantics.Source == semantics.Target:
-		return withPath(settle(outcome(ActionEstablishBaseline, ReasonAlreadyConverged, Converged), record), record)
+		return withPath(applyModeCorrection(outcome(ActionEstablishBaseline, ReasonAlreadyConverged, Converged), record), record)
 	}
 	return withPath(outcome(ActionNeedsDecision, ReasonConflict, DecisionRequired), record)
 }
 
-// settle upgrades a content-converged classification into a mode-only
-// correction when the target's executable bits differ from the source's:
-// automatic in both directions and independent of content drift (PLAN.md
-// Section 7.1), with exact 0600/0700 forced for secrets per Section 4.5.
-func settle(candidate FileClassification, record Evaluation) FileClassification {
+// applyModeCorrection upgrades a content-converged classification into a
+// mode-only correction when the target's executable bits differ from the
+// source's: automatic in both directions and independent of content drift
+// (PLAN.md Section 7.1), with exact 0600/0700 forced for secrets per
+// Section 4.5.
+func applyModeCorrection(candidate FileClassification, record Evaluation) FileClassification {
 	if candidate.Action != ActionNoOp && candidate.Action != ActionEstablishBaseline {
 		return candidate
 	}
@@ -123,13 +122,9 @@ func modeMismatch(record Evaluation, kind deployment.FileKind) bool {
 	}
 	executable := record.Source.Snapshot().Executable()
 	if kind == deployment.FileSecret {
-		expected := fs.FileMode(0o600)
-		if executable != 0 {
-			expected = 0o700
-		}
-		return record.Target.Mode() != expected
+		return record.Target.Mode() != deployment.SecretTargetMode(executable)
 	}
-	return record.Target.Mode()&0o111 != executable
+	return record.Target.Mode()&deployment.ExecutableBitMask != executable
 }
 
 // sourceKind reports the semantic mode of the current source: the state row
