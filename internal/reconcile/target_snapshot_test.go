@@ -26,6 +26,10 @@ func TestTargetSnapshot(t *testing.T) {
 		{"hard links share identity", testTargetHardLinks},
 		{"missing root", testTargetMissingRoot},
 		{"non-directory root", testTargetFileRoot},
+		{"symlink parent is rejected", testTargetSymlinkParent},
+		{"non-directory parent is rejected", testTargetNonDirectoryParent},
+		{"missing parent is absent", testTargetMissingParent},
+		{"parent replacement is visible", testTargetParentReplacement},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
@@ -203,5 +207,53 @@ func testTargetFileRoot(t *testing.T) {
 	mustTargetFile(t, block, []byte("x"))
 	if _, err := CaptureTarget(Destination{Root: block, Relative: "file.txt"}); err == nil {
 		t.Fatal("capture must reject a non-directory root")
+	}
+}
+
+func testTargetSymlinkParent(t *testing.T) {
+	root := t.TempDir()
+	real := filepath.Join(root, "real")
+	mustTargetMkdir(t, real)
+	if err := os.Symlink(real, filepath.Join(root, "link")); err != nil {
+		t.Fatalf("make symlink: %v", err)
+	}
+	if _, err := CaptureTarget(Destination{Root: root, Relative: "link/file.txt"}); err == nil {
+		t.Fatal("capture must reject a symlinked parent component")
+	}
+}
+
+func testTargetNonDirectoryParent(t *testing.T) {
+	root := t.TempDir()
+	mustTargetFile(t, filepath.Join(root, "block"), []byte("x"))
+	if _, err := CaptureTarget(Destination{Root: root, Relative: "block/file.txt"}); err == nil {
+		t.Fatal("capture must reject a non-directory parent component")
+	}
+}
+
+func testTargetMissingParent(t *testing.T) {
+	root := t.TempDir()
+	snapshot := captureAt(t, root, "missing/deep/file.txt")
+	if snapshot.Kind() != KindAbsent {
+		t.Fatalf("kind = %v, want KindAbsent", snapshot.Kind())
+	}
+	if snapshot.Parent().Path() != "" {
+		t.Fatal("missing parents must freeze as the zero parent identity")
+	}
+}
+
+func testTargetParentReplacement(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "dir")
+	mustTargetMkdir(t, parent)
+	mustTargetFile(t, filepath.Join(parent, "file"), []byte("x"))
+	first := captureAt(t, root, "dir/file")
+	if err := os.Rename(parent, filepath.Join(root, "gone")); err != nil {
+		t.Fatalf("move parent aside: %v", err)
+	}
+	mustTargetMkdir(t, parent)
+	second := captureAt(t, root, "dir/file")
+	if pathsafe.SameIdentity(first.Parent(), second.Parent()) ||
+		first.Kind() != KindFile || second.Kind() != KindAbsent {
+		t.Fatal("parent replacement must expose differing parent and target facts")
 	}
 }
