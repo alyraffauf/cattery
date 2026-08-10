@@ -2,6 +2,7 @@ package apply
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
@@ -35,7 +36,15 @@ func driftFixture(t *testing.T, targets ...string) evalPair {
 		files = append(files, ordinarySource(t, fileSpec{Repo: repo, Target: name, Relative: "files/" + name}, []byte("source "+name)))
 		writeTarget(t, targetPath(home, name), []byte("target "+name))
 	}
-	service := evalFixture(t, evalInput{repo: repo, home: home, plan: evalPlan(t, repo, files...)})
+	plan, err := deployment.NewPlan(deployment.PlanInput{
+		RepositoryRoot: repo, Platform: "linux", Files: files,
+		Hooks: []deployment.Hook{{Scope: deployment.NewScope(""), Phase: deployment.HookBefore, Name: "b.sh",
+			AbsolutePath: filepath.Join(repo, "_hooks", "before", "b.sh"), RepositoryPath: "_hooks/before/b.sh"}},
+	})
+	if err != nil {
+		t.Fatalf("plan: %v", err)
+	}
+	service := evalFixture(t, evalInput{repo: repo, home: home, plan: plan})
 	candidates, err := service.Evaluate(context.Background(), evalRequest())
 	if err != nil {
 		t.Fatalf("evaluate: %v", err)
@@ -105,8 +114,11 @@ func testPrepareSkip(t *testing.T) {
 	if len(records) != 1 || records[0].Status != StatusPlanned {
 		t.Fatalf("skip records = %+v, want one planned record", records)
 	}
-	if len(plan.Actions().Actions()) != 0 || plan.WithHooks() {
-		t.Fatal("a skipped plan must carry no actions and no hooks")
+	if len(plan.Actions().Actions()) != 0 {
+		t.Fatal("a skipped plan must carry no actions")
+	}
+	if !plan.WithHooks() {
+		t.Fatal("compiled hooks must still run after a skip")
 	}
 }
 

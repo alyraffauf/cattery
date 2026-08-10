@@ -66,7 +66,7 @@ func (service *Service) Prepare(ctx context.Context, input PrepareInput) (Prepar
 	return PreparedPlan{
 		actions:   NewActionPlan(actions),
 		records:   records,
-		withHooks: !input.Request.DryRun && !input.Request.NoHooks && len(actions) > 0,
+		withHooks: !input.Request.DryRun && !input.Request.NoHooks && len(input.Candidates.Hooks()) > 0,
 	}, nil
 }
 
