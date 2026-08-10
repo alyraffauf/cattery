@@ -133,7 +133,7 @@ func (service *Service) complete(ctx context.Context, batch resolvedBatch, reque
 	if err != nil {
 		return Result{}, err
 	}
-	validated, err := Preflight(preflightContext{identity: batch.identity, plan: batch.plan}, items)
+	validated, err := Preflight(preflightContext(batch), items)
 	if err != nil {
 		return Result{}, err
 	}

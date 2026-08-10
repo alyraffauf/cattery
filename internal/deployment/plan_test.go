@@ -54,10 +54,10 @@ func testPlanCopiesInputs(t *testing.T) {
 	aliases := candidate.Aliases
 	hooks := candidate.Hooks
 	plan := mustPlan(candidate)
-	groups = append(groups, " mutated")
-	files = append(files, ManagedFile{TargetRelativePath: "x"})
-	aliases = append(aliases, Alias{AliasRelativePath: "x"})
-	hooks = append(hooks, Hook{Name: "x"})
+	groups[0] = " mutated"
+	files[0] = ManagedFile{TargetRelativePath: "x"}
+	aliases[0] = Alias{AliasRelativePath: "x"}
+	hooks[0] = Hook{Name: "x"}
 	if len(plan.Groups()) != 2 {
 		t.Fatalf("groups leaked: %v", plan.Groups())
 	}

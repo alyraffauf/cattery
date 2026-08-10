@@ -5,10 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/alyraffauf/cattery/internal/deployment"
-	"github.com/alyraffauf/cattery/internal/failure"
-	"github.com/alyraffauf/cattery/internal/state"
 )
 
 func TestApplyVerification(t *testing.T) {
@@ -174,24 +170,5 @@ func testVerifyStateSilent(t *testing.T) {
 	}
 	if pair.baselines.calls != 0 || pair.transitions.calls != 0 {
 		t.Fatalf("verification must not commit state, baselines = %d transitions = %d", pair.baselines.calls, pair.transitions.calls)
-	}
-}
-
-// verifyErrorKind asserts a verification failure category.
-func verifyErrorKind(t *testing.T, err error, kind failure.Kind) {
-	t.Helper()
-	if err == nil || !kindIs(err, kind) {
-		t.Fatalf("error = %v, want %s", err, kind)
-	}
-}
-
-// secretRowFor freezes one active secret baseline over the envelope.
-func secretRowFor(target string) state.FileBaseline {
-	cipher := []byte(`{"data":"c2VjcmV0","sops":{"version":"3.9.0"}}`)
-	return state.FileBaseline{
-		TargetPath: target, SourcePath: "files/token", SourceKind: deployment.FileSecret, Layer: deployment.LayerBase,
-		BaselineContentHash: deployment.SecretSemantic([]byte("plaintext"), [32]byte{7}),
-		BaselineSourceHash:  deployment.RawStorage(cipher),
-		Status:              state.StatusActive,
 	}
 }
