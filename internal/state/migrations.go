@@ -48,7 +48,13 @@ func applyMigration(database *Database) error {
 		_ = transaction.Rollback()
 		return err
 	}
-	return transaction.Commit()
+	if err := transaction.Commit(); err != nil {
+		return err
+	}
+	if _, err := database.conn.Exec("PRAGMA locking_mode = NORMAL"); err != nil {
+		return fmt.Errorf("state: restore normal locking mode: %w", err)
+	}
+	return nil
 }
 
 func beginExclusive(database *Database) (*sql.Tx, error) {

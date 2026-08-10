@@ -19,6 +19,15 @@ import (
 // gracePeriod is the SIGTERM-to-SIGKILL interval mandated by Section 10.4.
 const gracePeriod = 5 * time.Second
 
+// groupPollInterval paces the bounded wait for a canceled process group to
+// disappear after SIGKILL.
+const groupPollInterval = 5 * time.Millisecond
+
+// groupShutdownTimeout bounds the post-SIGKILL wait so an unkillable child
+// (e.g. stuck in uninterruptible disk sleep) cannot hang the caller forever.
+// A timeout is reported as a partial cancellation rather than an infinite block.
+const groupShutdownTimeout = 30 * time.Second
+
 // Request describes one synchronous child invocation. Command[0] is the
 // executable; Directory and Environment default to inherited when empty so
 // the package stays neutral about caller policy.
@@ -108,6 +117,8 @@ func runAndWait(ctx context.Context, handle *processHandle, start time.Time) out
 
 func awaitShutdown(ctx context.Context, shutdown groupShutdown) outcome {
 	pid := shutdown.handle.pid()
+	// ESRCH here means the process already exited; terminateGroup's error is
+	// only meaningful for unexpected failures, so it is intentionally ignored.
 	_ = terminateGroup(pid)
 	select {
 	case <-shutdown.waitCh:
@@ -115,19 +126,28 @@ func awaitShutdown(ctx context.Context, shutdown groupShutdown) outcome {
 		return canceled(shutdown.elapsed, ctx.Err())
 	case <-time.After(gracePeriod):
 	}
+	// As above, ESRCH is the expected case once the group is gone.
 	_ = killGroup(pid)
 	<-shutdown.waitCh
-	waitForGroupExit(pid)
+	if !waitForGroupExit(pid) {
+		err := fmt.Errorf("subprocess: process group %d did not exit after SIGKILL within %s", pid, groupShutdownTimeout)
+		return outcome{result: Result{SignalCanceled: true, Duration: shutdown.elapsed}, err: err}
+	}
 	return canceled(shutdown.elapsed, ctx.Err())
 }
 
-func waitForGroupExit(pid int) {
+func waitForGroupExit(pid int) bool {
+	deadline := time.After(groupShutdownTimeout)
 	for {
-		err := syscall.Kill(-pid, 0)
-		if errors.Is(err, syscall.ESRCH) {
-			return
+		select {
+		case <-deadline:
+			return false
+		default:
 		}
-		time.Sleep(time.Millisecond)
+		if errors.Is(syscall.Kill(-pid, 0), syscall.ESRCH) {
+			return true
+		}
+		time.Sleep(groupPollInterval)
 	}
 }
 

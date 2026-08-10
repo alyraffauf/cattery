@@ -42,14 +42,15 @@ func (lock *Lock) acquire(writePID func(string) error) error {
 	if err := preparePrivateFile(lock.path); err != nil {
 		return err
 	}
-	lock.flock = flock.New(lock.path)
-	locked, err := lock.flock.TryLock()
+	held := flock.New(lock.path)
+	locked, err := held.TryLock()
 	if err != nil {
 		return fmt.Errorf("state: lock %q: %w", lock.path, err)
 	}
 	if !locked {
 		return errLockHeld(lock.path)
 	}
+	lock.flock = held
 	if err := writePID(lock.path); err != nil {
 		_ = lock.Release()
 		return err
