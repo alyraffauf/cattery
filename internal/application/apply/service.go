@@ -32,13 +32,19 @@ func (service *Service) Apply(ctx context.Context, request Request) (Result, err
 		return Result{}, err
 	}
 	if request.DryRun {
-		result := Result{Items: plan.Records(), Summary: plan.Summary()}
-		if result.Summary.Planned > 0 {
-			return result, failure.New(failure.Difference, "apply: dry run reports pending changes", nil)
-		}
-		return result, nil
+		return service.dryOutcome(plan)
 	}
 	return service.execute(ctx, executeInput{request: request, plan: plan, candidates: candidates})
+}
+
+// dryOutcome freezes the dry-run result, reporting pending changes as a
+// difference so the CLI exits 2.
+func (service *Service) dryOutcome(plan PreparedPlan) (Result, error) {
+	result := Result{Items: plan.Records(), Summary: plan.Summary()}
+	if result.Summary.Planned > 0 {
+		return result, failure.New(failure.Difference, "apply: dry run reports pending changes", nil)
+	}
+	return result, nil
 }
 
 // execute runs the hook-gated filesystem phase and post-hook verification,
