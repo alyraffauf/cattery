@@ -24,7 +24,7 @@ nix develop
 just check
 ```
 
-Verified release archives are described in the release documentation.
+Verified release archives are described in the [release documentation](docs/release.md).
 
 ## Repository example
 
