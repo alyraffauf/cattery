@@ -68,9 +68,9 @@ func targetStable(candidate Candidate, fresh reconcile.TargetSnapshot) error {
 	switch {
 	case fresh.Kind() != before.Kind():
 		return failure.New(failure.Operational, "apply: target type changed during apply: "+path, nil)
-	case !pathsafe.SameIdentity(fresh.Identity(), before.Identity()):
+	case before.Kind() != reconcile.KindAbsent && !pathsafe.SameIdentity(fresh.Identity(), before.Identity()):
 		return failure.New(failure.Operational, "apply: target identity changed during apply: "+path, nil)
-	case !pathsafe.SameIdentity(fresh.Parent(), before.Parent()):
+	case before.Kind() != reconcile.KindAbsent && !pathsafe.SameIdentity(fresh.Parent(), before.Parent()):
 		return failure.New(failure.Operational, "apply: target parent changed during apply: "+path, nil)
 	case fresh.Kind() == reconcile.KindFile && (fresh.Digest() != before.Digest() || fresh.Mode() != before.Mode()):
 		return failure.New(failure.Operational, "apply: target content changed during apply: "+path, nil)

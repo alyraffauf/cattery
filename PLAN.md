@@ -1463,6 +1463,7 @@ The diagram describes policy flow, not permission for bootstrap to move behavior
 | `cmd/cattery` | `bootstrap`, `cli`, `failure` |
 | `testfixture/filesystem`, `testfixture/sops`, `quality` | none |
 | `testfixture/database` | `state` |
+| `integration` | any production package; the black-box suite is exempt from the import allowlist by definition |
 
 Non-fixture production packages never import `internal/testfixture` or `internal/quality`. Tests beside one package may import that package's narrow test fixture; the `integration` test package may import production packages explicitly because its purpose is cross-package verification. The architecture test exempts `_test.go` files from the fixture-import restriction so each package's tests may import its narrow `testfixture/` family (e.g. `repository` tests import `testfixture/filesystem`, `secrets` tests import `testfixture/sops`, `state` tests import `testfixture/database`); production files never receive that exemption. The allowlist is directional: a listed lower package never imports an application, CLI, bootstrap, or command package.
 
