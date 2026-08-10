@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/alyraffauf/cattery/internal/failure"
+	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/reconcile"
 )
 
@@ -61,7 +62,7 @@ type targetReadInput struct {
 
 func validateOpenedTarget(input targetReadInput) error {
 	info, err := input.file.Stat()
-	if err != nil || !input.record.Target.Identity().SameFileInfo(info) || info.Mode().Perm() != input.record.Target.Mode() {
+	if err != nil || !filesystem.MatchesIdentityAndMode(input.record.Target.Identity(), info, input.record.Target.Mode()) {
 		return failure.New(failure.Operational, input.commandLabel+": target changed "+input.path, err)
 	}
 	return nil

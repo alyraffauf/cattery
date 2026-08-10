@@ -143,7 +143,7 @@ func validateOpenedFile(snapshot TargetSnapshot, info os.FileInfo) error {
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("reconcile: target changed to non-regular file %s", snapshot.identity.Path())
 	}
-	if !snapshot.identity.SameFileInfo(info) || info.Mode().Perm() != snapshot.mode {
+	if !filesystem.MatchesIdentityAndMode(snapshot.identity, info, snapshot.mode) {
 		return fmt.Errorf("reconcile: target identity or mode changed while reading %s", snapshot.identity.Path())
 	}
 	return nil

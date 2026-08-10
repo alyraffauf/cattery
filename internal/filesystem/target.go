@@ -35,6 +35,12 @@ func (f TargetFacts) Mode() fs.FileMode { return f.mode }
 // Payload returns the exact referent of a symlink entry.
 func (f TargetFacts) Payload() string { return f.payload }
 
+// MatchesIdentityAndMode reports whether an opened entry still matches a
+// captured identity and permission mode.
+func MatchesIdentityAndMode(identity pathsafe.Identity, info os.FileInfo, mode fs.FileMode) bool {
+	return identity.SameFileInfo(info) && info.Mode().Perm() == mode
+}
+
 // KindOfIdentity classifies an existing identity without touching the path.
 func KindOfIdentity(identity pathsafe.Identity) EntryKind {
 	mode := identity.Mode()
