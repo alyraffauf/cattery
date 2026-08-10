@@ -49,7 +49,6 @@ func newFixture(t *testing.T) *fixture {
 	return &fixture{service: service, source: source, rows: rows, root: root, home: home}
 }
 
-// compileFunc adapts the package compiler function to the narrow port.
 type compileFunc func(repository.CompileInput) (deployment.Plan, error)
 
 func (adapter compileFunc) Compile(input repository.CompileInput) (deployment.Plan, error) {
@@ -104,7 +103,6 @@ func writeFile(t *testing.T, path, content string) {
 	}
 }
 
-// writePrivateFile writes a file with the exact forced secret mode 0600.
 func writePrivateFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
@@ -112,8 +110,6 @@ func writePrivateFile(t *testing.T, path, content string) {
 	}
 }
 
-// repositoryTree creates a repository with one ordinary file per group
-// plus a root file.
 func repositoryTree(t *testing.T, groups []string) string {
 	t.Helper()
 	root := t.TempDir()
@@ -124,14 +120,12 @@ func repositoryTree(t *testing.T, groups []string) string {
 	return root
 }
 
-// useRepository points the fixture at a fresh repository tree.
 func useRepository(t *testing.T, fx *fixture, groups []string) {
 	t.Helper()
 	fx.root = repositoryTree(t, groups)
 	fx.source.identity.Root = fx.root
 }
 
-// baselineInput bundles the target, group, source, and content of one row.
 type baselineInput struct {
 	target  string
 	group   string
@@ -329,7 +323,14 @@ func testDecryptClassifies(t *testing.T) {
 	secretRepository(t, fx)
 	ciphertext := secretFixtureJSON()
 	writePrivateFile(t, filepath.Join(fx.home, "token"), string(ciphertext))
-	fx.service.secrets = fakeClient(t)
+	fx.service = NewService(Dependencies{
+		RepositorySource: fx.source,
+		Compiler:         compileFunc(repository.Compile),
+		State:            fx.rows,
+		Secrets:          fakeClient(t),
+		ProtectedTrees:   []string{filepath.Join(fx.home, "state")},
+		Platform:         "linux",
+	})
 	fx.rows.rows = stateRows{files: []state.FileBaseline{
 		fileRow(baselineInput{target: "token", group: "g1", source: []byte("older ciphertext\n"), content: ciphertext}, &fx.rows.key),
 	}}
@@ -372,7 +373,9 @@ func testFailureResolution(t *testing.T) {
 }
 
 func testFailurePlatform(t *testing.T) {
-	evaluateFailure(t, failure.InvalidInput, func(t *testing.T, fx *fixture) { fx.service.platform = "" })
+	evaluateFailure(t, failure.InvalidInput, func(t *testing.T, fx *fixture) {
+		fx.service = NewService(Dependencies{Platform: ""})
+	})
 }
 
 func testFailureCompilation(t *testing.T) {

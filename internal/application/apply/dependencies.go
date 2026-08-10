@@ -2,20 +2,11 @@ package apply
 
 import (
 	"context"
-	"errors"
-	"os"
 
+	"github.com/alyraffauf/cattery/internal/application/evaluation"
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/failure"
 )
-
-func compileFailure(message string, cause error) error {
-	var pathError *os.PathError
-	if errors.As(cause, &pathError) {
-		return failure.New(failure.Operational, message, cause)
-	}
-	return failure.New(failure.InvalidInput, message, cause)
-}
 
 // Preflight verifies the external dependencies the selected candidates
 // require: SOPS is probed only when a secret candidate needs on-demand
@@ -39,7 +30,7 @@ func (service *Service) Preflight(ctx context.Context, candidates Candidates) er
 // regular target must decrypt on demand.
 func needsSOPS(candidates Candidates) bool {
 	for _, candidate := range candidates.All() {
-		if candidate.record.File.Kind == deployment.FileSecret && secretDecryptNeeded(candidate.record) {
+		if candidate.record.File.Kind == deployment.FileSecret && evaluation.SecretDecryptionNeeded(candidate.record) {
 			return true
 		}
 	}

@@ -8,11 +8,8 @@
 package inspect
 
 import (
-	"github.com/alyraffauf/cattery/internal/deployment"
-	"github.com/alyraffauf/cattery/internal/repository"
+	"github.com/alyraffauf/cattery/internal/application/evaluation"
 	"github.com/alyraffauf/cattery/internal/secrets"
-	"github.com/alyraffauf/cattery/internal/selection"
-	"github.com/alyraffauf/cattery/internal/state"
 )
 
 // Dependencies bundles the injectable seams of the inspection service.
@@ -34,31 +31,20 @@ type Dependencies struct {
 // RepositorySource resolves the canonical repository pair for a selection
 // request. The composition root satisfies it with a selection resolver bound
 // to the canonical home and the state default lookup.
-type RepositorySource interface {
-	Resolve(selection.RepositoryRequest) (RepositoryIdentity, error)
-}
+type RepositorySource = evaluation.RepositorySource
 
 // RepositoryIdentity is the canonical repository pair one inspection
 // evaluates from. It is the inspect-owned projection of the lower selection
 // result so no backend type leaks through the application seam.
-type RepositoryIdentity struct {
-	Root string
-	Home string
-}
+type RepositoryIdentity = evaluation.RepositoryIdentity
 
 // Compiler validates and compiles one platform plan from a repository.
-type Compiler interface {
-	Compile(repository.CompileInput) (deployment.Plan, error)
-}
+type Compiler = evaluation.Compiler
 
 // StateReader is the narrow read-only port over the persisted rows and the
 // per-installation secret hash key of one repository pair. It never
 // registers, retires, or mutates rows.
-type StateReader interface {
-	FileBaselines(root, home string) ([]state.FileBaseline, error)
-	AliasBaselines(root, home string) ([]state.AliasBaseline, error)
-	RecoverHashKey() ([32]byte, error)
-}
+type StateReader = evaluation.StateReader
 
 // RepositoryInput carries the raw repository fields the CLI adapter copies
 // mechanically: the explicit --repo value and its presence, the raw
