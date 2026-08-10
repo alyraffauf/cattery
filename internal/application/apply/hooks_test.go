@@ -50,12 +50,14 @@ func (h *hookFake) Execute(ctx context.Context, input hooks.ExecuteInput, ordere
 
 // hookPair bundles the hook-pipeline seams of one drifted apply.
 type hookPair struct {
-	service    *Service
-	candidates Candidates
-	plan       PreparedPlan
-	hooks      *hookFake
-	baselines  *baselineFake
-	replacer   *replacerFake
+	service     *Service
+	candidates  Candidates
+	plan        PreparedPlan
+	hooks       *hookFake
+	baselines   *baselineFake
+	replacer    *replacerFake
+	home        string
+	transitions *transitionFake
 }
 
 // hookFixture evaluates one drifting file target over a write plan.
@@ -68,13 +70,14 @@ func hookFixture(t *testing.T, withHooks bool) hookPair {
 	hk := &hookFake{}
 	baselines := &baselineFake{}
 	replacer := &replacerFake{}
-	service := evalFixture(t, evalInput{repo: repo, home: home, plan: evalPlan(t, repo, file), baselines: baselines, replacer: replacer, hooks: hk})
+	transitions := &transitionFake{}
+	service := evalFixture(t, evalInput{repo: repo, home: home, plan: evalPlan(t, repo, file), baselines: baselines, replacer: replacer, hooks: hk, transitions: transitions})
 	candidates, err := service.Evaluate(context.Background(), evalRequest())
 	if err != nil {
 		t.Fatalf("evaluate: %v", err)
 	}
 	plan := PreparedPlan{actions: NewActionPlan([]PlanAction{{TargetPath: "a.conf", Kind: ActionKindWriteSource, SourcePath: "files/a"}}), withHooks: withHooks}
-	return hookPair{service: service, candidates: candidates, plan: plan, hooks: hk, baselines: baselines, replacer: replacer}
+	return hookPair{service: service, candidates: candidates, plan: plan, hooks: hk, baselines: baselines, replacer: replacer, home: home, transitions: transitions}
 }
 
 func testHooksNoop(t *testing.T) {
