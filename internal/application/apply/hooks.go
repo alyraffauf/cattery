@@ -102,5 +102,22 @@ func (service *Service) runHooks(ctx context.Context, input PipelineInput, reque
 		Phase:          request.phase,
 		Result:         request.result,
 	}
-	return service.hooks.Execute(ctx, execution, input.Candidates.Hooks())
+	return service.hooks.Execute(ctx, execution, hooksForPhase(input.Candidates.Hooks(), request.phase))
+}
+
+// hooksForPhase keeps the hooks of one phase in the execution order, since
+// the compiled plan carries the display order.
+func hooksForPhase(all []deployment.Hook, phase deployment.HookPhase) []deployment.Hook {
+	kept := make([]deployment.Hook, 0, len(all))
+	for _, hook := range all {
+		if hook.Phase == phase {
+			kept = append(kept, hook)
+		}
+	}
+	if phase == deployment.HookBefore {
+		hooks.SortBefore(kept)
+		return kept
+	}
+	hooks.SortAfter(kept)
+	return kept
 }
