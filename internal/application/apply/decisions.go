@@ -16,11 +16,17 @@ type ResolvedDecision struct {
 // CollectedDecisions freezes the resolved decisions in target-path order.
 type CollectedDecisions struct {
 	decisions []ResolvedDecision
+	specs     []reconcile.DecisionSpec
 }
 
 // All returns the resolved decisions in bytewise target-path order.
 func (c CollectedDecisions) All() []ResolvedDecision {
 	return append([]ResolvedDecision(nil), c.decisions...)
+}
+
+// Specs returns the decision specifications collected for this apply.
+func (c CollectedDecisions) Specs() []reconcile.DecisionSpec {
+	return append([]reconcile.DecisionSpec(nil), c.specs...)
 }
 
 // CollectDecisions resolves every candidate that requires an explicit
@@ -45,7 +51,7 @@ func (service *Service) CollectDecisions(ctx context.Context, candidates Candida
 		}
 		decisions = append(decisions, decision)
 	}
-	return CollectedDecisions{decisions: decisions}, nil
+	return CollectedDecisions{decisions: decisions, specs: ordered}, nil
 }
 
 // collectOne projects one spec into a request, resolves it, and validates
@@ -135,6 +141,9 @@ func projectChoice(choice reconcile.DecisionChoice) DecisionChoice {
 // difference and ask again.
 func (service *Service) resolveRepeatedly(ctx context.Context, request DecisionRequest) (DecisionResponse, error) {
 	for {
+		if err := ctx.Err(); err != nil {
+			return DecisionResponse{}, err
+		}
 		response, err := service.resolveOnce(ctx, request)
 		if err != nil {
 			return DecisionResponse{}, err

@@ -50,6 +50,9 @@ func (service *Service) Validate(ctx context.Context, request Request) (Result, 
 	if err != nil {
 		return Result{}, failure.New(failure.InvalidInput, "validate: select groups", err)
 	}
+	if len(request.Groups) == 0 {
+		return Result{Platforms: platformCounts(linux, darwin)}, nil
+	}
 	linux, darwin, err = service.compilePair(identity, chosen.Groups)
 	if err != nil {
 		return Result{}, err

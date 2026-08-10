@@ -57,7 +57,7 @@ func captureVerified(file deployment.ManagedFile, client *secrets.Client) (Sourc
 		clear(data)
 		return SourceObservation{}, err
 	}
-	if err := validateCapture(captureInput{file, before, after, data}); err != nil {
+	if err := validateCapture(captureInput{file: file, before: before, after: after, data: data}); err != nil {
 		clear(data)
 		return SourceObservation{}, err
 	}

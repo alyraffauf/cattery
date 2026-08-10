@@ -90,10 +90,10 @@ type baselineCommit struct {
 // commitBaseline switches an active alias row to the file representation or
 // upserts the file baseline, only after a durable write.
 func (service *Service) commitBaseline(ctx context.Context, job fileJob, commit baselineCommit) error {
+	if !commit.durable {
+		return failure.New(failure.Operational, "apply: baseline write is not durable: "+job.action.TargetPath, nil)
+	}
 	if job.candidate.record.AliasState != nil && job.candidate.record.AliasState.Active() {
-		if !commit.durable {
-			return failure.New(failure.Operational, "apply: alias-to-file transition is not durable: "+job.action.TargetPath, nil)
-		}
 		_, err := service.transitions.TransitionToFile(job.root, job.home, baselineRow(job.candidate, commit.contentHash))
 		if err != nil {
 			return failure.New(failure.Operational, "apply: transition to file "+job.action.TargetPath, err)

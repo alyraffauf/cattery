@@ -145,8 +145,12 @@ func statusRecord(input classificationInput) StatusRecord {
 
 // statusCounts tallies the per-kind records of one status result.
 func statusCounts(records []StatusRecord) (files, aliases, retired int) {
+	return countRecordKinds(records)
+}
+
+func countRecordKinds[T interface{ Kind() StatusKind }](records []T) (files, aliases, retired int) {
 	for _, record := range records {
-		switch record.kind {
+		switch record.Kind() {
 		case StatusKindFile:
 			files++
 		case StatusKindAlias:
@@ -161,8 +165,12 @@ func statusCounts(records []StatusRecord) (files, aliases, retired int) {
 // recordsConverged reports whether every status record is converged; a
 // record-free evaluation is converged by definition.
 func recordsConverged(records []StatusRecord) bool {
+	return recordsConvergedGeneric(records)
+}
+
+func recordsConvergedGeneric[T interface{ Converged() bool }](records []T) bool {
 	for _, record := range records {
-		if !record.converged {
+		if !record.Converged() {
 			return false
 		}
 	}

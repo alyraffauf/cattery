@@ -2,6 +2,7 @@ package inspect
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -143,35 +144,52 @@ func readTargetContent(home string, record reconcile.Evaluation) ([]byte, error)
 	if record.Target.Kind() != reconcile.KindFile {
 		return nil, nil
 	}
-	content, err := os.ReadFile(filepath.Join(home, filepath.FromSlash(record.TargetPath)))
+	path := filepath.Join(home, filepath.FromSlash(record.TargetPath))
+	file, err := openValidatedTarget(path, record)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	content, err := io.ReadAll(file)
 	if err != nil {
 		return nil, failure.New(failure.Operational, "diff: read target "+record.TargetPath, err)
+	}
+	if err := validateOpenedTarget(file, record, path); err != nil {
+		return nil, err
 	}
 	return content, nil
 }
 
-// diffCounts tallies the per-kind records of one diff result.
-func diffCounts(records []DiffRecord) (files, aliases, retired int) {
-	for _, record := range records {
-		switch record.Kind() {
-		case StatusKindFile:
-			files++
-		case StatusKindAlias:
-			aliases++
-		case StatusKindRetired:
-			retired++
-		}
+func openValidatedTarget(path string, record reconcile.Evaluation) (*os.File, error) {
+	entry, err := os.Lstat(path)
+	if err != nil {
+		return nil, failure.New(failure.Operational, "diff: read target "+record.TargetPath, err)
 	}
-	return files, aliases, retired
+	if !entry.Mode().IsRegular() || !record.Target.Identity().SameFileInfo(entry) {
+		return nil, failure.New(failure.Operational, "diff: target changed "+record.TargetPath, nil)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, failure.New(failure.Operational, "diff: read target "+record.TargetPath, err)
+	}
+	if err := validateOpenedTarget(file, record, path); err != nil {
+		file.Close()
+		return nil, err
+	}
+	return file, nil
 }
 
-// diffConverged reports whether every diff record is converged; a
-// record-free evaluation is converged by definition.
-func diffConverged(records []DiffRecord) bool {
-	for _, record := range records {
-		if !record.Converged() {
-			return false
-		}
+func validateOpenedTarget(file *os.File, record reconcile.Evaluation, path string) error {
+	info, err := file.Stat()
+	if err != nil || !record.Target.Identity().SameFileInfo(info) || info.Mode().Perm() != record.Target.Mode() {
+		return failure.New(failure.Operational, "diff: target changed "+path, err)
 	}
-	return true
+	return nil
 }
+
+// diffCounts tallies the per-kind records of one diff result.
+func diffCounts(records []DiffRecord) (files, aliases, retired int) {
+	return countRecordKinds(records)
+}
+
+func diffConverged(records []DiffRecord) bool { return recordsConvergedGeneric(records) }

@@ -119,7 +119,7 @@ func baseTarget(candidate Candidate) (string, error) {
 	if candidate.Kind != deployment.FileSecret {
 		return target, nil
 	}
-	target = strings.TrimPrefix(target, "_secrets/")
+	target = strings.TrimPrefix(target, SecretDirectoryName+"/")
 	if candidate.Scope.IsRoot() && !representableRootSecretTarget(target) {
 		return "", fmt.Errorf("repository: root secret target %q is not representable at the root layer", target)
 	}
@@ -242,7 +242,7 @@ func (walker *layerWalker) target(path string, kind deployment.FileKind) (string
 	if kind != deployment.FileSecret {
 		return path, nil
 	}
-	target := strings.TrimPrefix(strings.TrimPrefix(path, "_secrets"), "/")
+	target := strings.TrimPrefix(strings.TrimPrefix(path, SecretDirectoryName), "/")
 	if walker.scope.IsRoot() && !representableRootSecretTarget(target) {
 		return "", fmt.Errorf("repository: root secret target %q is not representable at the root layer", target)
 	}

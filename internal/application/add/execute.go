@@ -40,6 +40,7 @@ func (exec *executor) runItem(ctx context.Context, item ItemPlan) {
 	outcome, err := exec.write(ctx, item)
 	if err != nil {
 		exec.errors = append(exec.errors, err)
+		exec.records = append(exec.records, partialRecord(item))
 		return
 	}
 	defer clearBytes(outcome.target)
