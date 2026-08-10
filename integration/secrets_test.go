@@ -18,6 +18,7 @@ func TestExecutableSecrets(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{"secret adoption", testSecretsAdd},
+		{"secret adoption with a symlinked home", testSecretsAddWithLinkedHome},
 		{"secret apply round trip", testSecretsApply},
 		{"dependency failure", testSecretsDependency},
 		{"hash key recovery", testSecretsKey},
@@ -101,6 +102,28 @@ func testSecretsAdd(t *testing.T) {
 	}
 	if string(readTargetFile(t, env.home, "token")) != string(envelope) {
 		t.Fatal("the target must be preserved exactly")
+	}
+}
+
+func testSecretsAddWithLinkedHome(t *testing.T) {
+	env := newExecEnv(t)
+	realHome := env.home
+	linkedHome := filepath.Join(t.TempDir(), "home")
+	if err := os.Symlink(realHome, linkedHome); err != nil {
+		t.Fatalf("link home: %v", err)
+	}
+	env.home = linkedHome
+	env.initRepository(t)
+	envelope := []byte(`{"data":"ZmFrZS1jaXBoZXI=","sops":{"version":"3.9.0"}}`)
+	writeFile(t, filepath.Join(realHome, "token"), envelope)
+	env = fakeEnv(t, env)
+
+	result := env.secretRun(t, nil, "add", "--secret", "token")
+	if result.Code != 0 {
+		t.Fatalf("add: code=%d stderr=%q", result.Code, result.Stderr)
+	}
+	if _, err := os.Stat(filepath.Join(env.repo, "_secrets", "token")); err != nil {
+		t.Fatalf("encrypted source: %v", err)
 	}
 }
 
