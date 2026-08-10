@@ -1,0 +1,176 @@
+package apply
+
+import (
+	"context"
+
+	"github.com/alyraffauf/cattery/internal/deployment"
+	"github.com/alyraffauf/cattery/internal/failure"
+	"github.com/alyraffauf/cattery/internal/reconcile"
+)
+
+// PreparedPlan freezes one apply: the ordered execution actions, the
+// per-target records for rendering, and whether trusted hooks run.
+type PreparedPlan struct {
+	actions   ActionPlan
+	records   []ItemResult
+	withHooks bool
+}
+
+// Actions returns the ordered execution actions.
+func (p PreparedPlan) Actions() ActionPlan { return p.actions }
+
+// Records returns a defensive copy of the per-target records.
+func (p PreparedPlan) Records() []ItemResult {
+	return append([]ItemResult(nil), p.records...)
+}
+
+// WithHooks reports whether trusted hooks run for this plan.
+func (p PreparedPlan) WithHooks() bool { return p.withHooks }
+
+// Summary counts the per-target records of the plan.
+func (p PreparedPlan) Summary() Summary {
+	summary := Summary{}
+	for _, record := range p.records {
+		switch record.Status {
+		case StatusPlanned:
+			summary.Planned++
+		case StatusCompleted:
+			summary.Completed++
+		case StatusPartial:
+			summary.Partial++
+		}
+	}
+	return summary
+}
+
+// Prepare combines the resolved candidates and decisions into one immutable
+// action plan with dry-run records and stable per-target kinds (PLAN.md
+// Section 11.5). No hook or managed mutation occurs, and refusal paths
+// register nothing.
+func (service *Service) Prepare(ctx context.Context, request Request, candidates Candidates, decisions CollectedDecisions) (PreparedPlan, error) {
+	if err := ctx.Err(); err != nil {
+		return PreparedPlan{}, err
+	}
+	pending, err := decisionSpecs(candidates)
+	if err != nil {
+		return PreparedPlan{}, err
+	}
+	if len(pending) > 0 && !request.DryRun && request.NonInteractive {
+		return PreparedPlan{}, failure.New(failure.InvalidInput, "apply: non-interactive apply requires no pending decisions", nil)
+	}
+	actions, records, err := prepareActions(candidates, decisionChoices(decisions), request.DryRun)
+	if err != nil {
+		return PreparedPlan{}, err
+	}
+	return PreparedPlan{
+		actions:   NewActionPlan(actions),
+		records:   records,
+		withHooks: !request.DryRun && !request.NoHooks && len(actions) > 0,
+	}, nil
+}
+
+// decisionChoices indexes the resolved decisions by target path.
+func decisionChoices(decisions CollectedDecisions) map[string]DecisionChoice {
+	choices := make(map[string]DecisionChoice, len(decisions.All()))
+	for _, decision := range decisions.All() {
+		choices[decision.request.TargetPath()] = decision.response.Choice
+	}
+	return choices
+}
+
+// prepareActions derives the ordered actions and records of one apply.
+func prepareActions(candidates Candidates, choices map[string]DecisionChoice, dryRun bool) ([]PlanAction, []ItemResult, error) {
+	actions := make([]PlanAction, 0)
+	records := make([]ItemResult, 0)
+	for _, candidate := range candidates.All() {
+		action, source, err := underlyingAction(candidate)
+		if err != nil {
+			return nil, nil, err
+		}
+		kind, has := mapKind(action)
+		if !has {
+			continue
+		}
+		choice, decided := choices[candidate.record.TargetPath]
+		if decided && choice == ChoiceSkip {
+			records = append(records, plannedRecord(candidate, kind))
+			continue
+		}
+		if needsDecision(candidate) && !decided && !dryRun {
+			return nil, nil, failure.New(failure.InvalidInput, "apply: unresolved decision for "+candidate.record.TargetPath, nil)
+		}
+		if dryRun {
+			records = append(records, plannedRecord(candidate, kind))
+			continue
+		}
+		actions = append(actions, PlanAction{TargetPath: candidate.record.TargetPath, Kind: kind, SourcePath: source})
+	}
+	return actions, records, nil
+}
+
+// needsDecision reports whether one candidate required an explicit choice.
+func needsDecision(candidate Candidate) bool {
+	return candidate.file.Convergence == reconcile.DecisionRequired || candidate.alias.Convergence == reconcile.DecisionRequired
+}
+
+// plannedRecord builds the planned per-target record of one candidate.
+func plannedRecord(candidate Candidate, kind ActionKind) ItemResult {
+	return ItemResult{
+		TargetPath: candidate.record.TargetPath,
+		Status:     StatusPlanned,
+		Secret:     candidate.record.File.Kind == deployment.FileSecret,
+		Kind:       kind,
+	}
+}
+
+// underlyingAction resolves the intended action of one candidate: the
+// classification action for automatic rows, the representation named by the
+// plan entry for rows that required a decision.
+func underlyingAction(candidate Candidate) (reconcile.Action, string, error) {
+	decided := candidate.file.Convergence == reconcile.DecisionRequired || candidate.alias.Convergence == reconcile.DecisionRequired
+	if !decided {
+		if action, source, pending := classificationAction(candidate); pending {
+			return action, source, nil
+		}
+		return reconcile.ActionNoOp, "", nil
+	}
+	switch candidate.record.Entry {
+	case reconcile.PlanEntryFile:
+		return reconcile.ActionWriteSourceToTarget, candidate.record.File.SourceRepositoryPath, nil
+	case reconcile.PlanEntryAlias:
+		return reconcile.ActionCreateAlias, "", nil
+	}
+	return reconcile.ActionNoOp, "", nil
+}
+
+// classificationAction maps the automatic classifications to one action.
+func classificationAction(candidate Candidate) (reconcile.Action, string, bool) {
+	switch {
+	case candidate.file.Action == reconcile.ActionCreateTarget || candidate.file.Action == reconcile.ActionWriteSourceToTarget || candidate.file.Action == reconcile.ActionCorrectMode:
+		return candidate.file.Action, candidate.record.File.SourceRepositoryPath, true
+	case candidate.alias.Action == reconcile.ActionCreateAlias || candidate.alias.Action == reconcile.ActionReplaceAlias || candidate.alias.Action == reconcile.ActionVerifyAlias:
+		return candidate.alias.Action, "", true
+	case candidate.retirement.Action == reconcile.ActionRetireState:
+		return reconcile.ActionRetireState, "", true
+	case candidate.retirement.Action == reconcile.ActionRetireAliasState:
+		return reconcile.ActionRetireAliasState, "", true
+	}
+	return reconcile.ActionNoOp, "", false
+}
+
+// mapKind projects one reconcile action into the apply action vocabulary.
+func mapKind(action reconcile.Action) (ActionKind, bool) {
+	switch action {
+	case reconcile.ActionCreateTarget, reconcile.ActionWriteSourceToTarget:
+		return ActionKindWriteSource, true
+	case reconcile.ActionCorrectMode:
+		return ActionKindReplaceFile, true
+	case reconcile.ActionCreateAlias, reconcile.ActionReplaceAlias, reconcile.ActionVerifyAlias:
+		return ActionKindRealizeAlias, true
+	case reconcile.ActionRetireState:
+		return ActionKindRetireFile, true
+	case reconcile.ActionRetireAliasState:
+		return ActionKindRetireAlias, true
+	}
+	return "", false
+}
