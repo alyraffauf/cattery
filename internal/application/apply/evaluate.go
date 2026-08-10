@@ -57,14 +57,8 @@ func (service *Service) Evaluate(ctx context.Context, request Request) (Candidat
 
 func (service *Service) evaluate(ctx context.Context, request Request) (Candidates, error) {
 	shared, err := service.evaluator.Evaluate(ctx, evaluation.Request{
-		Repository: evaluation.RepositoryInput{
-			RawExplicit: request.Repository.RawExplicit,
-			ExplicitSet: request.Repository.ExplicitSet,
-			RawEnv:      request.Repository.RawEnv,
-			EnvSet:      request.Repository.EnvSet,
-			WorkingDir:  request.Repository.WorkingDir,
-		},
-		Groups: request.Groups,
+		Repository: request.Repository,
+		Groups:     request.Groups,
 	})
 	if err != nil {
 		return Candidates{}, err

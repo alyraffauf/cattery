@@ -9,6 +9,7 @@ package inspect
 
 import (
 	"github.com/alyraffauf/cattery/internal/application/evaluation"
+	applicationrepository "github.com/alyraffauf/cattery/internal/application/repository"
 	"github.com/alyraffauf/cattery/internal/secrets"
 )
 
@@ -31,15 +32,15 @@ type Dependencies struct {
 // RepositorySource resolves the canonical repository pair for a selection
 // request. The composition root satisfies it with a selection resolver bound
 // to the canonical home and the state default lookup.
-type RepositorySource = evaluation.RepositorySource
+type RepositorySource = applicationrepository.RepositorySource
 
 // RepositoryIdentity is the canonical repository pair one inspection
-// evaluates from. It is the inspect-owned projection of the lower selection
-// result so no backend type leaks through the application seam.
-type RepositoryIdentity = evaluation.RepositoryIdentity
+// evaluates from, shared by repository-oriented application services so no
+// backend type leaks through the application seam.
+type RepositoryIdentity = applicationrepository.RepositoryIdentity
 
 // Compiler validates and compiles one platform plan from a repository.
-type Compiler = evaluation.Compiler
+type Compiler = applicationrepository.Compiler
 
 // StateReader is the narrow read-only port over the persisted rows and the
 // per-installation secret hash key of one repository pair. It never
@@ -51,13 +52,7 @@ type StateReader = evaluation.StateReader
 // CATTERY_REPO value and its presence, and the initial working directory for
 // relative resolution. Presence is significant: an empty value with presence
 // blocks fallback.
-type RepositoryInput struct {
-	RawExplicit string
-	ExplicitSet bool
-	RawEnv      string
-	EnvSet      bool
-	WorkingDir  string
-}
+type RepositoryInput = applicationrepository.RepositoryInput
 
 // Request is the frozen input of one inspection: the raw repository fields
 // and the raw ordered group arguments.

@@ -4,11 +4,10 @@
 package evaluation
 
 import (
+	applicationrepository "github.com/alyraffauf/cattery/internal/application/repository"
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/reconcile"
-	"github.com/alyraffauf/cattery/internal/repository"
 	"github.com/alyraffauf/cattery/internal/secrets"
-	"github.com/alyraffauf/cattery/internal/selection"
 	"github.com/alyraffauf/cattery/internal/state"
 )
 
@@ -27,21 +26,9 @@ type Dependencies struct {
 	IncludeUnmanagedTargetDigest bool
 }
 
-// RepositorySource resolves the canonical repository pair for a raw request.
-type RepositorySource interface {
-	Resolve(selection.RepositoryRequest) (RepositoryIdentity, error)
-}
-
-// RepositoryIdentity is the canonical repository and home pair.
-type RepositoryIdentity struct {
-	Root string
-	Home string
-}
-
-// Compiler validates and compiles one platform plan.
-type Compiler interface {
-	Compile(repository.CompileInput) (deployment.Plan, error)
-}
+type RepositorySource = applicationrepository.RepositorySource
+type RepositoryIdentity = applicationrepository.RepositoryIdentity
+type Compiler = applicationrepository.Compiler
 
 // StateReader reads persisted rows and the installation hash key.
 type StateReader interface {
@@ -51,13 +38,7 @@ type StateReader interface {
 }
 
 // RepositoryInput carries raw repository selection fields.
-type RepositoryInput struct {
-	RawExplicit string
-	ExplicitSet bool
-	RawEnv      string
-	EnvSet      bool
-	WorkingDir  string
-}
+type RepositoryInput = applicationrepository.RepositoryInput
 
 // Request is the shared input of one evaluation.
 type Request struct {

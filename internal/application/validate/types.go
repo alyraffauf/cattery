@@ -7,9 +7,7 @@
 package validate
 
 import (
-	"github.com/alyraffauf/cattery/internal/deployment"
-	"github.com/alyraffauf/cattery/internal/repository"
-	"github.com/alyraffauf/cattery/internal/selection"
+	applicationrepository "github.com/alyraffauf/cattery/internal/application/repository"
 )
 
 // Dependencies bundles the injectable seams of the validation service.
@@ -17,43 +15,30 @@ import (
 // Compiler compiles and validates platform plans; ProtectedTrees lists the
 // trees compiled plans must never target, such as the state directory.
 type Dependencies struct {
-	RepositorySource RepositorySource
-	Compiler         Compiler
+	RepositorySource applicationrepository.RepositorySource
+	Compiler         applicationrepository.Compiler
 	ProtectedTrees   []string
 }
 
 // RepositorySource resolves the canonical repository pair for a selection
 // request. The composition root satisfies it with a selection resolver bound
 // to the canonical home and the state default lookup.
-type RepositorySource interface {
-	Resolve(selection.RepositoryRequest) (RepositoryIdentity, error)
-}
+type RepositorySource = applicationrepository.RepositorySource
 
 // RepositoryIdentity is the canonical repository pair one validation compiles
-// from. It is the validate-owned projection of the lower selection result so
-// no backend type leaks through the application seam.
-type RepositoryIdentity struct {
-	Root string
-	Home string
-}
+// from, shared by repository-oriented application services so no backend type
+// leaks through the application seam.
+type RepositoryIdentity = applicationrepository.RepositoryIdentity
 
 // Compiler validates and compiles one platform plan from a repository.
-type Compiler interface {
-	Compile(repository.CompileInput) (deployment.Plan, error)
-}
+type Compiler = applicationrepository.Compiler
 
 // RepositoryInput carries the raw repository fields the CLI adapter copies
 // mechanically: the explicit --repo value and its presence, the raw
 // CATTERY_REPO value and its presence, and the initial working directory for
 // relative resolution. Presence is significant: an empty value with presence
 // blocks fallback.
-type RepositoryInput struct {
-	RawExplicit string
-	ExplicitSet bool
-	RawEnv      string
-	EnvSet      bool
-	WorkingDir  string
-}
+type RepositoryInput = applicationrepository.RepositoryInput
 
 // Request is the frozen input of one validation: the raw repository fields
 // and the raw ordered group arguments.
