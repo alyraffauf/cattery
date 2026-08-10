@@ -2,16 +2,17 @@ package routes
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
 )
 
 // Activate resolves the route declarations active for one platform against
-// the scope's resolved canonical file targets. The active union is SectionAll
-// plus the platform section; every canonical key must name a managed regular
-// file in the same scope, and a repeated alias destination anywhere in the
-// active union is a validation error. The returned records are sorted by
-// alias destination.
+// the scope's resolved canonical targets. The active union is SectionAll plus
+// the platform section; every canonical key must name a managed file or a
+// managed directory (proved by a managed descendant) in the same scope, and a
+// repeated alias destination anywhere in the active union is a validation
+// error. The returned records are sorted by alias destination.
 func Activate(config Config, platform deployment.Layer, canonical []string) ([]deployment.Alias, error) {
 	if !platform.Valid() {
 		return nil, fmt.Errorf("routes: unknown platform %q", platform)
@@ -22,7 +23,7 @@ func Activate(config Config, platform deployment.Layer, canonical []string) ([]d
 		if !activeSection(declaration.Section, platform) {
 			continue
 		}
-		if !managed[declaration.Canonical] {
+		if !managed(declaration.Canonical) {
 			return nil, fmt.Errorf("routes: canonical target %q is not a managed file", declaration.Canonical)
 		}
 		added, err := recordsForDeclaration(declaration, platform)
@@ -78,10 +79,20 @@ func activeSection(section Section, platform deployment.Layer) bool {
 	return false
 }
 
-func canonicalSet(canonical []string) map[string]bool {
+func canonicalSet(canonical []string) func(string) bool {
 	managed := make(map[string]bool, len(canonical))
 	for _, path := range canonical {
 		managed[path] = true
 	}
-	return managed
+	return func(candidate string) bool {
+		if managed[candidate] {
+			return true
+		}
+		for path := range managed {
+			if strings.HasPrefix(path, candidate+"/") {
+				return true
+			}
+		}
+		return false
+	}
 }

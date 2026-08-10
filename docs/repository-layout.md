@@ -79,6 +79,27 @@ A group may deploy a file named `.gitignore`; the metadata exclusion applies
 only at the repository root. Other root regular files are literal sources, so
 repository-only prose should be named `_README.md` rather than `README.md`.
 
+## Symlink routes
+
+`_routes.toml` declares explicit relative symlinks. A route's canonical path
+must be a managed file or a managed directory (a directory is established by
+one or more managed descendants) in the same scope. Routes may be common to
+both platforms or platform-specific:
+
+```toml
+version = 1
+
+[symlinks.linux]
+".config/zed" = [".var/app/dev.zed.Zed/config/zed"]
+
+[symlinks.darwin]
+".config/Code/User" = ["Library/Application Support/Code/User"]
+```
+
+The right-hand paths become symlinks pointing at the left-hand path. Cattery
+never follows a route destination while creating it; an occupied directory
+still requires manual intervention rather than replacement.
+
 ## Ignoring helper files
 
 Place `.catteryignore` at the repository root to keep helper files and

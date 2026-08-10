@@ -16,7 +16,7 @@ func TestRouteActivation(t *testing.T) {
 		{"inactive section skipped", testActivationInactiveSection},
 		{"absent canonical fails", testActivationAbsentCanonical},
 		{"wrong-layer canonical fails", testActivationWrongLayer},
-		{"directory canonical fails", testActivationDirectoryCanonical},
+		{"directory canonical activates", testActivationDirectoryCanonical},
 		{"self alias fails", testActivationSelfAlias},
 		{"duplicate union destination fails", testActivationDuplicateDestination},
 		{"unknown platform fails", testActivationUnknownPlatform},
@@ -92,8 +92,12 @@ func testActivationDirectoryCanonical(t *testing.T) {
 	config := Config{Version: 1, Declarations: []Declaration{
 		declaration("config", []string{"config/alias"}, SectionAll),
 	}}
-	if _, err := Activate(config, deployment.LayerLinux, []string{"config/x"}); err == nil {
-		t.Fatal("directory canonical was accepted as a file source")
+	aliases, err := Activate(config, deployment.LayerLinux, []string{"config/x"})
+	if err != nil {
+		t.Fatalf("directory canonical: %v", err)
+	}
+	if len(aliases) != 1 {
+		t.Fatalf("aliases = %d, want 1", len(aliases))
 	}
 }
 
