@@ -71,6 +71,8 @@ func (r SafeRecord) TargetHash() deployment.Digest {
 // output purposes (PLAN.md Section 9.6).
 const maxTextBytes = 1 << 20
 
+const unifiedContextLines = 3
+
 // textEligible reports whether one side may appear in a unified diff: valid
 // UTF-8, at most maxTextBytes, and only newline, tab, or printable runes.
 // Controls, carriage return, DEL, bidi and zero-width format runes, and every
@@ -130,7 +132,7 @@ func textRecord(record SafeRecord, sourceBytes, targetBytes []byte) (SafeRecord,
 		B:        textLines(targetBytes),
 		FromFile: record.sourceLabel,
 		ToFile:   record.targetLabel,
-		Context:  3,
+		Context:  unifiedContextLines,
 	})
 	if err != nil {
 		return SafeRecord{}, fmt.Errorf("diff: render unified diff: %w", err)
@@ -178,7 +180,11 @@ func escapeLabel(label string) string {
 			builder.WriteRune(r)
 			continue
 		}
-		builder.WriteString(fmt.Sprintf("\\x%x", r))
+		var encoded [utf8.UTFMax]byte
+		width := utf8.EncodeRune(encoded[:], r)
+		for _, value := range encoded[:width] {
+			builder.WriteString(fmt.Sprintf("\\x%02x", value))
+		}
 	}
 	return builder.String()
 }

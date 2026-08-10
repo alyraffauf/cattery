@@ -29,18 +29,7 @@ func (p PreparedPlan) WithHooks() bool { return p.withHooks }
 
 // Summary counts the per-target records of the plan.
 func (p PreparedPlan) Summary() Summary {
-	summary := Summary{}
-	for _, record := range p.records {
-		switch record.Status {
-		case StatusPlanned:
-			summary.Planned++
-		case StatusCompleted:
-			summary.Completed++
-		case StatusPartial:
-			summary.Partial++
-		}
-	}
-	return summary
+	return summarize(p.records)
 }
 
 // PrepareInput bundles the request, candidates, and decisions of one apply
@@ -59,9 +48,13 @@ func (service *Service) Prepare(ctx context.Context, input PrepareInput) (Prepar
 	if err := ctx.Err(); err != nil {
 		return PreparedPlan{}, err
 	}
-	pending, err := decisionSpecs(input.Candidates)
-	if err != nil {
-		return PreparedPlan{}, err
+	pending := input.Decisions.Specs()
+	if pending == nil {
+		var err error
+		pending, err = decisionSpecs(input.Candidates)
+		if err != nil {
+			return PreparedPlan{}, err
+		}
 	}
 	if len(pending) > 0 && !input.Request.DryRun && input.Request.NonInteractive {
 		return PreparedPlan{}, failure.New(failure.InvalidInput, "apply: non-interactive apply requires no pending decisions", nil)
@@ -146,6 +139,10 @@ func confirmedReplace(candidate Candidate, decided bool, choice DecisionChoice) 
 
 // needsDecision reports whether one candidate required an explicit choice.
 func needsDecision(candidate Candidate) bool {
+	return candidateNeedsDecision(candidate)
+}
+
+func candidateNeedsDecision(candidate Candidate) bool {
 	return candidate.file.Convergence == reconcile.DecisionRequired || candidate.alias.Convergence == reconcile.DecisionRequired
 }
 
@@ -163,7 +160,7 @@ func plannedRecord(candidate Candidate, kind ActionKind) ItemResult {
 // classification action for automatic rows, the representation named by the
 // plan entry for rows that required a decision.
 func underlyingAction(candidate Candidate) (reconcile.Action, string, error) {
-	decided := candidate.file.Convergence == reconcile.DecisionRequired || candidate.alias.Convergence == reconcile.DecisionRequired
+	decided := candidateNeedsDecision(candidate)
 	if !decided {
 		if action, source, pending := classificationAction(candidate); pending {
 			return action, source, nil

@@ -20,23 +20,36 @@ func (service *Service) Verify(ctx context.Context, records []ItemResult, candid
 	byPath := candidatesByPath(candidates)
 	verified := append([]ItemResult(nil), records...)
 	for index := range verified {
-		record := &verified[index]
-		if record.Status != StatusCompleted {
-			continue
-		}
-		candidate, ok := byPath[record.TargetPath]
-		if !ok {
-			continue
-		}
-		equal, err := service.verifyOne(ctx, candidate, candidates.Home())
-		if err != nil {
+		if err := (verificationContext{service: service, context: ctx, candidates: byPath, home: candidates.Home()}).verify(&verified[index]); err != nil {
 			return nil, err
-		}
-		if !equal {
-			record.Status = StatusPartial
 		}
 	}
 	return verified, nil
+}
+
+type verificationContext struct {
+	service    *Service
+	context    context.Context
+	candidates map[string]Candidate
+	home       string
+}
+
+func (verification verificationContext) verify(record *ItemResult) error {
+	if record.Status != StatusCompleted {
+		return nil
+	}
+	candidate, ok := verification.candidates[record.TargetPath]
+	if !ok || candidate.record.Entry == reconcile.PlanEntryNone {
+		return nil
+	}
+	equal, err := verification.service.verifyOne(verification.context, candidate, verification.home)
+	if err != nil {
+		return err
+	}
+	if !equal {
+		record.Status = StatusPartial
+	}
+	return nil
 }
 
 // verifyOne re-snapshots one candidate's source and target and reports

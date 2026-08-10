@@ -32,12 +32,17 @@ type Service struct {
 	resolver       DecisionResolver
 	protectedTrees []string
 	platform       deployment.Layer
+	platformError  error
 }
 
 func NewService(dependencies Dependencies) *Service {
 	platform, err := deployment.ParseLayer(dependencies.Platform)
 	if err != nil || platform == deployment.LayerBase {
 		platform = ""
+	}
+	var platformError error
+	if dependencies.Platform != "" && err != nil {
+		platformError = failure.New(failure.InvalidInput, "apply: invalid configured platform "+dependencies.Platform, err)
 	}
 	return &Service{
 		source:         dependencies.RepositorySource,
@@ -54,6 +59,7 @@ func NewService(dependencies Dependencies) *Service {
 		resolver:       dependencies.Resolver,
 		protectedTrees: dependencies.ProtectedTrees,
 		platform:       platform,
+		platformError:  platformError,
 	}
 }
 
@@ -66,6 +72,9 @@ func (service *Service) evaluate(ctx context.Context, request Request) (Candidat
 		return Candidates{}, err
 	}
 	if service.platform == "" {
+		if service.platformError != nil {
+			return Candidates{}, service.platformError
+		}
 		return Candidates{}, failure.New(failure.InvalidInput, "apply: platform must be linux or darwin", nil)
 	}
 	identity, err := service.resolve(request.Repository)
@@ -219,13 +228,11 @@ func persistedGroups(rows stateRows) selection.PersistedGroups {
 	return selection.PersistedGroups{Active: sortedKeys(sets.active), All: sortedKeys(sets.all)}
 }
 
-// groupSets accumulates the distinct group names of the persisted rows.
 type groupSets struct {
 	active map[string]bool
 	all    map[string]bool
 }
 
-// remember records one row group in the active and all sets.
 func (sets *groupSets) remember(name string, active bool) {
 	if name == "" {
 		return
@@ -245,7 +252,6 @@ func sortedKeys(names map[string]bool) []string {
 	return keys
 }
 
-// selectedRows keeps root rows only for root selections and rows of the selected groups otherwise.
 func selectedRows(identity RepositoryIdentity, rows stateRows, chosen selection.Selection) reconcile.StateRows {
 	return reconcile.StateRows{
 		RepositoryRoot: identity.Root,
@@ -324,7 +330,6 @@ func (service *Service) classify(ctx context.Context, assembly reconcile.Evaluat
 	return candidates, nil
 }
 
-// semanticState carries the per-evaluation hash key, recovered once at most and only when a secret record needs fingerprints.
 type semanticState struct {
 	reader  StateReader
 	client  *secrets.Client
@@ -332,7 +337,6 @@ type semanticState struct {
 	haveKey bool
 }
 
-// fingerprints derives the semantic fingerprints of one evaluation record; secrets fingerprint on demand per PLAN.md Section 9.1.
 func (state *semanticState) fingerprints(ctx context.Context, home string, record reconcile.Evaluation) (reconcile.FileSemantics, error) {
 	if record.Entry != reconcile.PlanEntryFile {
 		if record.Target.Kind() == reconcile.KindFile {
@@ -349,8 +353,6 @@ func (state *semanticState) fingerprints(ctx context.Context, home string, recor
 	return state.secretFingerprints(ctx, home, record)
 }
 
-// secretFingerprints derives the keyed fingerprints of one secret record: the source decrypts only when its raw storage changed or the row is
-// unbaselined with a regular target.
 func (state *semanticState) secretFingerprints(ctx context.Context, home string, record reconcile.Evaluation) (reconcile.FileSemantics, error) {
 	semantics := reconcile.FileSemantics{}
 	targetFile := record.Target.Kind() == reconcile.KindFile
@@ -377,7 +379,6 @@ func (state *semanticState) secretFingerprints(ctx context.Context, home string,
 	return semantics, nil
 }
 
-// secretDecryptNeeded reports whether a secret source must decrypt for classification (PLAN.md Section 9.1).
 func secretDecryptNeeded(record reconcile.Evaluation) bool {
 	if record.FileState == nil {
 		return record.Target.Kind() == reconcile.KindFile
@@ -385,7 +386,6 @@ func secretDecryptNeeded(record reconcile.Evaluation) bool {
 	return record.Source.Snapshot().Storage() != record.FileState.BaselineSource()
 }
 
-// recover loads the per-installation hash key once for the evaluation.
 func (state *semanticState) recover() error {
 	if state.haveKey {
 		return nil

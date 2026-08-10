@@ -153,6 +153,9 @@ func validateItemPlan(candidate ItemPlanInput) error {
 	if !candidate.Kind.Valid() {
 		return fmt.Errorf("add: item plan has invalid kind %q", candidate.Kind)
 	}
+	if candidate.ExecutableBits&^deployment.ExecutableBitMask != 0 {
+		return fmt.Errorf("add: item plan has invalid executable bits %o", candidate.ExecutableBits)
+	}
 	return nil
 }
 

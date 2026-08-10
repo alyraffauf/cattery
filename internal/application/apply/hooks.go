@@ -8,6 +8,12 @@ import (
 	"github.com/alyraffauf/cattery/internal/hooks"
 )
 
+const (
+	hookResultPending = "pending"
+	hookResultSuccess = "success"
+	hookResultPartial = "partial"
+)
+
 // RunHookPipeline runs the hook-gated apply filesystem phase: before hooks
 // with CATTERY_RESULT=pending, the all-source guard and the file and alias
 // executors, then after hooks only when the phase completed, with
@@ -25,7 +31,7 @@ type PipelineInput struct {
 func (service *Service) RunHookPipeline(ctx context.Context, input PipelineInput) ([]ItemResult, error) {
 	records := input.Plan.Records()
 	if input.Plan.WithHooks() {
-		if err := service.runHooks(ctx, input, hookRequest{phase: deployment.HookBefore, result: "pending"}); err != nil {
+		if err := service.runHooks(ctx, input, hookRequest{phase: deployment.HookBefore, result: hookResultPending}); err != nil {
 			return nil, failure.New(failure.Hook, "apply: before hooks failed", err)
 		}
 	}
@@ -60,9 +66,9 @@ func (service *Service) runExecutors(ctx context.Context, input PipelineInput, r
 // runAfterHooks aggregates the after phase with success or partial.
 func (service *Service) runAfterHooks(ctx context.Context, input PipelineInput, records []ItemResult) ([]ItemResult, error) {
 	phase := deployment.HookAfter
-	result := "success"
+	result := hookResultSuccess
 	if hasSkipped(records) {
-		result = "partial"
+		result = hookResultPartial
 	}
 	if err := service.runHooks(ctx, input, hookRequest{phase: phase, result: result}); err != nil {
 		return records, failure.New(failure.Hook, "apply: after hooks failed", err)
@@ -95,8 +101,6 @@ func (service *Service) runHooks(ctx context.Context, input PipelineInput, reque
 		Platform:       input.Candidates.Platform(),
 		Phase:          request.phase,
 		Result:         request.result,
-		DryRun:         input.Request.DryRun,
-		NoHooks:        input.Request.NoHooks,
 	}
 	return service.hooks.Execute(ctx, execution, input.Candidates.Hooks())
 }

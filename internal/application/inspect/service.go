@@ -2,8 +2,6 @@ package inspect
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"slices"
 	"sort"
 
@@ -26,6 +24,7 @@ type Service struct {
 	secrets        *secrets.Client
 	protectedTrees []string
 	platform       deployment.Layer
+	platformError  error
 }
 
 // NewService constructs the inspection service bound to the dependencies.
@@ -34,6 +33,10 @@ func NewService(dependencies Dependencies) *Service {
 	if err != nil || platform == deployment.LayerBase {
 		platform = ""
 	}
+	var platformError error
+	if dependencies.Platform != "" && err != nil {
+		platformError = failure.New(failure.InvalidInput, "inspect: invalid configured platform "+dependencies.Platform, err)
+	}
 	return &Service{
 		source:         dependencies.RepositorySource,
 		compiler:       dependencies.Compiler,
@@ -41,6 +44,7 @@ func NewService(dependencies Dependencies) *Service {
 		secrets:        dependencies.Secrets,
 		protectedTrees: dependencies.ProtectedTrees,
 		platform:       platform,
+		platformError:  platformError,
 	}
 }
 
@@ -59,6 +63,9 @@ func (service *Service) evaluate(ctx context.Context, request Request) (Result, 
 		return Result{}, err
 	}
 	if service.platform == "" {
+		if service.platformError != nil {
+			return Result{}, service.platformError
+		}
 		return Result{}, failure.New(failure.InvalidInput, "inspect: platform must be linux or darwin", nil)
 	}
 	identity, err := service.resolve(request.Repository)
@@ -193,7 +200,6 @@ func (service *Service) selectedPlan(identity RepositoryIdentity, full deploymen
 	return service.compile(identity, selected)
 }
 
-// intersectGroups keeps selected names that are also current groups.
 func intersectGroups(selected, current []string) []string {
 	var common []string
 	for _, name := range selected {
@@ -238,7 +244,6 @@ type groupSets struct {
 	all    map[string]bool
 }
 
-// remember records one row group in the active and all sets.
 func (sets *groupSets) remember(name string, active bool) {
 	if name == "" {
 		return
@@ -355,7 +360,7 @@ func (state *semanticState) secretFingerprints(ctx context.Context, home string,
 		return semantics, err
 	}
 	if targetFile {
-		content, err := os.ReadFile(filepath.Join(home, filepath.FromSlash(record.TargetPath)))
+		content, err := readTargetContent(home, record)
 		if err != nil {
 			return semantics, failure.New(failure.Operational, "inspect: read target "+record.TargetPath, err)
 		}

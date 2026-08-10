@@ -153,11 +153,11 @@ func aliasPayload(alias deployment.Alias) (string, error) {
 	if len(remaining) == 0 {
 		return "", failure.New(failure.InvalidInput, "apply: alias descends into its canonical target", nil)
 	}
-	up := len(parent) - common
-	if up == 0 {
+	backtrack := len(parent) - common
+	if backtrack == 0 {
 		return strings.Join(remaining, "/"), nil
 	}
-	return strings.Repeat("../", up) + strings.Join(remaining, "/"), nil
+	return strings.Repeat("../", backtrack) + strings.Join(remaining, "/"), nil
 }
 
 // commonPrefix counts the shared leading segments of two path lists.

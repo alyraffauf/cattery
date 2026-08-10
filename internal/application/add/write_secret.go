@@ -2,8 +2,8 @@ package add
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/secrets"
 )
@@ -41,7 +41,7 @@ func (service *Service) writeSecret(ctx context.Context, identity RepositoryIden
 // caller owns the plaintext buffer and clears it after verification.
 func (service *Service) publishSecret(ctx context.Context, input publishInput) ([]byte, filesystem.ReplaceResult, error) {
 	if service.write.Secrets == nil {
-		return nil, filesystem.ReplaceResult{}, fmt.Errorf("add: secret writer is not configured")
+		return nil, filesystem.ReplaceResult{}, failure.New(failure.Operational, "add: secret writer is not configured", nil)
 	}
 	ciphertext, err := service.write.Secrets.Encrypt(ctx, input.plaintext, input.item.SourceRepositoryPath())
 	if err != nil {

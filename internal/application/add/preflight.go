@@ -176,7 +176,7 @@ func rejectBatchCollisions(items []ItemPlanInput) error {
 // sourceUsedEarlier reports whether item's source matches an earlier item's.
 func sourceUsedEarlier(previous []ItemPlanInput, current ItemPlanInput) error {
 	for _, candidate := range previous {
-		if candidate.SourceRepositoryPath == current.SourceRepositoryPath {
+		if sourcePathsOverlap(candidate.SourceRepositoryPath, current.SourceRepositoryPath) {
 			return failure.New(failure.InvalidInput,
 				"add: two targets derive the same source "+current.SourceRepositoryPath, nil)
 		}

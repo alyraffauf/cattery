@@ -137,7 +137,7 @@ func (location sourceLocation) sourcePath(target string) string {
 		builder.WriteString("/")
 	}
 	if location.kind == deployment.FileSecret {
-		builder.WriteString("_secrets/")
+		builder.WriteString(repository.SecretDirectoryName + "/")
 	}
 	builder.WriteString(target)
 	return builder.String()

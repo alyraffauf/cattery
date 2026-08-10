@@ -4,6 +4,9 @@ package repository
 
 import "strings"
 
+// SecretDirectoryName is the reserved scope directory for encrypted sources.
+const SecretDirectoryName = "_secrets"
+
 // Control classifies one scope-root entry name.
 type Control int
 
@@ -35,7 +38,7 @@ func ClassifyRoot(name string) Control {
 		return ControlDarwin
 	case "_linux":
 		return ControlLinux
-	case "_secrets":
+	case SecretDirectoryName:
 		return ControlSecrets
 	case "_hooks":
 		return ControlHooks
@@ -55,7 +58,7 @@ func ClassifyRoot(name string) Control {
 // entry; ordinary names are literal deployable entries and repository-root
 // metadata is not special here.
 func ClassifyPlatformLayer(name string) Control {
-	if name == "_secrets" {
+	if name == SecretDirectoryName {
 		return ControlSecrets
 	}
 	if strings.HasPrefix(name, "_") {
