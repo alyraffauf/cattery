@@ -154,21 +154,28 @@ func (store *Store) checkRepresentationCorruption(root, home string) error {
 }
 
 func (store *Store) readFileGroups(statement, root, home string) ([]string, error) {
-	rows, err := store.database.conn.Query(statement, root, home)
+	return store.queryStrings(statement, "file groups", root, home)
+}
+
+// queryStrings runs statement with args and returns the single string column
+// from every row, wrapping query and iteration errors with label so each caller
+// names its own read in the error.
+func (store *Store) queryStrings(statement, label string, args ...any) ([]string, error) {
+	rows, err := store.database.conn.Query(statement, args...)
 	if err != nil {
-		return nil, fmt.Errorf("state: list file groups: %w", err)
+		return nil, fmt.Errorf("state: list %s: %w", label, err)
 	}
 	defer rows.Close()
-	var groups []string
+	var values []string
 	for rows.Next() {
-		var group string
-		if err := rows.Scan(&group); err != nil {
+		var value string
+		if err := rows.Scan(&value); err != nil {
 			return nil, err
 		}
-		groups = append(groups, group)
+		values = append(values, value)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("state: list file groups: %w", err)
+		return nil, fmt.Errorf("state: list %s: %w", label, err)
 	}
-	return groups, nil
+	return values, nil
 }

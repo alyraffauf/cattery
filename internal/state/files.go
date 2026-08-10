@@ -30,23 +30,17 @@ const fileRetireSQL = "UPDATE files SET status = 'retired', retired_at = ? WHERE
 const fileReactivateSQL = "UPDATE files SET status = 'active', retired_at = NULL, applied_at = ? WHERE repository_id = ? AND target_path = ?"
 
 const fileByPairTargetSQL = `
-SELECT f.repository_id, f.target_path, f.group_name, f.source_path, f.source_kind,
-       f.layer, f.baseline_content_hash, f.baseline_source_hash, f.executable_bits,
-       f.status, f.applied_at, f.retired_at
+SELECT ` + fileColumns + `
 FROM files f JOIN repositories r ON r.id = f.repository_id
 WHERE r.root_path = ? AND r.home_path = ? AND f.target_path = ?`
 
 const allFileBaselinesSQL = `
-SELECT f.repository_id, f.target_path, f.group_name, f.source_path, f.source_kind,
-       f.layer, f.baseline_content_hash, f.baseline_source_hash, f.executable_bits,
-       f.status, f.applied_at, f.retired_at
+SELECT ` + fileColumns + `
 FROM files f JOIN repositories r ON r.id = f.repository_id
 WHERE r.root_path = ? AND r.home_path = ? ORDER BY f.target_path`
 
 const activeFileBaselinesSQL = `
-SELECT f.repository_id, f.target_path, f.group_name, f.source_path, f.source_kind,
-       f.layer, f.baseline_content_hash, f.baseline_source_hash, f.executable_bits,
-       f.status, f.applied_at, f.retired_at
+SELECT ` + fileColumns + `
 FROM files f JOIN repositories r ON r.id = f.repository_id
 WHERE r.root_path = ? AND r.home_path = ? AND f.status = 'active' ORDER BY f.target_path`
 
