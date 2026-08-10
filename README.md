@@ -24,8 +24,6 @@ nix develop
 just check
 ```
 
-Verified release archives are described in the [release documentation](docs/release.md).
-
 ## Repository example
 
 A repository is a plain directory of literal files. Root files and dot-trees

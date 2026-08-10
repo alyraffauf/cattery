@@ -9,17 +9,7 @@
       forAllSystems = function:
         nixpkgs.lib.genAttrs supportedSystems (system: function system);
       pkgsFor = system: import nixpkgs { inherit system; };
-      shellPackages = pkgs: with pkgs; [
-        go_1_26
-        just
-        sops
-        age
-        python3
-        shellcheck
-        gh
-        gnutar
-        gzip
-      ];
+      shellPackages = pkgs: with pkgs; [ go_1_26 just ];
     in
     {
       devShells = forAllSystems (system:
