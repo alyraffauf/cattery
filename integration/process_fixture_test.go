@@ -15,6 +15,7 @@ import (
 type ProcessInput struct {
 	Args    []string
 	Home    string
+	Cwd     string
 	Stdin   string
 	Env     []string
 	Timeout time.Duration
@@ -61,12 +62,7 @@ func (fixture ProcessFixture) Run(t *testing.T, input ProcessInput) ProcessResul
 		"XDG_STATE_HOME=" + filepath.Join(input.Home, ".local", "state"),
 		"PATH=" + os.Getenv("PATH"),
 	}, input.Env...)
-	command := exec.CommandContext(ctx, fixture.Binary, input.Args...)
-	if input.Pty {
-		command = exec.CommandContext(ctx, "script", "-qec", quotedCommand(fixture.Binary, input.Args...), "/dev/null")
-	}
-	command.Env = environment
-	command.Stdin = bytes.NewBufferString(input.Stdin)
+	command := runCommand(ctx, commandInput{fixture: fixture, input: input, environment: environment})
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	command.Stdout = stdout
@@ -77,6 +73,28 @@ func (fixture ProcessFixture) Run(t *testing.T, input ProcessInput) ProcessResul
 		code = exitCodeOf(err)
 	}
 	return ProcessResult{Stdout: stdout.String(), Stderr: stderr.String(), Code: code}
+}
+
+// commandInput bundles one subprocess command construction.
+type commandInput struct {
+	fixture     ProcessFixture
+	input       ProcessInput
+	environment []string
+}
+
+// runCommand builds one subprocess command over the input.
+func runCommand(ctx context.Context, bundle commandInput) *exec.Cmd {
+	command := exec.CommandContext(ctx, bundle.fixture.Binary, bundle.input.Args...)
+	if bundle.input.Pty {
+		command = exec.CommandContext(ctx, "script", "-qec", quotedCommand(bundle.fixture.Binary, bundle.input.Args...), "/dev/null")
+	}
+	command.Dir = bundle.input.Cwd
+	if command.Dir == "" {
+		command.Dir = bundle.input.Home
+	}
+	command.Env = bundle.environment
+	command.Stdin = bytes.NewBufferString(bundle.input.Stdin)
+	return command
 }
 
 // exitCodeOf extracts the process exit code from one run error.
