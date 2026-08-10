@@ -26,8 +26,9 @@ func testStaleIdentity(t *testing.T) {
 	path := filepath.Join(root, "target")
 	must(t, os.WriteFile(path, []byte("value=1"), 0o600))
 	facts := mustCapture(t, path)
-	must(t, os.Remove(path))
-	must(t, os.WriteFile(path, []byte("value=1"), 0o600))
+	replacement := filepath.Join(root, "replacement")
+	must(t, os.WriteFile(replacement, []byte("value=1"), 0o600))
+	must(t, os.Rename(replacement, path))
 	mustFail(t, facts.Revalidate())
 }
 

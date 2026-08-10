@@ -119,10 +119,11 @@ func testPreconditionIdentityReplacement(t *testing.T) {
 	path := filepath.Join(root, "file")
 	mustTargetFile(t, path, []byte("x"))
 	first := captureAt(t, root, "file")
-	if err := os.Remove(path); err != nil {
-		t.Fatalf("remove target: %v", err)
+	replacement := filepath.Join(root, "replacement")
+	mustTargetFile(t, replacement, []byte("x"))
+	if err := os.Rename(replacement, path); err != nil {
+		t.Fatalf("replace target: %v", err)
 	}
-	mustTargetFile(t, path, []byte("x"))
 	second := captureAt(t, root, "file")
 	if pathsafe.SameIdentity(first.Identity(), second.Identity()) {
 		t.Fatal("an identical-content replacement must still expose a new object identity")

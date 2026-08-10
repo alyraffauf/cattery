@@ -134,10 +134,11 @@ func testSourceReplacement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(path); err != nil {
+	replacement := filepath.Join(root, "replacement")
+	writeSource(t, replacement, []byte("same"))
+	if err := os.Rename(replacement, path); err != nil {
 		t.Fatal(err)
 	}
-	writeSource(t, path, []byte("same"))
 	second, err := CaptureSource(managedSource(path, "file", deployment.FileOrdinary), nil)
 	if err != nil {
 		t.Fatal(err)
