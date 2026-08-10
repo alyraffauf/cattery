@@ -140,8 +140,8 @@ func testPromptNonTTY(t *testing.T) {
 		IsTerminal: func(fd int) bool { return false },
 	})
 	_, err := prompt.Resolve(context.Background(), driftRequest())
-	if err == nil || !kindIs(err, failure.InvalidInput) {
-		t.Fatalf("non-terminal error = %v, want an invalid input failure", err)
+	if err == nil || !kindIs(err, failure.Difference) {
+		t.Fatalf("non-terminal error = %v, want an unresolved difference", err)
 	}
 }
 
