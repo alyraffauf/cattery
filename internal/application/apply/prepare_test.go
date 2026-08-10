@@ -72,7 +72,7 @@ type evalPair struct {
 
 func testPrepareDryRun(t *testing.T) {
 	pair := driftFixture(t, "a.conf")
-	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{DryRun: true, DryRunSet: true}, Candidates: pair.candidates})
+	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{DryRun: true}, Candidates: pair.candidates})
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -90,11 +90,11 @@ func testPrepareDryRun(t *testing.T) {
 
 func testPrepareNoninteractive(t *testing.T) {
 	pair := driftFixture(t, "a.conf")
-	_, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{NonInteractive: true, NonInteractiveSet: true}, Candidates: pair.candidates})
+	_, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{NonInteractive: true}, Candidates: pair.candidates})
 	if err == nil || !kindIs(err, failure.InvalidInput) {
 		t.Fatalf("noninteractive refusal error = %v, want an invalid input failure", err)
 	}
-	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{DryRun: true, NonInteractive: true, NonInteractiveSet: true}, Candidates: pair.candidates})
+	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{DryRun: true, NonInteractive: true}, Candidates: pair.candidates})
 	if err != nil {
 		t.Fatalf("dry-run must not refuse pending decisions: %v", err)
 	}
@@ -168,14 +168,14 @@ func assertPreparedAction(t *testing.T, pair evalPair, decisions CollectedDecisi
 // assertHooksSuppressed requires --no-hooks and dry-run to suppress hooks.
 func assertHooksSuppressed(t *testing.T, pair evalPair, decisions CollectedDecisions) {
 	t.Helper()
-	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{NoHooks: true, NoHooksSet: true}, Candidates: pair.candidates, Decisions: decisions})
+	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{NoHooks: true}, Candidates: pair.candidates, Decisions: decisions})
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
 	if plan.WithHooks() {
 		t.Fatal("--no-hooks must suppress hooks")
 	}
-	plan, err = pair.service.Prepare(context.Background(), PrepareInput{Request: Request{DryRun: true, DryRunSet: true}, Candidates: pair.candidates})
+	plan, err = pair.service.Prepare(context.Background(), PrepareInput{Request: Request{DryRun: true}, Candidates: pair.candidates})
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}

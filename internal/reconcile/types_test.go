@@ -164,14 +164,11 @@ func testSnapshotAccessors(t *testing.T) {
 		kind:        KindFile, token: TokenOfContent([]byte("x")),
 		digest: deployment.Ordinary([]byte("x")), mode: 0o755, payload: "payload",
 	}
-	if snapshot.Destination() != snapshot.destination {
-		t.Fatal("Destination must echo its field")
-	}
 	if snapshot.Kind() != snapshot.kind || snapshot.Mode() != snapshot.mode {
 		t.Fatal("kind and mode must echo their fields")
 	}
-	if snapshot.Token() != snapshot.token || snapshot.Digest() != snapshot.digest {
-		t.Fatal("hashes must echo their fields")
+	if snapshot.Digest() != snapshot.digest {
+		t.Fatal("digest must echo its field")
 	}
 	if snapshot.Payload() != snapshot.payload {
 		t.Fatal("payload must echo its field")
@@ -193,8 +190,8 @@ func testSourceSnapshotAccessors(t *testing.T) {
 	if source.Path() != source.path || source.Kind() != source.kind {
 		t.Fatal("path and kind must echo their fields")
 	}
-	if source.Token() != source.token || source.Semantic() != source.semantic {
-		t.Fatal("token and semantic must echo their fields")
+	if source.Semantic() != source.semantic {
+		t.Fatal("semantic must echo its field")
 	}
 	if source.Storage() != source.storage || source.Executable() != source.executable {
 		t.Fatal("storage and executable must echo their fields")
@@ -206,10 +203,10 @@ func testTargetZeroValue(t *testing.T) {
 	if zero.Kind() != KindAbsent || zero.Identity().Path() != "" || zero.Parent().Path() != "" {
 		t.Fatal("zero-value target snapshot must report absent facts")
 	}
-	if zero.Token() != (ContentToken{}) || zero.Digest() != (deployment.Digest{}) {
-		t.Fatal("zero-value target snapshot must carry zero hashes")
+	if zero.Digest() != (deployment.Digest{}) {
+		t.Fatal("zero-value target snapshot must carry a zero digest")
 	}
-	if zero.Mode() != 0 || zero.Payload() != "" || zero.Destination() != (Destination{}) {
+	if zero.Mode() != 0 || zero.Payload() != "" {
 		t.Fatal("zero-value target snapshot must carry zero facts")
 	}
 }

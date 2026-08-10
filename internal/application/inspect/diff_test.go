@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/diff"
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/state"
@@ -56,8 +55,7 @@ func testDiffAliasParity(t *testing.T) {
 	statusRecord := singleRecord(t, status)
 	diffRecord := singleDiffRecord(t, diffResult)
 	if diffRecord.TargetPath() != statusRecord.TargetPath() || diffRecord.Kind() != statusRecord.Kind() ||
-		diffRecord.Action() != statusRecord.Action() || diffRecord.Reason() != statusRecord.Reason() ||
-		diffRecord.Converged() != statusRecord.Converged() {
+		diffRecord.Action() != statusRecord.Action() {
 		t.Fatalf("diff record %+v differs from status record %+v", diffRecord, statusRecord)
 	}
 }
@@ -68,14 +66,12 @@ func testDiffRetirementParity(t *testing.T) {
 	fx.rows.rows = stateRows{files: []state.FileBaseline{
 		fileRow(baselineInput{target: "old.conf", group: "g2", source: []byte("stale\n"), content: []byte("stale\n")}, nil),
 	}}
-	status, statusErr := fx.service.Status(context.Background(), Request{Groups: []string{"g2"}})
+	_, statusErr := fx.service.Status(context.Background(), Request{Groups: []string{"g2"}})
 	diffResult, diffErr := fx.service.Diff(context.Background(), Request{Groups: []string{"g2"}})
 	assertKind(t, statusErr, failure.Difference)
 	assertKind(t, diffErr, failure.Difference)
-	statusRecord := singleRecord(t, status)
 	diffRecord := singleDiffRecord(t, diffResult)
-	if diffRecord.Kind() != StatusKindRetired || diffRecord.Action() != "retire-state" ||
-		diffRecord.Reason() != statusRecord.Reason() || diffRecord.Converged() {
+	if diffRecord.Kind() != StatusKindRetired || diffRecord.Action() != "retire-state" || diffResult.Converged() {
 		t.Fatalf("record = %+v", diffRecord)
 	}
 }
@@ -136,10 +132,6 @@ func testDiffBinary(t *testing.T) {
 	if record.SourceSize() != int64(len("alpha\n")) || record.TargetSize() != int64(len("alpha\x1bbeta\n")) {
 		t.Fatalf("sizes = %d/%d", record.SourceSize(), record.TargetSize())
 	}
-	if record.SourceHash() != deployment.Ordinary([]byte("alpha\n")) ||
-		record.TargetHash() != deployment.Ordinary([]byte("alpha\x1bbeta\n")) {
-		t.Fatalf("binary hashes mismatch")
-	}
 }
 
 func testDiffSecret(t *testing.T) {
@@ -159,8 +151,7 @@ func testDiffSecret(t *testing.T) {
 	if record.Tag() != diff.TagSecret || record.Action() != "needs-decision" {
 		t.Fatalf("record = %+v", record)
 	}
-	if record.Lines() != "" || record.SourceSize() != 0 || record.TargetSize() != 0 ||
-		record.SourceHash() != (deployment.Digest{}) || record.TargetHash() != (deployment.Digest{}) {
+	if record.Lines() != "" || record.SourceSize() != 0 || record.TargetSize() != 0 {
 		t.Fatalf("secret record leaked content or facts")
 	}
 }
@@ -178,7 +169,7 @@ func testDiffAliasOnly(t *testing.T) {
 	result, err := fx.service.Diff(context.Background(), Request{})
 	assertKind(t, err, failure.Difference)
 	record := singleDiffRecord(t, result)
-	if record.Kind() != StatusKindAlias || record.Action() != "create-alias" || record.Converged() {
+	if record.Kind() != StatusKindAlias || record.Action() != "create-alias" {
 		t.Fatalf("record = %+v", record)
 	}
 	if result.Files() != 0 || result.Aliases() != 1 || result.Retired() != 0 || result.Converged() {

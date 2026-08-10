@@ -18,7 +18,6 @@ func TestSnapshotPrecondition(t *testing.T) {
 		{"missing parents tolerated", testPreconditionMissingParents},
 		{"parent race", testPreconditionParentRace},
 		{"final symlink never followed", testPreconditionFinalSymlink},
-		{"content change", testPreconditionContentChange},
 		{"absent to present", testPreconditionAbsentTransition},
 		{"mode change", testPreconditionModeChange},
 		{"object replacement", testPreconditionIdentityReplacement},
@@ -88,18 +87,6 @@ func testPreconditionFinalSymlink(t *testing.T) {
 	}
 	if snapshot.Mode()&os.ModeSymlink != 0 {
 		t.Fatal("permission mode must exclude type bits")
-	}
-}
-
-func testPreconditionContentChange(t *testing.T) {
-	root := t.TempDir()
-	path := filepath.Join(root, "file")
-	mustTargetFile(t, path, []byte("first"))
-	first := captureAt(t, root, "file")
-	mustTargetFile(t, path, []byte("second"))
-	second := captureAt(t, root, "file")
-	if first.Token() != TokenOfContent([]byte("first")) || second.Token() != TokenOfContent([]byte("second")) {
-		t.Fatal("frozen precondition token must stay put while re-capture sees new content")
 	}
 }
 

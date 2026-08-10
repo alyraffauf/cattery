@@ -34,15 +34,6 @@ func mustCapture(t *testing.T, path string) TargetFacts {
 	return facts
 }
 
-func mustSource(t *testing.T, path string) SourceFacts {
-	t.Helper()
-	facts, err := FreezeSource(path)
-	if err != nil {
-		t.Fatalf("FreezeSource(%q): %v", path, err)
-	}
-	return facts
-}
-
 func mustRejectFreeze(t *testing.T, root, relative string) {
 	t.Helper()
 	if _, err := Freeze(Destination{Root: root, Relative: relative}); err == nil {

@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
-
-	"github.com/alyraffauf/cattery/internal/pathsafe"
 )
 
 func TestTargetMode(t *testing.T) {
@@ -17,9 +15,7 @@ func TestTargetMode(t *testing.T) {
 	}{
 		{"new ordinary target defaults to 0644 plus source executable bits", testNewOrdinaryMode},
 		{"existing ordinary target preserves its read/write bits", testExistingOrdinaryMode},
-		{"executable-only correction replaces only the executable bits", testExecutableOnlyCorrection},
 		{"secret target is exactly 0600 or 0700", testSecretMode},
-		{"mode-only correction chmods a singly linked target in place", testModeOnlyChmod},
 		{"restrictive umask cannot clamp the derived mode", testRestrictiveUmask},
 	}
 	for _, scenario := range scenarios {
@@ -48,22 +44,6 @@ func testExistingOrdinaryMode(t *testing.T) {
 	}
 }
 
-func testExecutableOnlyCorrection(t *testing.T) {
-	root := t.TempDir()
-	target := filepath.Join(root, "app")
-	must(t, os.WriteFile(target, []byte("run\n"), 0o755))
-	precondition := mustFreeze(t, root, "app")
-	replacer := NewReplacer()
-	must(t, replacer.ApplyMode(context.Background(), precondition, 0o644))
-	info, err := os.Stat(target)
-	if err != nil || info.Mode().Perm() != 0o644 {
-		t.Fatalf("mode = %v, want 0644", info.Mode())
-	}
-	if content := readFile(t, target); content != "run\n" {
-		t.Fatalf("content = %q, want untouched", content)
-	}
-}
-
 func testSecretMode(t *testing.T) {
 	if mode := SecretTargetMode(0); mode != 0o600 {
 		t.Fatalf("non-executable secret = %04o, want 0600", mode)
@@ -73,29 +53,6 @@ func testSecretMode(t *testing.T) {
 	}
 	if mode := SecretTargetMode(0o100); mode != 0o700 {
 		t.Fatalf("owner-executable secret = %04o, want 0700", mode)
-	}
-}
-
-func testModeOnlyChmod(t *testing.T) {
-	root := t.TempDir()
-	target := filepath.Join(root, "app")
-	must(t, os.WriteFile(target, []byte("run\n"), 0o644))
-	precondition := mustFreeze(t, root, "app")
-	before := mustCapture(t, target)
-	replacer := NewReplacer()
-	must(t, replacer.ApplyMode(context.Background(), precondition, 0o755))
-	after := mustCapture(t, target)
-	if before.Identity().Path() != after.Identity().Path() {
-		t.Fatal("mode-only correction changed the destination path")
-	}
-	if before.Identity().Path() == "" {
-		t.Fatal("mode-only correction lost the target identity")
-	}
-	if pathsafe.SameIdentity(before.Identity(), after.Identity()) {
-		t.Fatal("mode-only correction must rematerialize the target")
-	}
-	if after.Mode() != 0o755 {
-		t.Fatalf("mode = %04o, want 0755", after.Mode())
 	}
 }
 

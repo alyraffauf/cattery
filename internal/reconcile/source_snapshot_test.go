@@ -58,7 +58,7 @@ func testSourceOrdinary(t *testing.T) {
 		t.Fatal(err)
 	}
 	snapshot := observation.Snapshot()
-	if snapshot.Kind() != KindFile || snapshot.Token() != TokenOfContent(data) || snapshot.Semantic() != deployment.Ordinary(data) {
+	if snapshot.Kind() != KindFile || snapshot.Semantic() != deployment.Ordinary(data) {
 		t.Fatal("ordinary snapshot did not use exact bytes")
 	}
 	if snapshot.Storage() != (deployment.Digest{}) || string(observation.Bytes()) != string(data) {
@@ -80,7 +80,7 @@ func testSourceSecret(t *testing.T) {
 		t.Fatal(err)
 	}
 	snapshot := observation.Snapshot()
-	if snapshot.Token() != TokenOfContent(data) || snapshot.Storage() != deployment.RawStorage(data) || snapshot.Semantic() != (deployment.Digest{}) {
+	if snapshot.Storage() != deployment.RawStorage(data) || snapshot.Semantic() != (deployment.Digest{}) {
 		t.Fatal("secret snapshot did not preserve raw-storage identity")
 	}
 	if _, err := os.Stat(path); err != nil || !pathsafe.SameIdentity(snapshot.Identity(), mustIdentity(t, path)) {

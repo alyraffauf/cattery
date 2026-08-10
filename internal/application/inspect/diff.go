@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/alyraffauf/cattery/internal/application/evaluation"
-	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/diff"
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/reconcile"
@@ -39,7 +38,7 @@ func NewDiffRecord(input DiffRecordInput) DiffRecord {
 		status: StatusRecord{targetPath: input.TargetPath, kind: input.Kind, action: input.Action},
 		safe: diff.NewSafeRecord(diff.SafeRecordInput{
 			TargetPath:  input.TargetPath,
-			Tag:         parseDiffTag(input.Tag),
+			Tag:         diff.ParseTag(input.Tag),
 			SourceLabel: input.SourceLabel,
 			TargetLabel: input.TargetLabel,
 			Lines:       input.Lines,
@@ -47,12 +46,6 @@ func NewDiffRecord(input DiffRecordInput) DiffRecord {
 			TargetSize:  input.TargetSize,
 		}),
 	}
-}
-
-// parseDiffTag preserves the application boundary while delegating the tag
-// vocabulary to the diff package.
-func parseDiffTag(name string) diff.Tag {
-	return diff.ParseTag(name)
 }
 
 // DiffTagName returns the stable lowercase name of one record's safe tag.
@@ -63,20 +56,13 @@ func DiffTagName(record DiffRecord) string {
 func (record DiffRecord) TargetPath() string  { return record.status.TargetPath() }
 func (record DiffRecord) Kind() StatusKind    { return record.status.Kind() }
 func (record DiffRecord) Action() string      { return record.status.Action() }
-func (record DiffRecord) Reason() string      { return record.status.Reason() }
-func (record DiffRecord) Converged() bool     { return record.status.Converged() }
+func (record DiffRecord) isConverged() bool   { return record.status.converged }
 func (record DiffRecord) Tag() diff.Tag       { return record.safe.Tag() }
 func (record DiffRecord) SourceLabel() string { return record.safe.SourceLabel() }
 func (record DiffRecord) TargetLabel() string { return record.safe.TargetLabel() }
 func (record DiffRecord) Lines() string       { return record.safe.Lines() }
 func (record DiffRecord) SourceSize() int64   { return record.safe.SourceSize() }
 func (record DiffRecord) TargetSize() int64   { return record.safe.TargetSize() }
-func (record DiffRecord) SourceHash() deployment.Digest {
-	return record.safe.SourceHash()
-}
-func (record DiffRecord) TargetHash() deployment.Digest {
-	return record.safe.TargetHash()
-}
 
 // DiffResult is the frozen outcome of one diff translation: the
 // path-sorted safe diff/status records, the per-kind counts, and the overall

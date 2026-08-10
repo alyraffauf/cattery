@@ -107,7 +107,7 @@ func testHooksDryRun(t *testing.T) {
 
 func testHooksNoHooks(t *testing.T) {
 	pair := hookFixture(t, false)
-	records, err := pair.service.RunHookPipeline(context.Background(), PipelineInput{Request: Request{NoHooks: true, NoHooksSet: true}, Plan: pair.plan, Candidates: pair.candidates})
+	records, err := pair.service.RunHookPipeline(context.Background(), PipelineInput{Request: Request{NoHooks: true}, Plan: pair.plan, Candidates: pair.candidates})
 	if err != nil {
 		t.Fatalf("pipeline: %v", err)
 	}

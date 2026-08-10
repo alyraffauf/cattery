@@ -59,7 +59,7 @@ func testApplyFlags(t *testing.T) {
 	if request.Repository.RawExplicit != "repo" || !request.Repository.ExplicitSet {
 		t.Fatalf("repository = %+v, want the flag value", request.Repository)
 	}
-	if !request.NonInteractive || !request.NonInteractiveSet || !request.NoHooks || !request.NoHooksSet {
+	if !request.NonInteractive || !request.NoHooks {
 		t.Fatalf("policy = %+v, want the explicit flags", request)
 	}
 	if len(request.Groups) != 2 || request.Groups[0] != "apps" || request.Groups[1] != "tools" {
@@ -90,8 +90,8 @@ func testApplyDryRun(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 	request := service.requests[0]
-	if !request.DryRun || !request.DryRunSet {
-		t.Fatalf("dry run = %v set = %v, want the flag value", request.DryRun, request.DryRunSet)
+	if !request.DryRun {
+		t.Fatalf("dry run = %v, want the flag value", request.DryRun)
 	}
 }
 

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -23,25 +22,14 @@ type Candidate struct {
 	ExecutableBits fs.FileMode
 }
 
-// HookCandidate is one raw regular-file child of a scope _hooks tree; hook
-// semantics are validated by hook discovery, not by the scanner.
-type HookCandidate struct {
-	Scope          deployment.Scope
-	Phase          deployment.HookPhase
-	Name           string
-	AbsolutePath   string
-	RepositoryPath string
-}
-
 // ScanResult is the deterministic output of one repository scan.
 type ScanResult struct {
 	Groups []string
 	Files  []Candidate
-	Hooks  []HookCandidate
 }
 
-// Scan returns the base-layer candidates, raw hook candidates, and group
-// names of the repository at root in deterministic order. Symlinks and
+// Scan returns the base-layer candidates and group names of the repository at
+// root in deterministic order. Symlinks and
 // special entries are rejected.
 func Scan(root string) (ScanResult, error) {
 	scanner := scopeScanner{repoRoot: root, rootTree: true}
@@ -51,7 +39,7 @@ func Scan(root string) (ScanResult, error) {
 	if err := checkGroupCollisions(scanner.groups); err != nil {
 		return ScanResult{}, err
 	}
-	return ScanResult{Groups: scanner.groups, Files: scanner.files, Hooks: scanner.hooks}, nil
+	return ScanResult{Groups: scanner.groups, Files: scanner.files}, nil
 }
 
 type scopeScanner struct {
@@ -61,7 +49,6 @@ type scopeScanner struct {
 	rootTree  bool
 	groups    []string
 	files     []Candidate
-	hooks     []HookCandidate
 }
 
 func (scanner *scopeScanner) scanScopeRoot() error {
@@ -90,8 +77,6 @@ func (scanner *scopeScanner) scanEntry(entry os.DirEntry) error {
 		return scanner.scanOrdinary(entry)
 	case control == ControlSecrets:
 		return scanner.scanSecrets(entry)
-	case control == ControlHooks:
-		return scanner.scanHooks(entry)
 	case control == ControlMetadata:
 		if scanner.rootTree {
 			// Repository metadata is ignored only at the repository root.
@@ -136,44 +121,6 @@ func (scanner *scopeScanner) scanSecrets(entry os.DirEntry) error {
 	return scanner.walkTree(entry.Name(), deployment.FileSecret)
 }
 
-func (scanner *scopeScanner) scanHooks(entry os.DirEntry) error {
-	if !entry.IsDir() {
-		return fmt.Errorf("repository: control %q is not a directory", entry.Name())
-	}
-	for _, phase := range []deployment.HookPhase{deployment.HookBefore, deployment.HookAfter} {
-		if err := scanner.scanHookPhase(entry.Name(), phase); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (scanner *scopeScanner) scanHookPhase(hooksDir string, phase deployment.HookPhase) error {
-	path := filepath.Join(scanner.repoRoot, scanner.scopeRoot, hooksDir, string(phase))
-	info, err := os.Lstat(path)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		return err
-	}
-	if !info.IsDir() {
-		// Missing hook phases are optional; a non-directory phase is ignored like
-		// an absent phase because hook discovery only consumes regular children.
-		return nil
-	}
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return err
-	}
-	for _, entry := range entries {
-		if entry.Type().IsRegular() {
-			scanner.hooks = append(scanner.hooks, scanner.hookCandidate(hooksDir, phase, entry.Name()))
-		}
-	}
-	return nil
-}
-
 func (scanner *scopeScanner) walkTree(relative string, kind deployment.FileKind) error {
 	entries, err := os.ReadDir(filepath.Join(scanner.repoRoot, scanner.scopeRoot, relative))
 	if err != nil {
@@ -213,17 +160,6 @@ func (scanner *scopeScanner) addFileAt(relative string, entry os.DirEntry, kind 
 		ExecutableBits: info.Mode() & deployment.ExecutableBitMask,
 	})
 	return nil
-}
-
-func (scanner *scopeScanner) hookCandidate(hooks string, phase deployment.HookPhase, name string) HookCandidate {
-	path := filepath.Join(scanner.scopeRoot, hooks, string(phase), name)
-	return HookCandidate{
-		Scope:          scanner.scope,
-		Phase:          phase,
-		Name:           name,
-		AbsolutePath:   filepath.Join(scanner.repoRoot, path),
-		RepositoryPath: path,
-	}
 }
 
 func (scanner *scopeScanner) newNonRegularSourceError(relative string) error {

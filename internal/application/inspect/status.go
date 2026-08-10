@@ -62,8 +62,7 @@ type StatusRecord struct {
 func (record StatusRecord) TargetPath() string { return record.targetPath }
 func (record StatusRecord) Kind() StatusKind   { return record.kind }
 func (record StatusRecord) Action() string     { return record.action }
-func (record StatusRecord) Reason() string     { return record.reason }
-func (record StatusRecord) Converged() bool    { return record.converged }
+func (record StatusRecord) isConverged() bool  { return record.converged }
 
 // StatusResult is the frozen outcome of one status translation: the
 // path-sorted semantic status records, the per-kind counts, and the overall
@@ -180,9 +179,9 @@ func countRecordKinds[T interface{ Kind() StatusKind }](records []T) (files, ali
 	return files, aliases, retired
 }
 
-func recordsConvergedGeneric[T interface{ Converged() bool }](records []T) bool {
+func recordsConvergedGeneric[T interface{ isConverged() bool }](records []T) bool {
 	for _, record := range records {
-		if !record.Converged() {
+		if !record.isConverged() {
 			return false
 		}
 	}

@@ -56,14 +56,11 @@ func applyRequest(command *cobra.Command, input applyInput) apply.Request {
 	nonInteractive, _ := command.Flags().GetBool("non-interactive")
 	noHooks, _ := command.Flags().GetBool("no-hooks")
 	return apply.Request{
-		Repository:        applyRepository(options, input.runtime),
-		Groups:            append([]string(nil), input.groups...),
-		DryRun:            dryRun,
-		DryRunSet:         command.Flags().Changed("dry-run"),
-		NonInteractive:    nonInteractive,
-		NonInteractiveSet: command.Flags().Changed("non-interactive"),
-		NoHooks:           noHooks,
-		NoHooksSet:        command.Flags().Changed("no-hooks"),
+		Repository:     applyRepository(options, input.runtime),
+		Groups:         append([]string(nil), input.groups...),
+		DryRun:         dryRun,
+		NonInteractive: nonInteractive,
+		NoHooks:        noHooks,
 	}
 }
 

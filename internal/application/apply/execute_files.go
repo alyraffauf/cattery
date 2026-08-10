@@ -196,7 +196,6 @@ func completedRecord(job fileJob) ItemResult {
 	return ItemResult{
 		TargetPath: job.action.TargetPath,
 		Status:     StatusCompleted,
-		Secret:     job.candidate.record.File.Kind == deployment.FileSecret,
 		Kind:       job.action.Kind,
 	}
 }
@@ -206,7 +205,6 @@ func partialRecord(job fileJob) ItemResult {
 	return ItemResult{
 		TargetPath: job.action.TargetPath,
 		Status:     StatusPartial,
-		Secret:     job.candidate.record.File.Kind == deployment.FileSecret,
 		Kind:       job.action.Kind,
 	}
 }

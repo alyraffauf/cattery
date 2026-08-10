@@ -20,7 +20,6 @@ func TestRepositoryScan(t *testing.T) {
 		{"groups", testScanGroups},
 		{"empty files", testScanEmptyFiles},
 		{"controls are excluded", testScanControlsExcluded},
-		{"raw hook candidates", testScanHookCandidates},
 		{"symlinks rejected", testScanSymlinkRejected},
 		{"specials rejected", testScanSpecialRejected},
 		{"group collisions", testScanGroupCollisions},
@@ -112,21 +111,6 @@ func testScanControlsExcluded(t *testing.T) {
 	assertCandidate(t, result.Files[0], newCandidate(root, wantFile{repoPath: "_secrets/token", secret: true}))
 }
 
-func testScanHookCandidates(t *testing.T) {
-	root := t.TempDir()
-	writeFile(t, filepath.Join(root, "_hooks", "before", "install.sh"), 0o755)
-	writeFile(t, filepath.Join(root, "atuin", "_hooks", "after", "finish.sh"), 0o755)
-	result, err := Scan(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(result.Hooks) != 2 {
-		t.Fatalf("hooks = %d, want 2", len(result.Hooks))
-	}
-	assertHook(t, result.Hooks[0], HookCandidate{Scope: deployment.NewScope(""), Phase: deployment.HookBefore, Name: "install.sh", RepositoryPath: "_hooks/before/install.sh", AbsolutePath: filepath.Join(root, "_hooks", "before", "install.sh")})
-	assertHook(t, result.Hooks[1], HookCandidate{Scope: deployment.NewScope("atuin"), Phase: deployment.HookAfter, Name: "finish.sh", RepositoryPath: "atuin/_hooks/after/finish.sh", AbsolutePath: filepath.Join(root, "atuin", "_hooks", "after", "finish.sh")})
-}
-
 func testScanSymlinkRejected(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "target"), 0o644)
@@ -208,13 +192,6 @@ func assertCandidate(t *testing.T, got Candidate, want Candidate) {
 	t.Helper()
 	if got != want {
 		t.Fatalf("candidate = %+v, want %+v", got, want)
-	}
-}
-
-func assertHook(t *testing.T, got HookCandidate, want HookCandidate) {
-	t.Helper()
-	if got != want {
-		t.Fatalf("hook candidate = %+v, want %+v", got, want)
 	}
 }
 

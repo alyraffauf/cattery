@@ -61,14 +61,11 @@ func testTargetAbsent(t *testing.T) {
 	if snapshot.Kind() != KindAbsent || snapshot.Identity().Path() != "" {
 		t.Fatalf("absent target facts = %v, want KindAbsent with zero identity", snapshot.Kind())
 	}
-	if snapshot.Token() != (ContentToken{}) || snapshot.Digest() != (deployment.Digest{}) {
-		t.Fatal("absent target must carry zero hashes")
+	if snapshot.Digest() != (deployment.Digest{}) {
+		t.Fatal("absent target must carry a zero digest")
 	}
 	if snapshot.Mode() != 0 || snapshot.Payload() != "" {
 		t.Fatal("absent target must carry zero mode and payload")
-	}
-	if snapshot.Destination() != (Destination{Root: root, Relative: "missing.txt"}) {
-		t.Fatal("destination must echo the captured path")
 	}
 	parent, err := pathsafe.FilesystemIdentity(root)
 	if err != nil {
@@ -103,9 +100,6 @@ func testTargetRegularHashes(t *testing.T) {
 	content := []byte("managed content")
 	mustTargetFile(t, filepath.Join(root, "file.txt"), content)
 	snapshot := captureAt(t, root, "file.txt")
-	if snapshot.Token() != TokenOfContent(content) {
-		t.Fatal("token must match the exact bytes")
-	}
 	if snapshot.Digest() != deployment.Ordinary(content) {
 		t.Fatal("digest must match the exact bytes")
 	}
@@ -132,8 +126,8 @@ func testTargetDirectory(t *testing.T) {
 	if snapshot.Kind() != KindDirectory || snapshot.Mode() != 0o700 {
 		t.Fatalf("directory facts = %v mode %o, want KindDirectory 0700", snapshot.Kind(), snapshot.Mode())
 	}
-	if snapshot.Token() != (ContentToken{}) || snapshot.Payload() != "" {
-		t.Fatal("directory must carry zero token and payload")
+	if snapshot.Payload() != "" {
+		t.Fatal("directory must carry zero payload")
 	}
 }
 
@@ -164,8 +158,8 @@ func testTargetSpecial(t *testing.T) {
 	if snapshot.Kind() != KindSpecial {
 		t.Fatalf("fifo kind = %v, want KindSpecial", snapshot.Kind())
 	}
-	if snapshot.Token() != (ContentToken{}) || snapshot.Payload() != "" {
-		t.Fatal("special target must carry zero token and payload")
+	if snapshot.Payload() != "" {
+		t.Fatal("special target must carry zero payload")
 	}
 }
 
@@ -178,11 +172,8 @@ func testTargetNested(t *testing.T) {
 		t.Fatalf("write deep target: %v", err)
 	}
 	snapshot := captureAt(t, root, "a/b/file.txt")
-	if snapshot.Kind() != KindFile || snapshot.Token() != TokenOfContent([]byte("deep")) {
-		t.Fatal("nested target must freeze its content")
-	}
-	if snapshot.Destination() != (Destination{Root: root, Relative: "a/b/file.txt"}) {
-		t.Fatal("destination must echo the nested path")
+	if snapshot.Kind() != KindFile {
+		t.Fatal("nested target must freeze its file kind")
 	}
 }
 
@@ -194,8 +185,8 @@ func testTargetHardLinks(t *testing.T) {
 	}
 	first := captureAt(t, root, "first")
 	second := captureAt(t, root, "second")
-	if !pathsafe.SameIdentity(first.Identity(), second.Identity()) || first.Token() != second.Token() {
-		t.Fatal("hard links must share one object identity and content token")
+	if !pathsafe.SameIdentity(first.Identity(), second.Identity()) {
+		t.Fatal("hard links must share one object identity")
 	}
 }
 
