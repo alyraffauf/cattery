@@ -9,6 +9,7 @@ import (
 	"github.com/alyraffauf/cattery/internal/repository"
 	"github.com/alyraffauf/cattery/internal/secrets"
 	"github.com/alyraffauf/cattery/internal/selection"
+	"github.com/alyraffauf/cattery/internal/state"
 )
 
 // WriteDependencies carries the secret-specific ports required by add's
@@ -16,12 +17,7 @@ import (
 // so the contract owner can finish without a shared-file change.
 type WriteDependencies struct {
 	Secrets *secrets.Client
-	HashKey Recoverer
-}
-
-// Recoverer loads the per-installation secret hash key for keyed baselines.
-type Recoverer interface {
-	RecoverHashKey() ([32]byte, error)
+	HashKey *state.Store
 }
 
 // Service performs one add batch against the injectable ports. Construction

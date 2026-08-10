@@ -26,24 +26,19 @@ type RepositoryRequest struct {
 	WorkingDir  string
 }
 
-// Defaults is the narrow read-only port over the state default lookup.
-type Defaults interface {
-	DefaultRepository(home string) (state.Repository, error)
-}
-
 // RepositoryResolver applies the Section 8.2 precedence and returns the
 // canonical repository identity. Explicit and environment paths are resolved
 // against the initial working directory; only the default lookup may touch
 // state, and it never registers a row.
 type RepositoryResolver struct {
 	home     string
-	defaults Defaults
+	defaults *state.Store
 }
 
 // NewRepositoryResolver constructs a resolver bound to the canonical home
 // and the read-only default lookup. Construction performs no filesystem or
 // state access.
-func NewRepositoryResolver(home string, defaults Defaults) *RepositoryResolver {
+func NewRepositoryResolver(home string, defaults *state.Store) *RepositoryResolver {
 	return &RepositoryResolver{home: home, defaults: defaults}
 }
 
@@ -61,6 +56,9 @@ func (resolver *RepositoryResolver) Resolve(request RepositoryRequest) (state.Re
 			return state.Repository{}, fmt.Errorf("selection: CATTERY_REPO is empty")
 		}
 		return resolver.canonical(request.RawEnv, request.WorkingDir)
+	}
+	if err := resolver.defaults.EnsureAcquired(); err != nil {
+		return state.Repository{}, err
 	}
 	return resolver.defaults.DefaultRepository(resolver.home)
 }
