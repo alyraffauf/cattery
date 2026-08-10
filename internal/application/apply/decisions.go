@@ -45,7 +45,7 @@ func (service *Service) CollectDecisions(ctx context.Context, candidates Candida
 	ordered := reconcile.OrderedDecisionSpecs(specs)
 	decisions := make([]ResolvedDecision, 0, len(ordered))
 	for _, spec := range ordered {
-		decision, err := service.collectOne(ctx, spec)
+		decision, err := service.collectOne(ctx, spec, candidates)
 		if err != nil {
 			return CollectedDecisions{}, err
 		}
@@ -56,7 +56,7 @@ func (service *Service) CollectDecisions(ctx context.Context, candidates Candida
 
 // collectOne projects one spec into a request, resolves it, and validates
 // the response before any hook or mutation.
-func (service *Service) collectOne(ctx context.Context, spec reconcile.DecisionSpec) (ResolvedDecision, error) {
+func (service *Service) collectOne(ctx context.Context, spec reconcile.DecisionSpec, candidates Candidates) (ResolvedDecision, error) {
 	request, err := NewDecisionRequest(DecisionRequestInput{
 		TargetPath: spec.TargetPath(),
 		Choices:    projectChoices(spec.AllChoices()),
@@ -64,7 +64,7 @@ func (service *Service) collectOne(ctx context.Context, spec reconcile.DecisionS
 	if err != nil {
 		return ResolvedDecision{}, failure.New(failure.InvalidInput, "apply: project decision request", err)
 	}
-	response, err := service.resolveRepeatedly(ctx, request)
+	response, err := service.resolveRepeatedly(ctx, request, service.differenceProvider(candidates))
 	if err != nil {
 		return ResolvedDecision{}, err
 	}
@@ -139,12 +139,12 @@ func projectChoice(choice reconcile.DecisionChoice) DecisionChoice {
 // resolveRepeatedly asks the resolver until it returns a final choice,
 // re-requesting when it answers diff so the adapter can show the safe
 // difference and ask again.
-func (service *Service) resolveRepeatedly(ctx context.Context, request DecisionRequest) (DecisionResponse, error) {
+func (service *Service) resolveRepeatedly(ctx context.Context, request DecisionRequest, difference DifferenceProvider) (DecisionResponse, error) {
 	for {
 		if err := ctx.Err(); err != nil {
 			return DecisionResponse{}, err
 		}
-		response, err := service.resolveOnce(ctx, request)
+		response, err := service.resolveOnce(ctx, request, difference)
 		if err != nil {
 			return DecisionResponse{}, err
 		}
@@ -156,11 +156,11 @@ func (service *Service) resolveRepeatedly(ctx context.Context, request DecisionR
 
 // resolveOnce asks the resolver once and validates its response against the
 // allowed choices of the request.
-func (service *Service) resolveOnce(ctx context.Context, request DecisionRequest) (DecisionResponse, error) {
+func (service *Service) resolveOnce(ctx context.Context, request DecisionRequest, difference DifferenceProvider) (DecisionResponse, error) {
 	if service.resolver == nil {
 		return DecisionResponse{}, failure.New(failure.Operational, "apply: decision resolver is unavailable", nil)
 	}
-	response, err := service.resolver.Resolve(ctx, request)
+	response, err := resolveDecision(service.resolver, ctx, request, difference)
 	if err != nil {
 		return DecisionResponse{}, err
 	}
@@ -170,4 +170,11 @@ func (service *Service) resolveOnce(ctx context.Context, request DecisionRequest
 		}
 	}
 	return DecisionResponse{}, failure.New(failure.InvalidInput, "apply: invalid decision response for "+request.TargetPath(), nil)
+}
+
+func resolveDecision(resolver DecisionResolver, ctx context.Context, request DecisionRequest, difference DifferenceProvider) (DecisionResponse, error) {
+	if differenceResolver, ok := resolver.(DifferenceResolver); ok {
+		return differenceResolver.ResolveWithDifference(ctx, request, difference)
+	}
+	return resolver.Resolve(ctx, request)
 }

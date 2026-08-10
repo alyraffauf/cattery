@@ -49,6 +49,16 @@ func NewDecisionPrompt(input PromptInput) *DecisionPrompt {
 
 // Resolve asks one decision request until a valid final answer arrives.
 func (p *DecisionPrompt) Resolve(ctx context.Context, request apply.DecisionRequest) (apply.DecisionResponse, error) {
+	return p.resolve(ctx, request, p.diff)
+}
+
+// ResolveWithDifference resolves one request with the apply candidate's safe
+// difference provider. This keeps target reads bound to the frozen evaluation.
+func (p *DecisionPrompt) ResolveWithDifference(ctx context.Context, request apply.DecisionRequest, difference apply.DifferenceProvider) (apply.DecisionResponse, error) {
+	return p.resolve(ctx, request, difference)
+}
+
+func (p *DecisionPrompt) resolve(ctx context.Context, request apply.DecisionRequest, difference apply.DifferenceProvider) (apply.DecisionResponse, error) {
 	if p.isTerminal == nil || !p.isTerminal(0) {
 		return apply.DecisionResponse{}, failure.New(failure.Difference, "cli: decisions require an interactive terminal", nil)
 	}
@@ -62,7 +72,7 @@ func (p *DecisionPrompt) Resolve(ctx context.Context, request apply.DecisionRequ
 		if err != nil {
 			return apply.DecisionResponse{}, failure.New(failure.InvalidInput, "cli: EOF before a valid answer", err)
 		}
-		response, done, err := p.answer(ctx, request, answer)
+		response, done, err := p.answer(ctx, request, answer, difference)
 		if err != nil {
 			return apply.DecisionResponse{}, err
 		}
@@ -100,7 +110,7 @@ func readAnswer(scanner *bufio.Scanner) (string, error) {
 
 // answer maps one raw answer to a response, displaying the safe difference
 // and re-prompting on diff or invalid input.
-func (p *DecisionPrompt) answer(ctx context.Context, request apply.DecisionRequest, answer string) (apply.DecisionResponse, bool, error) {
+func (p *DecisionPrompt) answer(ctx context.Context, request apply.DecisionRequest, answer string, difference apply.DifferenceProvider) (apply.DecisionResponse, bool, error) {
 	if answer == "" {
 		return apply.DecisionResponse{Choice: request.Choices()[0]}, true, nil
 	}
@@ -112,7 +122,7 @@ func (p *DecisionPrompt) answer(ctx context.Context, request apply.DecisionReque
 		if choice != apply.ChoiceDiff {
 			return apply.DecisionResponse{Choice: choice}, true, nil
 		}
-		if err := p.renderDifference(ctx, request.TargetPath()); err != nil {
+		if err := p.renderDifference(ctx, request.TargetPath(), difference); err != nil {
 			return apply.DecisionResponse{}, false, err
 		}
 		return apply.DecisionResponse{}, false, nil
@@ -122,16 +132,16 @@ func (p *DecisionPrompt) answer(ctx context.Context, request apply.DecisionReque
 }
 
 // renderDifference displays the safe difference of one target on stderr.
-func (p *DecisionPrompt) renderDifference(ctx context.Context, target string) error {
-	if p.diff == nil {
+func (p *DecisionPrompt) renderDifference(ctx context.Context, target string, difference apply.DifferenceProvider) error {
+	if difference == nil {
 		_, err := fmt.Fprintf(p.stderr, "no difference available for %s\n", target)
 		return err
 	}
-	difference, ok := p.diff(ctx, target)
+	safeDifference, ok := difference(ctx, target)
 	if !ok {
 		_, err := fmt.Fprintf(p.stderr, "no difference available for %s\n", target)
 		return err
 	}
-	_, err := fmt.Fprintf(p.stderr, "--- %s ---\n%s", target, strings.Join(difference.LinesCopy(), "\n"))
+	_, err := fmt.Fprintf(p.stderr, "--- %s ---\n%s", target, strings.Join(safeDifference.LinesCopy(), "\n"))
 	return err
 }
