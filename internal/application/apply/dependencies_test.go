@@ -40,14 +40,14 @@ func (probe *probeFake) Probe(ctx context.Context) error {
 
 // preflightFixture evaluates one plan over the given rows with a counting
 // probe and returns the service, the candidates, the probe, and the home.
-func preflightFixture(t *testing.T, repo, home string, plan deployment.Plan, rows stateRows, probe *probeFake, client *secrets.Client) (*Service, Candidates, string) {
+func preflightFixture(t *testing.T, input evalInput) (*Service, Candidates) {
 	t.Helper()
-	service := evalFixture(t, evalInput{repo: repo, home: home, plan: plan, rows: rows, probe: probe, client: client})
+	service := evalFixture(t, input)
 	candidates, err := service.Evaluate(context.Background(), evalRequest())
 	if err != nil {
 		t.Fatalf("evaluate: %v", err)
 	}
-	return service, candidates, home
+	return service, candidates
 }
 
 // secretRow freezes one active secret baseline over the given ciphertext.
@@ -65,7 +65,7 @@ func testPreflightOrdinary(t *testing.T) {
 	repo := t.TempDir()
 	home := t.TempDir()
 	file := ordinarySource(t, fileSpec{Repo: repo, Target: "a.conf", Relative: "files/a"}, []byte("a"))
-	service, candidates, _ := preflightFixture(t, repo, home, evalPlan(t, repo, file), stateRows{}, &probeFake{}, sopsClient(t, []byte("plaintext")))
+	service, candidates := preflightFixture(t, evalInput{repo: repo, home: home, plan: evalPlan(t, repo, file), probe: &probeFake{}, client: sopsClient(t, []byte("plaintext"))})
 	if err := service.Preflight(context.Background(), candidates); err != nil {
 		t.Fatalf("preflight: %v", err)
 	}
@@ -80,7 +80,7 @@ func testPreflightUnchangedSecret(t *testing.T) {
 	home := t.TempDir()
 	file := secretSource(t, fileSpec{Repo: repo, Target: "target", Relative: "files/token"})
 	writeTarget(t, targetPath(home, "target"), []byte("secret"))
-	service, candidates, _ := preflightFixture(t, repo, home, evalPlan(t, repo, file), stateRows{files: []state.FileBaseline{secretRow("target")}}, &probeFake{}, nil)
+	service, candidates := preflightFixture(t, evalInput{repo: repo, home: home, plan: evalPlan(t, repo, file), rows: stateRows{files: []state.FileBaseline{secretRow("target")}}, probe: &probeFake{}})
 	if err := service.Preflight(context.Background(), candidates); err != nil {
 		t.Fatalf("preflight: %v", err)
 	}
@@ -95,7 +95,7 @@ func testPreflightChangedSecret(t *testing.T) {
 	home := t.TempDir()
 	file := secretSource(t, fileSpec{Repo: repo, Target: "target", Relative: "files/token"})
 	writeTarget(t, targetPath(home, "target"), []byte("secret"))
-	service, candidates, _ := preflightFixture(t, repo, home, evalPlan(t, repo, file), stateRows{}, &probeFake{}, sopsClient(t, []byte("plaintext")))
+	service, candidates := preflightFixture(t, evalInput{repo: repo, home: home, plan: evalPlan(t, repo, file), probe: &probeFake{}, client: sopsClient(t, []byte("plaintext"))})
 	if err := service.Preflight(context.Background(), candidates); err != nil {
 		t.Fatalf("preflight: %v", err)
 	}
@@ -123,7 +123,7 @@ func testPreflightMissingExecutable(t *testing.T) {
 	file := secretSource(t, fileSpec{Repo: repo, Target: "target", Relative: "files/token"})
 	probe := &probeFake{err: failure.New(failure.Dependency, "apply: sops executable missing", nil)}
 	writeTarget(t, targetPath(home, "target"), []byte("secret"))
-	service, candidates, _ := preflightFixture(t, repo, home, evalPlan(t, repo, file), stateRows{}, probe, sopsClient(t, []byte("plaintext")))
+	service, candidates := preflightFixture(t, evalInput{repo: repo, home: home, plan: evalPlan(t, repo, file), probe: probe, client: sopsClient(t, []byte("plaintext"))})
 	err := service.Preflight(context.Background(), candidates)
 	if err == nil || !kindIs(err, failure.Dependency) {
 		t.Fatalf("missing executable error = %v, want a dependency failure", err)
@@ -139,7 +139,7 @@ func testPreflightLaunchedFailure(t *testing.T) {
 	file := secretSource(t, fileSpec{Repo: repo, Target: "target", Relative: "files/token"})
 	probe := &probeFake{err: failure.New(failure.Operational, "apply: sops launch failed", nil)}
 	writeTarget(t, targetPath(home, "target"), []byte("secret"))
-	service, candidates, _ := preflightFixture(t, repo, home, evalPlan(t, repo, file), stateRows{}, probe, sopsClient(t, []byte("plaintext")))
+	service, candidates := preflightFixture(t, evalInput{repo: repo, home: home, plan: evalPlan(t, repo, file), probe: probe, client: sopsClient(t, []byte("plaintext"))})
 	err := service.Preflight(context.Background(), candidates)
 	if err == nil || !kindIs(err, failure.Operational) {
 		t.Fatalf("launched failure error = %v, want an operational failure", err)
