@@ -1459,7 +1459,7 @@ The diagram describes policy flow, not permission for bootstrap to move behavior
 | `application/add` | `deployment`, `failure`, `filesystem`, `pathsafe`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
 | `application/version` | `buildinfo` |
 | `cli` | `application/...`, `failure` only, subject to the per-file restrictions in Section 12.1 |
-| `bootstrap` | the concrete packages needed for construction plus `cli`; no business call and no Cobra/pflag import |
+| `bootstrap` | `application/initialize`, `application/validate`, `application/inspect`, `application/apply`, `application/add`, `application/version`, `cli`, `deployment`, `failure`, `filesystem`, `hooks`, `repository`, `secrets`, `selection`, `state`; no business call and no Cobra/pflag import |
 | `cmd/cattery` | `bootstrap`, `cli`, `failure` |
 | `testfixture/filesystem`, `testfixture/sops`, `quality` | none |
 | `testfixture/database` | `state` |
