@@ -1,0 +1,312 @@
+package apply
+
+import (
+	"context"
+	"go/parser"
+	"go/token"
+	"os"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/alyraffauf/cattery/internal/deployment"
+	"github.com/alyraffauf/cattery/internal/filesystem"
+	"github.com/alyraffauf/cattery/internal/hooks"
+	"github.com/alyraffauf/cattery/internal/reconcile"
+	"github.com/alyraffauf/cattery/internal/repository"
+	"github.com/alyraffauf/cattery/internal/secrets"
+	"github.com/alyraffauf/cattery/internal/selection"
+	"github.com/alyraffauf/cattery/internal/state"
+)
+
+func TestApplyContract(t *testing.T) {
+	scenarios := []struct {
+		name string
+		run  func(*testing.T)
+	}{
+		{"zero request keeps policy presence false", testContractPresenceBits},
+		{"decision requests validate and copy", testContractDecisionRequest},
+		{"safe differences copy lines", testContractSafeDifference},
+		{"action plans copy defensively", testContractActionPlan},
+		{"summaries tally partial outcomes", testContractPartialSummaries},
+		{"dependency seams accept fakes", testContractDependencySeams},
+		{"dto fields are application-owned", testContractCleanTypes},
+	}
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, scenario.run)
+	}
+}
+
+func testContractPresenceBits(t *testing.T) {
+	var request Request
+	if request.DryRunSet || request.NonInteractiveSet || request.NoHooksSet {
+		t.Fatal("zero Request must leave every policy presence false")
+	}
+	if request.Repository != (RepositoryInput{}) {
+		t.Fatalf("zero Request.Repository = %+v, want the zero repository input", request.Repository)
+	}
+	if request.Groups != nil {
+		t.Fatalf("zero Request.Groups = %v, want nil", request.Groups)
+	}
+	explicit := Request{Repository: RepositoryInput{RawExplicit: "repo", ExplicitSet: true},
+		DryRun: true, DryRunSet: true, NonInteractive: false, NonInteractiveSet: true, NoHooks: true, NoHooksSet: true}
+	if !explicit.DryRunSet || !explicit.NonInteractiveSet || !explicit.NoHooksSet {
+		t.Fatal("explicit presence bits must be preserved")
+	}
+	if !explicit.Repository.ExplicitSet || explicit.Repository.RawExplicit != "repo" {
+		t.Fatal("repository presence and value must be preserved")
+	}
+}
+
+func testContractDecisionRequest(t *testing.T) {
+	request, err := NewDecisionRequest(DecisionRequestInput{TargetPath: "a.conf", Choices: []DecisionChoice{ChoiceOverwrite, ChoiceSkip}})
+	if err != nil {
+		t.Fatalf("new decision request: %v", err)
+	}
+	if request.TargetPath() != "a.conf" {
+		t.Fatalf("target path = %q, want a.conf", request.TargetPath())
+	}
+	if !reflect.DeepEqual(request.Choices(), []DecisionChoice{ChoiceOverwrite, ChoiceSkip}) {
+		t.Fatalf("choices = %v, want [overwrite skip]", request.Choices())
+	}
+	choices := request.Choices()
+	choices[0] = ChoiceAbort
+	if request.Choices()[0] != ChoiceOverwrite {
+		t.Fatal("mutating a Choices copy must not reach the request")
+	}
+	rejected := []struct {
+		name  string
+		input DecisionRequestInput
+	}{
+		{"empty target", DecisionRequestInput{}},
+		{"empty choices", DecisionRequestInput{TargetPath: "a.conf"}},
+		{"invalid choice", DecisionRequestInput{TargetPath: "a.conf", Choices: []DecisionChoice{"prompt"}}},
+	}
+	for _, scenario := range rejected {
+		t.Run(scenario.name, func(t *testing.T) {
+			if _, err := NewDecisionRequest(scenario.input); err == nil {
+				t.Fatalf("%s must be rejected", scenario.name)
+			}
+		})
+	}
+}
+
+func testContractSafeDifference(t *testing.T) {
+	difference := SafeDifference{Tag: DiffTagText, SourceSize: 3, TargetSize: 5,
+		SourceHash: "aa", TargetHash: "bb", Lines: []string{"-a", "+b"}}
+	lines := difference.LinesCopy()
+	lines[0] = "mutated"
+	if difference.Lines[0] != "-a" {
+		t.Fatal("mutating a Lines copy must not reach the difference")
+	}
+	if difference.Tag != DiffTagText || difference.SourceSize != 3 || difference.TargetSize != 5 {
+		t.Fatal("safe difference fields must be preserved")
+	}
+}
+
+func testContractActionPlan(t *testing.T) {
+	plan := NewActionPlan([]PlanAction{
+		{TargetPath: "b", Kind: ActionKindReplaceFile, SourcePath: "files/b"},
+		{TargetPath: "a", Kind: ActionKindWriteSource, SourcePath: "files/a"},
+	})
+	if got := plan.Actions(); len(got) != 2 || got[0].Kind != ActionKindReplaceFile {
+		t.Fatalf("action plan must freeze the ordered actions, got %+v", got)
+	}
+	actions := plan.Actions()
+	actions[0].Kind = ActionKindRetireFile
+	if plan.Actions()[0].Kind != ActionKindReplaceFile {
+		t.Fatal("mutating an Actions copy must not reach the plan")
+	}
+	empty := NewActionPlan(nil)
+	if len(empty.Actions()) != 0 {
+		t.Fatal("an empty action plan must stay empty")
+	}
+}
+
+func testContractPartialSummaries(t *testing.T) {
+	result := Result{Items: []ItemResult{
+		{TargetPath: "a", Status: StatusCompleted, Secret: true, Kind: ActionKindReplaceFile},
+		{TargetPath: "b", Status: StatusPartial, Kind: ActionKindWriteSource},
+		{TargetPath: "c", Status: StatusPlanned, Kind: ActionKindRealizeAlias},
+	}, Summary: Summary{Planned: 1, Completed: 1, Partial: 1}}
+	if result.Summary.Planned != 1 || result.Summary.Completed != 1 || result.Summary.Partial != 1 {
+		t.Fatalf("summary = %+v, want one planned, one completed, one partial", result.Summary)
+	}
+	items := result.ItemsCopy()
+	items[0].Status = StatusPartial
+	if result.Items[0].Status != StatusCompleted {
+		t.Fatal("mutating an ItemsCopy must not reach the result")
+	}
+	if len(result.ItemsCopy()) != 3 {
+		t.Fatal("ItemsCopy must preserve the record count")
+	}
+}
+
+type fakeRepositorySource struct {
+	identity RepositoryIdentity
+}
+
+func (f fakeRepositorySource) Resolve(selection.RepositoryRequest) (RepositoryIdentity, error) {
+	return f.identity, nil
+}
+
+type fakeCompiler struct {
+	plan deployment.Plan
+}
+
+func (f fakeCompiler) Compile(repository.CompileInput) (deployment.Plan, error) {
+	return f.plan, nil
+}
+
+type fakeStateReader struct {
+	rows reconcile.StateRows
+}
+
+func (f fakeStateReader) Snapshot(root, home string) (reconcile.StateRows, error) {
+	return f.rows, nil
+}
+
+type fakeBaselineStore struct {
+	baseline state.FileBaseline
+}
+
+func (f fakeBaselineStore) UpsertFileBaseline(root, home string, baseline state.FileBaseline) (state.FileBaseline, error) {
+	return f.baseline, nil
+}
+
+type fakeTransitionStore struct {
+	alias    state.AliasBaseline
+	baseline state.FileBaseline
+}
+
+func (f fakeTransitionStore) TransitionToAlias(root, home string, baseline state.AliasBaseline) (state.AliasBaseline, error) {
+	return f.alias, nil
+}
+
+func (f fakeTransitionStore) TransitionToFile(root, home string, baseline state.FileBaseline) (state.FileBaseline, error) {
+	return f.baseline, nil
+}
+
+type fakeRetirementStore struct {
+	file  state.FileBaseline
+	alias state.AliasBaseline
+}
+
+func (f fakeRetirementStore) RetireFileBaseline(root, home, target string) (state.FileBaseline, error) {
+	return f.file, nil
+}
+
+func (f fakeRetirementStore) RetireAliasBaseline(root, home, aliasPath string) (state.AliasBaseline, error) {
+	return f.alias, nil
+}
+
+type fakeSecretClient struct{}
+
+func (f fakeSecretClient) ValidateCandidate(context.Context, secrets.Candidate) ([]byte, error) {
+	return nil, nil
+}
+
+type fakeReplacer struct{}
+
+func (f fakeReplacer) ReplaceResult(context.Context, filesystem.Precondition, filesystem.ReplacementSpec) (filesystem.ReplaceResult, error) {
+	return filesystem.ReplaceResult{}, nil
+}
+
+func (f fakeReplacer) RealizeAlias(context.Context, filesystem.Precondition, filesystem.AliasSpec) (filesystem.AliasRealization, error) {
+	return 0, nil
+}
+
+type fakeHookExecutor struct{}
+
+func (f fakeHookExecutor) Execute(context.Context, hooks.ExecuteInput, []deployment.Hook) error {
+	return nil
+}
+
+type fakeProbe struct{}
+
+func (f fakeProbe) Probe(context.Context) error {
+	return nil
+}
+
+func testContractDependencySeams(t *testing.T) {
+	dependencies := Dependencies{
+		RepositorySource: fakeRepositorySource{identity: RepositoryIdentity{Root: "/repo", Home: "/home"}},
+		Compiler:         fakeCompiler{},
+		State:            fakeStateReader{},
+		Baselines:        fakeBaselineStore{},
+		Transitions:      fakeTransitionStore{},
+		Retirements:      fakeRetirementStore{},
+		Client:           fakeSecretClient{},
+		Replacer:         fakeReplacer{},
+		Hooks:            fakeHookExecutor{},
+		Probe:            fakeProbe{},
+	}
+	if dependencies.RepositorySource == nil || dependencies.Compiler == nil || dependencies.State == nil ||
+		dependencies.Baselines == nil || dependencies.Transitions == nil || dependencies.Retirements == nil ||
+		dependencies.Client == nil || dependencies.Replacer == nil || dependencies.Hooks == nil || dependencies.Probe == nil {
+		t.Fatal("all ten dependency seams must accept fakes")
+	}
+}
+
+func testContractCleanTypes(t *testing.T) {
+	assertCleanImports(t)
+	if containsBackendField(DecisionRequest{}) || containsBackendField(DecisionResponse{}) ||
+		containsBackendField(SafeDifference{}) || containsBackendField(Request{}) || containsBackendField(Result{}) {
+		t.Fatal("a CLI-facing DTO must expose only application-owned fields")
+	}
+}
+
+// assertCleanImports requires every production source of this package to
+// avoid Cobra, pflag, and the CLI package entirely.
+func assertCleanImports(t *testing.T) {
+	t.Helper()
+	for _, name := range packageSources(t) {
+		assertSourceImports(t, name)
+	}
+}
+
+func assertSourceImports(t *testing.T, name string) {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), name, nil, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("parse %s: %v", name, err)
+	}
+	for _, spec := range file.Imports {
+		if isForbiddenImport(strings.Trim(spec.Path.Value, `"`)) {
+			t.Fatalf("%s imports %q", name, spec.Path.Value)
+		}
+	}
+}
+
+func containsBackendField(value any) bool {
+	reflected := reflect.TypeOf(value)
+	for index := 0; index < reflected.NumField(); index++ {
+		field := reflected.Field(index)
+		if field.Type.PkgPath() != "" && !strings.HasSuffix(field.Type.PkgPath(), "/internal/application/apply") {
+			return true
+		}
+	}
+	return false
+}
+
+func packageSources(t *testing.T) []string {
+	t.Helper()
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sources []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+			sources = append(sources, name)
+		}
+	}
+	return sources
+}
+
+func isForbiddenImport(path string) bool {
+	return strings.HasPrefix(path, "github.com/spf13/cobra") ||
+		strings.HasPrefix(path, "github.com/spf13/pflag") ||
+		strings.HasSuffix(path, "/internal/cli")
+}
