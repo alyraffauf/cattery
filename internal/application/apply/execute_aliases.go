@@ -2,9 +2,7 @@ package apply
 
 import (
 	"context"
-	"strings"
 
-	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/pathsafe"
@@ -65,7 +63,10 @@ func (service *Service) realizeAlias(ctx context.Context, job aliasJob) (ItemRes
 	if err != nil {
 		return aliasRecord(job, StatusPartial), failure.New(failure.Operational, "apply: freeze alias "+job.action.TargetPath, err)
 	}
-	payload, err := aliasPayload(job.candidate.record.Alias)
+	payload, err := pathsafe.RelativeAliasPayload(
+		job.candidate.record.Alias.CanonicalTargetRelativePath,
+		job.candidate.record.Alias.AliasRelativePath,
+	)
 	if err != nil {
 		return aliasRecord(job, StatusPartial), failure.New(failure.InvalidInput, "apply: payload for "+job.action.TargetPath, err)
 	}
@@ -134,37 +135,4 @@ func aliasRecord(job aliasJob, status ItemStatus) ItemResult {
 		Secret:     false,
 		Kind:       job.action.Kind,
 	}
-}
-
-// aliasPayload derives the exact relative payload one alias link must
-// carry, mirroring the routes activation contract (PLAN.md Section 5.4).
-func aliasPayload(alias deployment.Alias) (string, error) {
-	canonical, err := pathsafe.Segments(alias.CanonicalTargetRelativePath)
-	if err != nil {
-		return "", err
-	}
-	link, err := pathsafe.Segments(alias.AliasRelativePath)
-	if err != nil {
-		return "", err
-	}
-	parent := link[:len(link)-1]
-	common := commonPrefix(canonical, parent)
-	remaining := canonical[common:]
-	if len(remaining) == 0 {
-		return "", failure.New(failure.InvalidInput, "apply: alias descends into its canonical target", nil)
-	}
-	backtrack := len(parent) - common
-	if backtrack == 0 {
-		return strings.Join(remaining, "/"), nil
-	}
-	return strings.Repeat("../", backtrack) + strings.Join(remaining, "/"), nil
-}
-
-// commonPrefix counts the shared leading segments of two path lists.
-func commonPrefix(first, second []string) int {
-	shared := 0
-	for shared < len(first) && shared < len(second) && first[shared] == second[shared] {
-		shared++
-	}
-	return shared
 }

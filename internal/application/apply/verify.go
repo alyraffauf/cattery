@@ -5,6 +5,7 @@ import (
 
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/failure"
+	"github.com/alyraffauf/cattery/internal/pathsafe"
 	"github.com/alyraffauf/cattery/internal/reconcile"
 )
 
@@ -92,7 +93,10 @@ func (service *Service) verifySource(ctx context.Context, candidate Candidate) (
 // verifyAlias requires the target to be a symlink carrying the exact
 // derived payload.
 func (service *Service) verifyAlias(candidate Candidate, target reconcile.TargetSnapshot) (bool, error) {
-	payload, err := aliasPayload(candidate.record.Alias)
+	payload, err := pathsafe.RelativeAliasPayload(
+		candidate.record.Alias.CanonicalTargetRelativePath,
+		candidate.record.Alias.AliasRelativePath,
+	)
 	if err != nil {
 		return false, err
 	}

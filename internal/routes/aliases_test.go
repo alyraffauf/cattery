@@ -1,6 +1,10 @@
 package routes
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/alyraffauf/cattery/internal/pathsafe"
+)
 
 func TestAliasDeclaration(t *testing.T) {
 	scenarios := []struct {
@@ -80,7 +84,7 @@ type payloadCase struct {
 
 func assertPayload(t *testing.T, scenario payloadCase) {
 	t.Helper()
-	got, err := AliasPayload(scenario.canonical, scenario.alias)
+	got, err := pathsafe.RelativeAliasPayload(scenario.canonical, scenario.alias)
 	if err != nil {
 		t.Fatalf("payload for %q -> %q: %v", scenario.alias, scenario.canonical, err)
 	}
@@ -91,7 +95,7 @@ func assertPayload(t *testing.T, scenario payloadCase) {
 
 func assertPayloadError(t *testing.T, scenario payloadCase) {
 	t.Helper()
-	payload, err := AliasPayload(scenario.canonical, scenario.alias)
+	payload, err := pathsafe.RelativeAliasPayload(scenario.canonical, scenario.alias)
 	if err == nil {
 		t.Fatalf("payload for %q -> %q = %q, want error", scenario.alias, scenario.canonical, payload)
 	}
