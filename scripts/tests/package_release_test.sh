@@ -11,6 +11,14 @@ fail() {
     exit 1
 }
 
+# run_package_release invokes the packaging script without a caller-set
+# SOURCE_DATE_EPOCH so the tag-derived epoch is always exercised; the Nix
+# development shell exports a placeholder SOURCE_DATE_EPOCH that would
+# otherwise override it.
+run_package_release() {
+    (cd "$TEMP_ROOT" && env -u SOURCE_DATE_EPOCH scripts/package-release.sh "$@")
+}
+
 prepare_repository() {
     git archive HEAD | tar -x -C "$TEMP_ROOT"
     mkdir -p "$TEMP_ROOT/scripts"
@@ -51,22 +59,22 @@ assert_archives() {
 
 assert_rejects_invalid_checkout() {
     printf 'dirty\n' > "$TEMP_ROOT/dirty.txt"
-    if (cd "$TEMP_ROOT" && scripts/package-release.sh >/dev/null 2>&1); then
+    if run_package_release >/dev/null 2>&1; then
         fail "dirty checkout was accepted"
     fi
     rm -f "$TEMP_ROOT/dirty.txt"
     git -C "$TEMP_ROOT" commit --allow-empty -qm second
-    if (cd "$TEMP_ROOT" && scripts/package-release.sh >/dev/null 2>&1); then
+    if run_package_release >/dev/null 2>&1; then
         fail "non-HEAD tag was accepted"
     fi
     git -C "$TEMP_ROOT" tag -d v0.0.1 >/dev/null
     git -C "$TEMP_ROOT" tag v0.0.2
-    if (cd "$TEMP_ROOT" && scripts/package-release.sh >/dev/null 2>&1); then
+    if run_package_release >/dev/null 2>&1; then
         fail "lightweight tag was accepted"
     fi
     git -C "$TEMP_ROOT" tag -d v0.0.2 >/dev/null
     git -C "$TEMP_ROOT" tag -a -m malformed vbad
-    if (cd "$TEMP_ROOT" && scripts/package-release.sh >/dev/null 2>&1); then
+    if run_package_release >/dev/null 2>&1; then
         fail "malformed tag was accepted"
     fi
     git -C "$TEMP_ROOT" tag -d vbad >/dev/null
@@ -79,13 +87,13 @@ main() {
     grep -q -- '-buildvcs=false' scripts/package-release.sh || fail "buildvcs=false is missing"
     grep -q -- '-trimpath' scripts/package-release.sh || fail "trimpath is missing"
     grep -q -- 'CGO_ENABLED=0' scripts/package-release.sh || fail "CGO_ENABLED=0 is missing"
-    (cd "$TEMP_ROOT" && scripts/package-release.sh)
+    run_package_release
     assert_archives "$TEMP_ROOT/dist"
     first=$(sha256sum "$TEMP_ROOT/dist"/*.tar.gz "$TEMP_ROOT/dist/SHA256SUMS")
-    (cd "$TEMP_ROOT" && scripts/package-release.sh)
+    run_package_release
     second=$(sha256sum "$TEMP_ROOT/dist"/*.tar.gz "$TEMP_ROOT/dist/SHA256SUMS")
     [[ $first == "$second" ]] || fail "repeated package builds differ"
-    [[ $(cd "$TEMP_ROOT" && scripts/package-release.sh --print-reproducibility-status) == reproducible ]] || fail "manifest was not reproducible"
+    [[ $(run_package_release --print-reproducibility-status) == reproducible ]] || fail "manifest was not reproducible"
     printf 'package release tests passed\n'
 }
 

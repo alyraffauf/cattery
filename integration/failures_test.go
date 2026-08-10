@@ -3,6 +3,7 @@ package integration
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -14,6 +15,8 @@ func TestExecutableFailures(t *testing.T) {
 		{"pre-rename keeps the old target", testFailuresPreRename},
 		{"later item preserves earlier", testFailuresLaterItem},
 		{"retry recovers by equality", testFailuresRecovery},
+		{"locked state store fails before mutation", testFailuresStateLock},
+		{"asynchronous apply converges", testFailuresAsyncApply},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
@@ -82,5 +85,45 @@ func testFailuresRecovery(t *testing.T) {
 	}
 	if string(race.target(t, ".config/app")) != "v2" {
 		t.Fatal("the retry must converge the target")
+	}
+}
+
+// testFailuresStateLock proves that a concurrently held state-store lock
+// is an operational failure before any target mutation. The open-file
+// description locks are Linux-only.
+func testFailuresStateLock(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("open-file description locks are Linux-only")
+	}
+	race := NewRaceFixture(t)
+	race.initRepository(t)
+	race.source(t, ".config/app", "v1")
+	if result := race.run(t, nil, "apply"); result.Code != 0 {
+		t.Fatalf("first apply: %+v", result)
+	}
+	race.source(t, ".config/app", "v2")
+	race.lockStateWrites(t)
+	result := race.run(t, nil, "apply")
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1 for a locked state store", result.Code)
+	}
+	if string(race.target(t, ".config/app")) != "v1" {
+		t.Fatal("a locked state store must not touch the target")
+	}
+}
+
+// testFailuresAsyncApply proves the fixture's asynchronous launch,
+// content polling, and completion helpers against a real apply.
+func testFailuresAsyncApply(t *testing.T) {
+	race := NewRaceFixture(t)
+	race.initRepository(t)
+	race.source(t, ".config/a", "a")
+	race.source(t, "x/bin/b", "b")
+	handle := race.start(t, "apply")
+	race.awaitTarget(t, ".config/a", "a")
+	race.awaitTarget(t, "bin/b", "b")
+	result := handle.finish(t)
+	if result.Code != 0 {
+		t.Fatalf("async apply: %+v", result)
 	}
 }

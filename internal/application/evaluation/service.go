@@ -2,8 +2,6 @@ package evaluation
 
 import (
 	"context"
-	"errors"
-	"os"
 	"slices"
 	"sort"
 
@@ -67,6 +65,9 @@ func (service *Service) Evaluate(ctx context.Context, request Request) (Result, 
 	identity, err := service.resolve(request.Repository)
 	if err != nil {
 		return Result{}, err
+	}
+	if service.secrets != nil {
+		service.secrets.SetDirectory(identity.Root)
 	}
 	rows, err := service.readRows(identity)
 	if err != nil {
@@ -166,17 +167,9 @@ func (service *Service) compile(identity RepositoryIdentity, selected []string) 
 		Selected:       selected,
 	})
 	if err != nil {
-		return deployment.Plan{}, compileFailure(service.commandLabel+": compile plan", err)
+		return deployment.Plan{}, failure.FromPathError(service.commandLabel+": compile plan", err)
 	}
 	return plan, nil
-}
-
-func compileFailure(message string, cause error) error {
-	var pathError *os.PathError
-	if errors.As(cause, &pathError) {
-		return failure.New(failure.Operational, message, cause)
-	}
-	return failure.New(failure.InvalidInput, message, cause)
 }
 
 func (service *Service) selectedPlan(identity RepositoryIdentity, full deployment.Plan, chosen selection.Selection) (deployment.Plan, error) {

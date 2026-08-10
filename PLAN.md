@@ -1134,10 +1134,17 @@ internal/application/add/execute.go
 internal/application/add/service.go
 internal/application/version/types.go
 internal/application/version/service.go
+internal/application/outcome/types.go
+
+internal/application/evaluation/types.go
+internal/application/evaluation/service.go
+internal/application/evaluation/target.go
+internal/application/evaluation/semantics.go
 
 internal/deployment/scope.go
 internal/deployment/file.go
 internal/deployment/alias.go
+internal/deployment/hook.go
 internal/deployment/plan.go
 internal/deployment/hash.go
 internal/deployment/sort.go
@@ -1152,10 +1159,12 @@ internal/subprocess/process_unix.go
 
 internal/state/types.go
 internal/state/database.go
+internal/state/private_file.go
 internal/state/lock.go
 internal/state/migrations.go
 internal/state/migrations/001_initial.sql
 internal/state/store.go
+internal/state/transaction.go
 internal/state/repositories.go
 internal/state/keyfile.go
 internal/state/keyid.go
@@ -1218,6 +1227,8 @@ internal/testfixture/database/store.go
 ```
 
 This is the exhaustive initial-release Go package/file layout, not permission to collect unrelated behavior. Root documentation, Nix, workflow, and script paths are exhaustively owned in Section 16. A needed file rename, split, or addition requires a plan amendment before coding; a card may not invent it locally. Every non-test Go file receives a focused test named by exactly one roadmap card. `internal/testfixture` is a directory only, never a Go package: its three child packages expose one narrowly named fixture role each, and non-fixture production code may not import them.
+
+**Amendment 1 (delivery review, 2026-08-10):** Register the files completed below the exhaustive list and never registered by their cards: `internal/deployment/hook.go` (Task 7), `internal/state/private_file.go` (Task 15), `internal/state/transaction.go` (Task 23), `internal/application/outcome/types.go` (Task 64), the `internal/application/evaluation` package (Task 61), `internal/application/apply/difference.go` (Task 64), `internal/repository/compiler_determinism_test.go` (Task 35), `internal/secrets/client_buffers_test.go` (Task 37), `internal/filesystem/race_test.go` (Task 45), `internal/reconcile/state_snapshot_invalid_test.go` (Task 49), `internal/reconcile/snapshot_helpers_test.go` (Task 50), `internal/application/inspect/state_rows_test.go` (Task 61), and `scripts/check-credentials.py` (Task 119). Each card's `Owns` list below carries the exact files; the evaluation package sits below the application command packages and above the backend families in the Section 12.5 policy flow, and its consumers are `application/inspect` and `application/apply`. The `just check-credentials` recipe and the CI `documentation` job already referenced `scripts/check-credentials.py`; this amendment registers the file with its Task 119 owner. The Task 4 shell additionally exposes `go_1_25` and `go_1_25fmt` wrapper executables so the Task 115 go-floor job can run the pinned Go 1.25.12 toolchain through the frozen `just` recipes.
 
 **CLI/application seam:**
 
@@ -1454,8 +1465,9 @@ The diagram describes policy flow, not permission for bootstrap to move behavior
 | `selection` | `deployment`, `pathsafe`, `state` |
 | `application/initialize` | `failure`, `pathsafe`, `state` |
 | `application/validate` | `deployment`, `failure`, `repository`, `selection` |
-| `application/inspect` | `deployment`, `diff`, `failure`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
-| `application/apply` | `deployment`, `diff`, `failure`, `filesystem`, `hooks`, `pathsafe`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
+| `application/inspect` | `application/evaluation`, `deployment`, `diff`, `failure`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
+| `application/evaluation` | `deployment`, `failure`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
+| `application/apply` | `application/evaluation`, `deployment`, `diff`, `failure`, `filesystem`, `hooks`, `pathsafe`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
 | `application/add` | `deployment`, `failure`, `filesystem`, `pathsafe`, `reconcile`, `repository`, `secrets`, `selection`, `state` |
 | `application/version` | `buildinfo` |
 | `cli` | `application/...`, `failure` only, subject to the per-file restrictions in Section 12.1 |
@@ -1890,7 +1902,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 6.
 
-**Owns:** `internal/deployment/scope.go`, `internal/deployment/file.go`, `internal/deployment/alias.go`, `internal/deployment/plan.go`, `internal/deployment/scope_test.go`, `internal/deployment/file_test.go`, `internal/deployment/alias_test.go`, `internal/deployment/plan_test.go`.
+**Owns:** `internal/deployment/scope.go`, `internal/deployment/file.go`, `internal/deployment/alias.go`, `internal/deployment/hook.go`, `internal/deployment/plan.go`, `internal/deployment/scope_test.go`, `internal/deployment/file_test.go`, `internal/deployment/alias_test.go`, `internal/deployment/plan_test.go`.
 
 **Deliverable:** Freeze scope, layer, file, alias, hook, and platform-plan values from Section 12.2 with defensive-copy constructors.
 
@@ -2018,7 +2030,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 14.
 
-**Owns:** `internal/state/database.go`, `internal/state/database_test.go`.
+**Owns:** `internal/state/database.go`, `internal/state/private_file.go`, `internal/state/database_test.go`.
 
 **Deliverable:** Resolve the canonical XDG state path, enforce entry modes/types, open modernc SQLite v1.56.0 with one connection, and set required PRAGMAs without locking or migration.
 
@@ -2146,7 +2158,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 20, 22.
 
-**Owns:** `internal/state/files.go`, `internal/state/files_read.go`, `internal/state/files_decode.go`, plus `internal/state/files_test.go`, `internal/state/files_retire_test.go`.
+**Owns:** `internal/state/files.go`, `internal/state/files_read.go`, `internal/state/files_decode.go`, `internal/state/transaction.go`, plus `internal/state/files_test.go`, `internal/state/files_retire_test.go`.
 
 **Deliverable:** Implement active/retired file reads, ordinary/keyed-secret baselines, raw storage hashes, modes, reactivation, state-only scopes, and per-file transactions.
 
@@ -2338,7 +2350,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 9, 29, 31, 33, 34.
 
-**Owns:** `internal/repository/compiler.go`, `internal/repository/compiler_test.go`.
+**Owns:** `internal/repository/compiler.go`, `internal/repository/compiler_test.go`, `internal/repository/compiler_determinism_test.go`.
 
 **Deliverable:** Compose the exact nine Section 12.3 phases for Linux and Darwin using frozen scanner, route, hook, collision, and sorting contracts.
 
@@ -2370,7 +2382,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 2, 13, 36.
 
-**Owns:** `internal/secrets/client.go`, `internal/secrets/client_test.go`.
+**Owns:** `internal/secrets/client.go`, `internal/secrets/client_test.go`, `internal/secrets/client_buffers_test.go`.
 
 **Deliverable:** Own exact SOPS executable lookup, repository cwd, bounded capture, safe launch/exit diagnostics, redaction, cancellation, and buffer clearing.
 
@@ -2498,7 +2510,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 41, 42.
 
-**Owns:** `internal/filesystem/alias.go`, `internal/filesystem/alias_test.go`.
+**Owns:** `internal/filesystem/alias.go`, `internal/filesystem/alias_test.go`, `internal/filesystem/race_test.go`.
 
 **Deliverable:** Create, verify, and replace exact relative symlink entries without following final referents; payloads are slash-relative without absolute or empty segments and may traverse upward with `..`.
 
@@ -2562,7 +2574,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 25, 46.
 
-**Owns:** `internal/reconcile/state_snapshot.go`, `internal/reconcile/state_records.go`, `internal/reconcile/state_snapshot_test.go`.
+**Owns:** `internal/reconcile/state_snapshot.go`, `internal/reconcile/state_records.go`, `internal/reconcile/state_snapshot_test.go`, `internal/reconcile/state_snapshot_invalid_test.go`.
 
 **Deliverable:** Convert active/retired/state-only file and alias rows into immutable evaluation records and reject cross-table corruption.
 
@@ -2578,7 +2590,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 47, 48, 49.
 
-**Owns:** `internal/reconcile/snapshot.go`, `internal/reconcile/snapshot_test.go`.
+**Owns:** `internal/reconcile/snapshot.go`, `internal/reconcile/snapshot_test.go`, `internal/reconcile/snapshot_helpers_test.go`.
 
 **Deliverable:** Join sorted source, target, and state observations for one complete selected platform plan without classification.
 
@@ -2754,7 +2766,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 2, 35, 40, 47, 48, 49, 50, 51, 52, 53, 55, 57.
 
-**Owns:** `internal/application/inspect/types.go`, `internal/application/inspect/service.go`, `internal/application/inspect/types_test.go`, `internal/application/inspect/service_test.go`.
+**Owns:** `internal/application/evaluation/types.go`, `internal/application/evaluation/service.go`, `internal/application/evaluation/target.go`, `internal/application/evaluation/semantics.go`, `internal/application/inspect/types.go`, `internal/application/inspect/service.go`, `internal/application/inspect/types_test.go`, `internal/application/inspect/service_test.go`, `internal/application/inspect/state_rows_test.go`.
 
 **Deliverable:** Freeze inspection DTOs/ports and perform one immutable selection, compile, snapshot, and classification evaluation with on-demand secret semantics.
 
@@ -2802,7 +2814,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 2, 46, 54, 55, 57.
 
-**Owns:** `internal/application/apply/types.go`, `internal/application/apply/types_test.go`.
+**Owns:** `internal/application/outcome/types.go`, `internal/application/apply/types.go`, `internal/application/apply/difference.go`, `internal/application/apply/types_test.go`.
 
 **Deliverable:** Define repository input, request/result/action-plan, application-owned decision class/choice/safe-difference request/response DTOs, and narrow phase ports used by apply; no exported CLI-facing DTO mentions a backend package type.
 
@@ -3682,7 +3694,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Depends on:** 4, 118.
 
-**Owns:** `scripts/check-docs.py`, `scripts/tests/check_docs_test.py`.
+**Owns:** `scripts/check-docs.py`, `scripts/check-credentials.py`, `scripts/tests/check_docs_test.py`.
 
 **Deliverable:** Implement the immutable `just check-docs [PATH ...]` and `just check-credentials [PATH ...]` backends using only Python's standard library: validate local links, documented command/flag vocabulary, forbidden feature claims, placeholder-only credentials, and deterministic UTF-8 output.
 

@@ -36,6 +36,14 @@ func NewClient(executable string, directory string, environment []string) *Clien
 	return &Client{executable: executable, directory: directory, environment: slices.Clone(environment)}
 }
 
+// SetDirectory rebinds the client to the repository root that Section 4.3
+// SOPS invocations must run in. Bootstrap cannot know the repository, so the
+// binding happens once the selected command resolves it; the client is used
+// by one single-use application for exactly one repository.
+func (client *Client) SetDirectory(directory string) {
+	client.directory = directory
+}
+
 // Request describes one SOPS invocation. Operation and SourcePath appear only
 // in sanitized diagnostics; Arguments are the exact sops arguments after the
 // executable name; Stdin is written once to the /dev/stdin argument; and

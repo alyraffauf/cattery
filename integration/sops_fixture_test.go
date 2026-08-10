@@ -19,6 +19,7 @@ type SOPSFixture struct {
 	Client      *secrets.Client
 	RealSOPS    string
 	RealAge     string
+	RealAgeGen  string
 	AgeKey      string
 	ConfigDir   string
 	CleanupDirs []string
@@ -41,6 +42,7 @@ func NewSOPSFixture(t *testing.T) SOPSFixture {
 	}
 	fixture.RealSOPS = probeTool(t, "sops", "--version")
 	fixture.RealAge = probeTool(t, "age", "--version")
+	fixture.RealAgeGen = probeTool(t, "age-keygen", "--version")
 	return fixture
 }
 
@@ -64,18 +66,19 @@ func probeTool(t *testing.T, name string, args ...string) string {
 
 // RealAvailable reports whether the pinned real tools exist.
 func (fixture SOPSFixture) RealAvailable() bool {
-	return fixture.RealSOPS != "" && fixture.RealAge != ""
+	return fixture.RealSOPS != "" && fixture.RealAge != "" && fixture.RealAgeGen != ""
 }
 
-// SetupAge generates one ephemeral age identity in the fixture home.
+// SetupAge generates one ephemeral age identity in the sops-discovered
+// location of the fixture home.
 func (fixture SOPSFixture) SetupAge(t *testing.T, home string) string {
 	t.Helper()
-	ageDir := filepath.Join(home, ".config", "age")
+	ageDir := filepath.Join(home, ".config", "sops", "age")
 	if err := os.MkdirAll(ageDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	key := filepath.Join(ageDir, "keys.txt")
-	command := exec.Command(fixture.RealAge, "-o", key)
+	command := exec.Command(fixture.RealAgeGen, "-o", key)
 	command.Env = append(os.Environ(), "HOME="+home)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("age-keygen: %v\n%s", err, output)
@@ -83,16 +86,38 @@ func (fixture SOPSFixture) SetupAge(t *testing.T, home string) string {
 	return key
 }
 
-// SetupConfig writes one ephemeral sops config bound to the age identity.
-func (fixture SOPSFixture) SetupConfig(t *testing.T, home string) {
+// SetupConfig writes one ephemeral sops config bound to the age identity
+// created by SetupAge under the given home into the given directory, the
+// repository root cattery uses as the SOPS working directory.
+func (fixture SOPSFixture) SetupConfig(t *testing.T, home, directory string) {
 	t.Helper()
-	config := filepath.Join(home, ".config", "sops", "sops.yaml")
-	if err := os.MkdirAll(filepath.Dir(config), 0o700); err != nil {
+	publicKey := fixture.agePublicKey(t, home)
+	config := "creation_rules:\n  - age: " + publicKey + "\n"
+	configPath := filepath.Join(directory, ".sops.yaml")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(config, []byte("creation_rules:\n  - unencrypted_suffix: _unencrypted\n"), 0o600); err != nil {
+	if err := os.WriteFile(configPath, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// agePublicKey extracts the public key line from the fixture identity,
+// located under the given home directory.
+func (fixture SOPSFixture) agePublicKey(t *testing.T, home string) string {
+	t.Helper()
+	keyBytes, err := os.ReadFile(filepath.Join(home, ".config", "sops", "age", "keys.txt"))
+	if err != nil {
+		t.Fatalf("age identity: %v", err)
+	}
+	for _, line := range strings.Split(string(keyBytes), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "# public key: ") {
+			return strings.TrimPrefix(line, "# public key: ")
+		}
+	}
+	t.Fatal("no public key in the age identity")
+	return ""
 }
 
 // Cleanup removes every created identity, config, and binary copy.

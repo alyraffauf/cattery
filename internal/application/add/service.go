@@ -76,6 +76,9 @@ func (service *Service) Add(ctx context.Context, request Request) (Result, error
 	if err != nil {
 		return Result{}, err
 	}
+	if service.write.Secrets != nil {
+		service.write.Secrets.SetDirectory(identity.Root)
+	}
 	plan, err := service.compile(identity)
 	if err != nil {
 		return Result{}, err
