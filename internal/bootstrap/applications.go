@@ -135,13 +135,16 @@ func buildApply(input ApplicationsInput, shared shared) *apply.Service {
 	})
 }
 
-// buildAdd wires the add service.
+// buildAdd wires the add service with its secret execution ports.
 func buildAdd(input ApplicationsInput, shared shared) *add.Service {
-	return add.NewService(add.Dependencies{
+	return add.NewServiceWithWrites(add.Dependencies{
 		RepositorySource: repositorySourceOf(shared.resolver, addIdentity),
 		Compiler:         shared.compiler,
 		Writer:           input.Adapters.Replacer,
 		Baselines:        shared.baselines,
+	}, add.WriteDependencies{
+		Secrets: input.Adapters.SOPS,
+		HashKey: shared.state,
 	})
 }
 
