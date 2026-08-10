@@ -13,7 +13,7 @@ import (
 // Section 11.8 exit status. Numeric statuses exist only here and
 // os.Exit stays in the process entrypoint.
 func Execute(ctx context.Context, application *Application, args []string) int {
-	err := application.Execute(args)
+	err := application.Execute(ctx, args)
 	if err == nil {
 		return 0
 	}

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 )
@@ -71,7 +72,7 @@ func zeroCalls(fakes *rootFakes) bool {
 
 func testRootHelp(t *testing.T) {
 	application, fakes, stdout, _ := rootFixture(t)
-	if err := application.Execute(nil); err != nil {
+	if err := application.Execute(context.Background(), nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if !strings.Contains(stdout.String(), "cattery") {
@@ -84,7 +85,7 @@ func testRootHelp(t *testing.T) {
 
 func testRootInventory(t *testing.T) {
 	application, fakes, stdout, _ := rootFixture(t)
-	if err := application.Execute([]string{"--help"}); err != nil {
+	if err := application.Execute(context.Background(), []string{"--help"}); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	for _, name := range []string{"init", "validate", "version", "status", "diff", "add", "apply"} {
@@ -100,7 +101,7 @@ func testRootInventory(t *testing.T) {
 func testRootFlags(t *testing.T) {
 	application, fakes, _, _ := rootFixture(t)
 	fakes.status.result = statusResult()
-	if err := application.Execute([]string{"status", "apps", "-r", "repo", "tools"}); err != nil {
+	if err := application.Execute(context.Background(), []string{"status", "apps", "-r", "repo", "tools"}); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	request := fakes.status.requests[0]
@@ -114,7 +115,7 @@ func testRootFlags(t *testing.T) {
 
 func testRootUnknownVersion(t *testing.T) {
 	application, fakes, _, _ := rootFixture(t)
-	if err := application.Execute([]string{"--version"}); err == nil {
+	if err := application.Execute(context.Background(), []string{"--version"}); err == nil {
 		t.Fatal("--version must remain an unknown root flag")
 	}
 	if !zeroCalls(fakes) {
@@ -124,7 +125,7 @@ func testRootUnknownVersion(t *testing.T) {
 
 func testRootZeroCalls(t *testing.T) {
 	application, fakes, _, _ := rootFixture(t)
-	if err := application.Execute([]string{"nonsense"}); err == nil {
+	if err := application.Execute(context.Background(), []string{"nonsense"}); err == nil {
 		t.Fatal("an unknown command must fail")
 	}
 	if !zeroCalls(fakes) {
