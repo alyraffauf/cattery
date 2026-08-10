@@ -72,7 +72,7 @@ make_archive() {
 main() {
     mkdir -p "$TEMP_ROOT/tree"
     make_fake_sops
-    for target in "linux amd64" "linux arm64" "darwin amd64" "darwin arm64"; do
+    for target in "linux amd64" "darwin arm64"; do
         read -r os arch <<< "$target"
         make_archive "$os" "$arch"
     done

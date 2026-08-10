@@ -5,20 +5,13 @@
 
   outputs = { self, nixpkgs }:
     let
-      supportedSystems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
+      supportedSystems = [ "x86_64-linux" ];
       forAllSystems = function:
         nixpkgs.lib.genAttrs supportedSystems (system: function system);
       pkgsFor = system: import nixpkgs { inherit system; };
-      shellPackages = pkgs: go: with pkgs; [
-        go
-        go_1_25
+      shellPackages = pkgs: with pkgs; [
+        go_1_26
         just
-        go-tools
         sops
         age
         python3
@@ -30,13 +23,10 @@
     in
     {
       devShells = forAllSystems (system:
-        let pkgs = pkgsFor system;
-        in {
+        let pkgs = pkgsFor system; in
+        {
           default = pkgs.mkShell {
-            packages = shellPackages pkgs pkgs.go_1_26;
-          };
-          go-floor = pkgs.mkShell {
-            packages = shellPackages pkgs pkgs.go_1_25;
+            packages = shellPackages pkgs;
           };
         });
 

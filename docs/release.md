@@ -1,12 +1,12 @@
 # Release Operations
 
-Cattery releases are deterministic static binaries for Linux and macOS on
-amd64 and arm64. The process is tag-driven and does not depend on workflow
-wall-clock time.
+Cattery releases are deterministic static binaries for Linux amd64 and macOS
+arm64. The process is tag-driven and does not depend on workflow wall-clock
+time.
 
 ## Requirements
 
-The pinned Nix shell supplies Go 1.26.5, Go 1.25.12, GNU tar 1.35, gzip 1.14,
+The pinned Nix shell supplies Go 1.26.5, GNU tar 1.35, gzip 1.14,
 GitHub CLI 2.97.0, SOPS 3.13.3, and age 1.3.1.
 
 Run local packaging checks before a release:
@@ -35,12 +35,10 @@ exact tag, full commit SHA, UTC build timestamp, Go version, and target.
 
 ## Package Format
 
-`bash scripts/package-release.sh` builds exactly four archives:
+`bash scripts/package-release.sh` builds exactly two archives:
 
 ```text
 cattery_X.Y.Z_linux_amd64.tar.gz
-cattery_X.Y.Z_linux_arm64.tar.gz
-cattery_X.Y.Z_darwin_amd64.tar.gz
 cattery_X.Y.Z_darwin_arm64.tar.gz
 ```
 
@@ -66,10 +64,11 @@ round trip. The smoke process sets HOME and XDG state paths to temporary trees.
 
 ## CI and Publication
 
-`.github/workflows/ci.yml` runs required native jobs on explicit `ubuntu-22.04`
-and `macos-15` labels, the Go 1.25 floor, four CGO-free cross-builds, race
-tests, the real SOPS test, the dependency audit, and documentation/credential
-checks. Every external GitHub Action is pinned to a full commit.
+`.github/workflows/ci.yml` runs one required Linux check on `ubuntu-22.04`
+using the pinned Go setup action. It runs race tests, vet, documentation and
+credential checks, and cross-builds the macOS arm64 output. Nix is reserved for
+local/release tooling that needs SOPS, age, or pinned archive utilities. Every
+external GitHub Action is pinned to a full commit.
 
 `.github/workflows/release.yml` has two boundaries:
 

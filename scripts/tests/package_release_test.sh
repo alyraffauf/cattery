@@ -36,8 +36,8 @@ EOF
 assert_archives() {
     local dist=$1
     local archive name expected_members actual_members epoch header
-    [[ $(find "$dist" -maxdepth 1 -name 'cattery_*.tar.gz' | wc -l) -eq 4 ]] || fail "expected four archives"
-    [[ $(wc -l < "$dist/SHA256SUMS") -eq 4 ]] || fail "expected four checksums"
+    [[ $(find "$dist" -maxdepth 1 -name 'cattery_*.tar.gz' | wc -l) -eq 2 ]] || fail "expected two archives"
+    [[ $(wc -l < "$dist/SHA256SUMS") -eq 2 ]] || fail "expected two checksums"
     (cd "$dist" && sha256sum -c SHA256SUMS >/dev/null)
     epoch=$(git -C "$TEMP_ROOT" show -s --format=%ct HEAD)
     for archive in "$dist"/cattery_*.tar.gz; do

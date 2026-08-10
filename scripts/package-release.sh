@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT=$(git rev-parse --show-toplevel)
 DIST=${CATTERY_DIST_DIR:-"$ROOT/dist"}
-TARGETS=("linux amd64" "linux arm64" "darwin amd64" "darwin arm64")
+TARGETS=("linux amd64" "darwin arm64")
 
 die() {
     printf 'package-release: %s\n' "$*" >&2

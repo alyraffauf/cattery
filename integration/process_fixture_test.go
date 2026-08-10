@@ -36,6 +36,16 @@ type ProcessFixture struct {
 	Binary string
 }
 
+func writeFile(t *testing.T, path string, content []byte) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // NewProcessFixture builds one binary for the whole test.
 func NewProcessFixture(t *testing.T) ProcessFixture {
 	t.Helper()

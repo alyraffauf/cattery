@@ -14,7 +14,7 @@ die() {
 verify_manifest() {
     [[ -f "$DIST/SHA256SUMS" ]] || die "missing SHA256SUMS"
     (cd "$DIST" && sha256sum -c SHA256SUMS)
-    [[ $(wc -l < "$DIST/SHA256SUMS") -eq 4 ]] || die "manifest must contain four archives"
+    [[ $(wc -l < "$DIST/SHA256SUMS") -eq 2 ]] || die "manifest must contain two archives"
 }
 
 archive_name() {
@@ -103,7 +103,7 @@ run_secret_round_trip() {
 main() {
     verify_manifest
     local os arch archive name binary
-    for target in "linux amd64" "linux arm64" "darwin amd64" "darwin arm64"; do
+    for target in "linux amd64" "darwin arm64"; do
         read -r os arch <<< "$target"
         archive=$(printf '%s\n' "$DIST"/cattery_*_"$os"_"$arch".tar.gz)
         [[ -f $archive ]] || die "missing archive for $os/$arch"
