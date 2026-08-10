@@ -12,7 +12,6 @@ import (
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/hooks"
-	"github.com/alyraffauf/cattery/internal/reconcile"
 	"github.com/alyraffauf/cattery/internal/repository"
 	"github.com/alyraffauf/cattery/internal/secrets"
 	"github.com/alyraffauf/cattery/internal/selection"
@@ -31,9 +30,12 @@ type Dependencies struct {
 	Transitions      TransitionStore
 	Retirements      RetirementStore
 	Client           SecretClient
+	Secrets          *secrets.Client
 	Replacer         AtomicReplacer
 	Hooks            HookExecutor
 	Probe            DependencyProbe
+	ProtectedTrees   []string
+	Platform         string
 }
 
 // RepositorySource resolves the canonical repository pair for a selection
@@ -54,10 +56,13 @@ type Compiler interface {
 	Compile(repository.CompileInput) (deployment.Plan, error)
 }
 
-// StateReader provides the persisted file and alias rows of one repository
-// pair so the service can assemble evaluation snapshots.
+// StateReader is the narrow read-only port over the persisted rows and the
+// per-installation secret hash key of one repository pair. It never
+// registers, retires, or mutates rows.
 type StateReader interface {
-	Snapshot(root, home string) (reconcile.StateRows, error)
+	FileBaselines(root, home string) ([]state.FileBaseline, error)
+	AliasBaselines(root, home string) ([]state.AliasBaseline, error)
+	RecoverHashKey() ([32]byte, error)
 }
 
 // BaselineStore establishes or replaces the equal source/target baseline

@@ -12,7 +12,6 @@ import (
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/hooks"
-	"github.com/alyraffauf/cattery/internal/reconcile"
 	"github.com/alyraffauf/cattery/internal/repository"
 	"github.com/alyraffauf/cattery/internal/secrets"
 	"github.com/alyraffauf/cattery/internal/selection"
@@ -159,11 +158,21 @@ func (f fakeCompiler) Compile(repository.CompileInput) (deployment.Plan, error) 
 }
 
 type fakeStateReader struct {
-	rows reconcile.StateRows
+	files   []state.FileBaseline
+	aliases []state.AliasBaseline
+	key     [32]byte
 }
 
-func (f fakeStateReader) Snapshot(root, home string) (reconcile.StateRows, error) {
-	return f.rows, nil
+func (f fakeStateReader) FileBaselines(root, home string) ([]state.FileBaseline, error) {
+	return f.files, nil
+}
+
+func (f fakeStateReader) AliasBaselines(root, home string) ([]state.AliasBaseline, error) {
+	return f.aliases, nil
+}
+
+func (f fakeStateReader) RecoverHashKey() ([32]byte, error) {
+	return f.key, nil
 }
 
 type fakeBaselineStore struct {
@@ -237,14 +246,22 @@ func testContractDependencySeams(t *testing.T) {
 		Transitions:      fakeTransitionStore{},
 		Retirements:      fakeRetirementStore{},
 		Client:           fakeSecretClient{},
+		Secrets:          &secrets.Client{},
 		Replacer:         fakeReplacer{},
 		Hooks:            fakeHookExecutor{},
 		Probe:            fakeProbe{},
+		ProtectedTrees:   []string{},
+		Platform:         "linux",
 	}
-	if dependencies.RepositorySource == nil || dependencies.Compiler == nil || dependencies.State == nil ||
-		dependencies.Baselines == nil || dependencies.Transitions == nil || dependencies.Retirements == nil ||
-		dependencies.Client == nil || dependencies.Replacer == nil || dependencies.Hooks == nil || dependencies.Probe == nil {
-		t.Fatal("all ten dependency seams must accept fakes")
+	for _, seam := range []any{dependencies.RepositorySource, dependencies.Compiler, dependencies.State,
+		dependencies.Baselines, dependencies.Transitions, dependencies.Retirements, dependencies.Client,
+		dependencies.Replacer, dependencies.Hooks, dependencies.Probe} {
+		if seam == nil {
+			t.Fatal("every dependency seam must accept fakes")
+		}
+	}
+	if dependencies.Platform != "linux" || dependencies.Secrets == nil {
+		t.Fatal("platform, secrets, and protected trees must be preserved")
 	}
 }
 
