@@ -19,6 +19,10 @@ func (service *Service) execute(ctx context.Context, identity RepositoryIdentity
 	items := plan.Items()
 	exec := &executor{service: service, identity: identity, records: make([]ItemResult, 0, len(items))}
 	for _, index := range plan.ExecutionOrder() {
+		if err := ctx.Err(); err != nil {
+			exec.errors = append(exec.errors, err)
+			break
+		}
 		exec.runItem(ctx, items[index])
 	}
 	return exec.finish(), exec.joinedError()
