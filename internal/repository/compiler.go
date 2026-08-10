@@ -173,6 +173,8 @@ func activateScope(input CompileInput, scope deployment.Scope, files []deploymen
 		return nil, err
 	}
 	for index := range activated {
+		// routes.Activate validates paths but intentionally leaves scope ownership
+		// to the repository compiler.
 		activated[index].Scope = scope
 	}
 	return activated, nil

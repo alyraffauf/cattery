@@ -14,7 +14,7 @@ func ResolvePlatform(root string, baseScan ScanResult, platformLayer deployment.
 	if !platformLayer.Valid() {
 		return nil, fmt.Errorf("repository: unknown platform layer %q", platformLayer)
 	}
-	platformResolver := resolver{root: root, base: baseScan, platform: platformLayer}
+	platformResolver := platformResolver{root: root, base: baseScan, platform: platformLayer}
 	platformRootView, err := scanLayerTree(root, deployment.NewScope(""), platformLayer)
 	if err != nil {
 		return nil, err
@@ -34,13 +34,14 @@ func ResolvePlatform(root string, baseScan ScanResult, platformLayer deployment.
 	return records, nil
 }
 
-type resolver struct {
+type platformResolver struct {
 	root     string
 	base     ScanResult
 	platform deployment.Layer
 }
 
-func (resolver *resolver) resolveScope(scope deployment.Scope, platformRootView layerView) ([]deployment.ManagedFile, error) {
+func (resolver *platformResolver) resolveScope(scope deployment.Scope, platformRootView layerView) ([]deployment.ManagedFile, error) {
+	// A platform file at the group name replaces the entire group subtree.
 	if _, replaced := platformRootView.files[scope.Group]; replaced {
 		return nil, nil
 	}
@@ -53,7 +54,7 @@ func (resolver *resolver) resolveScope(scope deployment.Scope, platformRootView 
 
 type layerView struct {
 	files map[string]Candidate
-	dirs  map[string]bool
+	dirs  map[string]struct{}
 }
 
 // covers reports whether any base-layer entry suppresses the platform layer
@@ -62,7 +63,10 @@ type layerView struct {
 // beneath it. That is why covers walks prefixes of the target rather than only
 // exact file/dir matches.
 func (view layerView) covers(target string) bool {
-	if _, ok := view.files[target]; ok || view.dirs[target] {
+	if _, ok := view.files[target]; ok {
+		return true
+	}
+	if _, ok := view.dirs[target]; ok {
 		return true
 	}
 	segments := strings.Split(target, "/")
@@ -76,7 +80,7 @@ func (view layerView) covers(target string) bool {
 }
 
 func resolveScopeFiles(base ScanResult, scope deployment.Scope, platform layerView) ([]deployment.ManagedFile, error) {
-	merged := layerView{files: map[string]Candidate{}, dirs: map[string]bool{}}
+	merged := layerView{files: map[string]Candidate{}, dirs: map[string]struct{}{}}
 	for _, candidate := range base.Files {
 		if candidate.Scope != scope {
 			continue
@@ -156,7 +160,7 @@ func scanLayerTree(root string, scope deployment.Scope, platform deployment.Laye
 	}
 	walker := layerWalker{
 		absolute: filepath.Join(root, relative), relative: relative, scope: scope, layer: platform,
-		view: layerView{files: map[string]Candidate{}, dirs: map[string]bool{}},
+		view: layerView{files: map[string]Candidate{}, dirs: map[string]struct{}{}},
 	}
 	if err := walker.walk("", deployment.FileOrdinary); err != nil {
 		return layerView{}, err
@@ -215,7 +219,9 @@ func (walker *layerWalker) visit(path string, entry os.DirEntry, kind deployment
 		return err
 	}
 	if entry.IsDir() {
-		walker.view.dirs[target] = target != ""
+		if target != "" {
+			walker.view.dirs[target] = struct{}{}
+		}
 		return walker.walk(path, kind)
 	}
 	if !entry.Type().IsRegular() {

@@ -184,11 +184,12 @@ func recordFor(path string, input joinInput) (Evaluation, error) {
 	return record, nil
 }
 
-// byFileState indexes file records by target path.
+// byFileState indexes the caller-owned state slice by target path. The slice
+// is freshly allocated by StateSnapshot.All, so these pointers remain local.
 func byFileState(rows []FileState) map[string]*FileState {
 	index := make(map[string]*FileState, len(rows))
-	for number := range rows {
-		index[rows[number].TargetPath()] = &rows[number]
+	for rowIndex := range rows {
+		index[rows[rowIndex].TargetPath()] = &rows[rowIndex]
 	}
 	return index
 }
@@ -196,8 +197,8 @@ func byFileState(rows []FileState) map[string]*FileState {
 // byAliasState indexes alias records by alias path.
 func byAliasState(rows []AliasState) map[string]*AliasState {
 	index := make(map[string]*AliasState, len(rows))
-	for number := range rows {
-		index[rows[number].AliasPath()] = &rows[number]
+	for rowIndex := range rows {
+		index[rows[rowIndex].AliasPath()] = &rows[rowIndex]
 	}
 	return index
 }
