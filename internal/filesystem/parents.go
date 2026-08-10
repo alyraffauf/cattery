@@ -15,28 +15,13 @@ func targetPath(destination Destination) string {
 }
 
 func walkParentsValid(root, relative string) error {
-	segments, err := pathsafe.Segments(relative)
-	if err != nil {
-		return err
-	}
-	if err := requireDir(root); err != nil {
-		return err
-	}
-	current := root
-	for _, segment := range segments[:len(segments)-1] {
-		current = filepath.Join(current, segment)
-		info, err := os.Lstat(current)
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if err := requireDirEntry(current, info); err != nil {
-			return err
-		}
-	}
-	return nil
+	return pathsafe.ExistingAncestorWalk(root, relative,
+		func(err error) error {
+			return fmt.Errorf("filesystem: stat root %s: %w", root, err)
+		},
+		func(path, reason string) error {
+			return fmt.Errorf("filesystem: %s parent component %s", reason, path)
+		})
 }
 
 // ensureParents creates only missing parent components.  Mkdir is deliberately

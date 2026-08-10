@@ -36,28 +36,13 @@ func CaptureTarget(destination Destination) (TargetSnapshot, error) {
 // parent of relative; each must be a real directory. The walk stops at the
 // first missing component because nothing deeper can exist yet.
 func walkParentComponents(root, relative string) error {
-	segments, err := pathsafe.Segments(relative)
-	if err != nil {
-		return err
-	}
-	if err := requireDirectory(root); err != nil {
-		return err
-	}
-	current := root
-	for _, segment := range segments[:len(segments)-1] {
-		current = filepath.Join(current, segment)
-		info, err := os.Lstat(current)
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if err := requireDirectoryEntry(current, info); err != nil {
-			return err
-		}
-	}
-	return nil
+	return pathsafe.ExistingAncestorWalk(root, relative,
+		func(err error) error {
+			return fmt.Errorf("reconcile: stat root %s: %w", root, err)
+		},
+		func(path, reason string) error {
+			return fmt.Errorf("reconcile: %s component %s", reason, path)
+		})
 }
 
 // parentIdentity freezes the identity of the destination parent directory;
@@ -159,31 +144,6 @@ func validateOpenedFile(snapshot TargetSnapshot, info os.FileInfo) error {
 	}
 	if !snapshot.identity.SameFileInfo(info) || info.Mode().Perm() != snapshot.mode {
 		return fmt.Errorf("reconcile: target identity or mode changed while reading %s", snapshot.identity.Path())
-	}
-	return nil
-}
-
-// requireDirectory rejects a root that is missing or not a real directory.
-func requireDirectory(path string) error {
-	info, err := os.Lstat(path)
-	if err != nil {
-		return fmt.Errorf("reconcile: stat root %s: %w", path, err)
-	}
-	return requireDirectoryEntry(path, info)
-}
-
-// requireDirectoryEntry rejects symlink, special, and non-directory
-// components so a destination can never be redirected through its parents.
-func requireDirectoryEntry(path string, info os.FileInfo) error {
-	mode := info.Mode()
-	if mode&os.ModeSymlink != 0 {
-		return fmt.Errorf("reconcile: symlink component %s", path)
-	}
-	if mode&(os.ModeDevice|os.ModeNamedPipe|os.ModeSocket|os.ModeCharDevice) != 0 {
-		return fmt.Errorf("reconcile: special component %s", path)
-	}
-	if !mode.IsDir() {
-		return fmt.Errorf("reconcile: non-directory component %s", path)
 	}
 	return nil
 }
