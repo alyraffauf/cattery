@@ -21,6 +21,53 @@ func AncestorWalk(root, relativePath string) error {
 	return walkParents(root, parentSegments(segments))
 }
 
+// ExistingAncestorWalk validates every existing component from root through
+// the parent of relativePath. It stops at the first missing component because
+// nothing below it can exist yet. Callers provide error rendering so the
+// validation stays shared without imposing their package's error vocabulary.
+func ExistingAncestorWalk(root, relativePath string, rootError func(error) error, entryError func(path, reason string) error) error {
+	segments, err := Segments(relativePath)
+	if err != nil {
+		return err
+	}
+	info, err := os.Lstat(root)
+	if err != nil {
+		return rootError(err)
+	}
+	if err := directoryEntryError(root, info, entryError); err != nil {
+		return err
+	}
+	current := root
+	for _, segment := range parentSegments(segments) {
+		current = filepath.Join(current, segment)
+		info, err := os.Lstat(current)
+		if os.IsNotExist(err) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if err := directoryEntryError(current, info, entryError); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func directoryEntryError(path string, info os.FileInfo, entryError func(path, reason string) error) error {
+	mode := info.Mode()
+	switch {
+	case mode&os.ModeSymlink != 0:
+		return entryError(path, "symlink")
+	case isSpecial(mode):
+		return entryError(path, "special")
+	case !mode.IsDir():
+		return entryError(path, "non-directory")
+	default:
+		return nil
+	}
+}
+
 // parentSegments drops the final destination segment, leaving the chain of
 // directories that must already be real directories.
 func parentSegments(segments []string) []string {
