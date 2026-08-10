@@ -47,6 +47,14 @@ func (b *baselineFake) UpsertFileBaseline(root, home string, baseline state.File
 	return baseline, nil
 }
 
+func (b *baselineFake) UpsertAliasBaseline(root, home string, baseline state.AliasBaseline) (state.AliasBaseline, error) {
+	b.calls++
+	if b.failCall > 0 && b.calls >= b.failCall {
+		return state.AliasBaseline{}, os.ErrNotExist
+	}
+	return baseline, nil
+}
+
 // replacerFake delegates to the real replacer and can fail or count.
 type replacerFake struct {
 	calls int

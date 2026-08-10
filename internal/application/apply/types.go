@@ -67,9 +67,10 @@ type StateReader interface {
 }
 
 // BaselineStore establishes or replaces the equal source/target baseline
-// after a durable write.
+// after a durable write, for both file and alias rows.
 type BaselineStore interface {
 	UpsertFileBaseline(root, home string, baseline state.FileBaseline) (state.FileBaseline, error)
+	UpsertAliasBaseline(root, home string, baseline state.AliasBaseline) (state.AliasBaseline, error)
 }
 
 // TransitionStore atomically switches the active representation of one path
@@ -263,11 +264,13 @@ const (
 )
 
 // PlanAction is one immutable apply action: the HOME-relative target, the
-// action class, and the repository-relative source for content actions.
+// action class, the repository-relative source for content actions, and
+// whether an occupied alias path was confirmed for replacement.
 type PlanAction struct {
 	TargetPath string
 	Kind       ActionKind
 	SourcePath string
+	Overwrite  bool
 }
 
 // ActionPlan freezes the ordered execution actions of one apply defensively.

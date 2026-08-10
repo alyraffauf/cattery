@@ -2899,7 +2899,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Owns:** `internal/application/apply/execute_files.go`, `internal/application/apply/execute_files_test.go`.
 
-**Deliverable:** Execute regular-file create/update/mode/baseline actions sequentially with per-target rechecks, durable writes, short state commits, and partial results.
+**Deliverable:** Execute regular-file create/update/mode/baseline actions sequentially with per-target rechecks, durable writes, short state commits, and partial results, including the alias-to-file representation switch when the retained row is an active alias.
 
 **Tests:** `TestApplyFileExecution` injects every filesystem/state boundary and covers equality recovery and action-local secret clearing.
 

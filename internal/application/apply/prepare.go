@@ -92,13 +92,13 @@ func prepareActions(candidates Candidates, choices map[string]DecisionChoice, dr
 	records := make([]ItemResult, 0)
 	scope := prepareScope{choices: choices, dryRun: dryRun}
 	for _, candidate := range candidates.All() {
-		execute, kind, source, kept, err := prepareOne(candidate, records, scope)
+		execute, kind, source, overwrite, kept, err := prepareOne(candidate, records, scope)
 		if err != nil {
 			return nil, nil, err
 		}
 		records = kept
 		if execute {
-			actions = append(actions, PlanAction{TargetPath: candidate.record.TargetPath, Kind: kind, SourcePath: source})
+			actions = append(actions, PlanAction{TargetPath: candidate.record.TargetPath, Kind: kind, SourcePath: source, Overwrite: overwrite})
 		}
 	}
 	return actions, records, nil
@@ -112,26 +112,26 @@ type prepareScope struct {
 
 // prepareOne resolves one candidate into a skipped or dry-run record, or
 // reports that its pending action executes.
-func prepareOne(candidate Candidate, records []ItemResult, scope prepareScope) (bool, ActionKind, string, []ItemResult, error) {
+func prepareOne(candidate Candidate, records []ItemResult, scope prepareScope) (bool, ActionKind, string, bool, []ItemResult, error) {
 	action, source, err := underlyingAction(candidate)
 	if err != nil {
-		return false, "", "", records, err
+		return false, "", "", false, records, err
 	}
 	kind, has := mapKind(action)
 	if !has {
-		return false, "", "", records, nil
+		return false, "", "", false, records, nil
 	}
 	choice, decided := scope.choices[candidate.record.TargetPath]
 	if decided && choice == ChoiceSkip {
-		return false, kind, "", append(records, plannedRecord(candidate, kind)), nil
+		return false, kind, "", false, append(records, plannedRecord(candidate, kind)), nil
 	}
 	if needsDecision(candidate) && !decided && !scope.dryRun {
-		return false, kind, "", records, failure.New(failure.InvalidInput, "apply: unresolved decision for "+candidate.record.TargetPath, nil)
+		return false, kind, "", false, records, failure.New(failure.InvalidInput, "apply: unresolved decision for "+candidate.record.TargetPath, nil)
 	}
 	if scope.dryRun {
-		return false, kind, "", append(records, plannedRecord(candidate, kind)), nil
+		return false, kind, "", false, append(records, plannedRecord(candidate, kind)), nil
 	}
-	return true, kind, source, records, nil
+	return true, kind, source, decided && choice == ChoiceOverwrite, records, nil
 }
 
 // needsDecision reports whether one candidate required an explicit choice.

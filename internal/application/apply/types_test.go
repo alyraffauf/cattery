@@ -184,6 +184,10 @@ func (f fakeBaselineStore) UpsertFileBaseline(root, home string, baseline state.
 	return f.baseline, nil
 }
 
+func (f fakeBaselineStore) UpsertAliasBaseline(root, home string, baseline state.AliasBaseline) (state.AliasBaseline, error) {
+	return state.AliasBaseline{}, nil
+}
+
 type fakeTransitionStore struct {
 	alias    state.AliasBaseline
 	baseline state.FileBaseline
