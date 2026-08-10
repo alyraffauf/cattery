@@ -29,9 +29,10 @@ func TestExecutableApply(t *testing.T) {
 
 // execEnv bundles the executable fixture and its directories.
 type execEnv struct {
-	fixture ProcessFixture
-	repo    string
-	home    string
+	fixture  ProcessFixture
+	repo     string
+	home     string
+	extraEnv []string
 }
 
 // newExecEnv builds the binary and the isolated repository and HOME.
