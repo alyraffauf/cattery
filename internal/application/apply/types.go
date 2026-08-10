@@ -11,6 +11,7 @@ import (
 
 	"github.com/alyraffauf/cattery/internal/application/evaluation"
 	"github.com/alyraffauf/cattery/internal/application/outcome"
+	applicationrepository "github.com/alyraffauf/cattery/internal/application/repository"
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/hooks"
@@ -42,13 +43,13 @@ type Dependencies struct {
 // RepositorySource resolves the canonical repository pair for a selection
 // request. The composition root satisfies it with a selection resolver bound
 // to the canonical home and the state default lookup.
-type RepositorySource = evaluation.RepositorySource
+type RepositorySource = applicationrepository.RepositorySource
 
 // RepositoryIdentity is the canonical repository pair one apply compiles from.
-type RepositoryIdentity = evaluation.RepositoryIdentity
+type RepositoryIdentity = applicationrepository.RepositoryIdentity
 
 // Compiler compiles the current-platform plan from a repository.
-type Compiler = evaluation.Compiler
+type Compiler = applicationrepository.Compiler
 
 // StateReader is the narrow read-only port over the persisted rows and the
 // per-installation secret hash key of one repository pair. It never
@@ -119,13 +120,7 @@ type DifferenceResolver interface {
 // CATTERY_REPO value and its presence, and the initial working directory for
 // relative resolution. Presence is significant: an empty value with presence
 // blocks fallback.
-type RepositoryInput struct {
-	RawExplicit string
-	ExplicitSet bool
-	RawEnv      string
-	EnvSet      bool
-	WorkingDir  string
-}
+type RepositoryInput = applicationrepository.RepositoryInput
 
 // Request is the frozen input of one apply: the raw repository fields, the
 // raw group arguments in command-line order, and the policy flags.

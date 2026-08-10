@@ -7,6 +7,7 @@ import (
 	"github.com/alyraffauf/cattery/internal/application/apply"
 	"github.com/alyraffauf/cattery/internal/application/initialize"
 	"github.com/alyraffauf/cattery/internal/application/inspect"
+	applicationrepository "github.com/alyraffauf/cattery/internal/application/repository"
 	"github.com/alyraffauf/cattery/internal/application/validate"
 	"github.com/alyraffauf/cattery/internal/cli"
 	"github.com/alyraffauf/cattery/internal/deployment"
@@ -94,7 +95,7 @@ func buildInitialize(input ApplicationsInput, shared shared) *initialize.Service
 // buildValidate wires the repository validation service.
 func buildValidate(input ApplicationsInput, shared shared) *validate.Service {
 	return validate.NewService(validate.Dependencies{
-		RepositorySource: repositorySourceOf(shared.resolver, validateIdentity),
+		RepositorySource: repositorySourceOf(shared.resolver, repositoryIdentity),
 		Compiler:         shared.compiler,
 		ProtectedTrees:   input.Protected,
 	})
@@ -103,7 +104,7 @@ func buildValidate(input ApplicationsInput, shared shared) *validate.Service {
 // buildInspect wires the inspection service.
 func buildInspect(input ApplicationsInput, shared shared) *inspect.Service {
 	return inspect.NewService(inspect.Dependencies{
-		RepositorySource: repositorySourceOf(shared.resolver, inspectIdentity),
+		RepositorySource: repositorySourceOf(shared.resolver, repositoryIdentity),
 		Compiler:         shared.compiler,
 		State:            shared.state,
 		Secrets:          input.Adapters.SOPS,
@@ -115,7 +116,7 @@ func buildInspect(input ApplicationsInput, shared shared) *inspect.Service {
 // buildApply wires the apply service with the prompt resolver.
 func buildApply(input ApplicationsInput, shared shared) *apply.Service {
 	return apply.NewService(apply.Dependencies{
-		RepositorySource: repositorySourceOf(shared.resolver, applyIdentity),
+		RepositorySource: repositorySourceOf(shared.resolver, repositoryIdentity),
 		Compiler:         shared.compiler,
 		State:            shared.state,
 		Baselines:        shared.baselines,
@@ -135,7 +136,7 @@ func buildApply(input ApplicationsInput, shared shared) *apply.Service {
 // buildAdd wires the add service with its secret execution ports.
 func buildAdd(input ApplicationsInput, shared shared) *add.Service {
 	return add.NewServiceWithWrites(add.Dependencies{
-		RepositorySource: repositorySourceOf(shared.resolver, addIdentity),
+		RepositorySource: repositorySourceOf(shared.resolver, repositoryIdentity),
 		Compiler:         shared.compiler,
 		Writer:           input.Adapters.Replacer,
 		Baselines:        shared.baselines,
@@ -145,22 +146,7 @@ func buildAdd(input ApplicationsInput, shared shared) *add.Service {
 	})
 }
 
-// applyIdentity projects one state repository into the apply identity.
-func applyIdentity(repository state.Repository) apply.RepositoryIdentity {
-	return apply.RepositoryIdentity{Root: repository.RootPath, Home: repository.HomePath}
-}
-
-// validateIdentity projects one state repository into the validate identity.
-func validateIdentity(repository state.Repository) validate.RepositoryIdentity {
-	return validate.RepositoryIdentity{Root: repository.RootPath, Home: repository.HomePath}
-}
-
-// inspectIdentity projects one state repository into the inspect identity.
-func inspectIdentity(repository state.Repository) inspect.RepositoryIdentity {
-	return inspect.RepositoryIdentity{Root: repository.RootPath, Home: repository.HomePath}
-}
-
-// addIdentity projects one state repository into the add identity.
-func addIdentity(repository state.Repository) add.RepositoryIdentity {
-	return add.RepositoryIdentity{Root: repository.RootPath, Home: repository.HomePath}
+// repositoryIdentity projects the backend repository into the application contract.
+func repositoryIdentity(repository state.Repository) applicationrepository.RepositoryIdentity {
+	return applicationrepository.RepositoryIdentity{Root: repository.RootPath, Home: repository.HomePath}
 }

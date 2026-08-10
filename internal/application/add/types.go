@@ -12,10 +12,9 @@ import (
 	"io/fs"
 
 	"github.com/alyraffauf/cattery/internal/application/outcome"
+	applicationrepository "github.com/alyraffauf/cattery/internal/application/repository"
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/filesystem"
-	"github.com/alyraffauf/cattery/internal/repository"
-	"github.com/alyraffauf/cattery/internal/selection"
 	"github.com/alyraffauf/cattery/internal/state"
 )
 
@@ -32,21 +31,14 @@ type Dependencies struct {
 // RepositorySource resolves the canonical repository pair for a selection
 // request. The composition root satisfies it with a selection resolver bound
 // to the canonical home and the state default lookup.
-type RepositorySource interface {
-	Resolve(selection.RepositoryRequest) (RepositoryIdentity, error)
-}
+type RepositorySource = applicationrepository.RepositorySource
 
 // RepositoryIdentity is the canonical repository pair one add compiles from.
-type RepositoryIdentity struct {
-	Root string
-	Home string
-}
+type RepositoryIdentity = applicationrepository.RepositoryIdentity
 
 // Compiler compiles the current-platform plan from a repository so add can
 // prove a derived source recompiles to its target.
-type Compiler interface {
-	Compile(repository.CompileInput) (deployment.Plan, error)
-}
+type Compiler = applicationrepository.Compiler
 
 // AtomicWriter durably replaces one source entry from exact validated bytes.
 // The filesystem adapter satisfies it structurally; request and result values
@@ -65,13 +57,7 @@ type BaselineStore interface {
 // CATTERY_REPO value and its presence, and the initial working directory for
 // relative resolution. Presence is significant: an empty value with presence
 // blocks fallback.
-type RepositoryInput struct {
-	RawExplicit string
-	ExplicitSet bool
-	RawEnv      string
-	EnvSet      bool
-	WorkingDir  string
-}
+type RepositoryInput = applicationrepository.RepositoryInput
 
 // Request is the frozen input of one add: the raw repository fields, the raw
 // target arguments in command-line order, the explicit option values with
