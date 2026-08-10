@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"github.com/alyraffauf/cattery/internal/failure"
 	"io"
 	"os"
 	"strings"
@@ -159,8 +160,8 @@ func testApplySkip(t *testing.T) {
 	fixture.WriteTarget(t, ".config/app", []byte("drifted"))
 	service = scriptedApply(t, fixture, []string{"skip"})
 	result, err := service.Apply(context.Background(), applyRequest(fixture))
-	if err != nil {
-		t.Fatalf("apply: %v", err)
+	if err == nil || !kindIs(err, failure.Difference) {
+		t.Fatalf("apply: %v, want a difference failure after a skip", err)
 	}
 	if result.Summary.Planned != 1 {
 		t.Fatalf("summary = %+v, want one planned skip", result.Summary)

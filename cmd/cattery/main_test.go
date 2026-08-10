@@ -53,15 +53,15 @@ func testBoundaryPassthrough(t *testing.T) {
 
 func testBoundaryStateHome(t *testing.T) {
 	got := stateHomeOf([]string{"HOME=/home/user", "XDG_STATE_HOME=/state"})
-	if got != "/state/cattery" {
-		t.Fatalf("state home = %q, want /state/cattery", got)
+	if got != "/state" {
+		t.Fatalf("state base = %q, want /state", got)
 	}
 	got = stateHomeOf([]string{"HOME=/home/user"})
-	if got != "/home/user/.local/state/cattery" {
-		t.Fatalf("state home = %q, want the home fallback", got)
+	if got != "/home/user/.local/state" {
+		t.Fatalf("state base = %q, want the home fallback", got)
 	}
 	if got := stateHomeOf(nil); got != "" {
-		t.Fatalf("state home = %q, want empty without HOME", got)
+		t.Fatalf("state base = %q, want empty without HOME", got)
 	}
 }
 

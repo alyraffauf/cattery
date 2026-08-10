@@ -87,8 +87,8 @@ func testAddDryRun(t *testing.T) {
 	request := addRequest(fixture, "a.conf")
 	request.DryRun = true
 	result, err := fixture.Applications.Add.Add(context.Background(), request)
-	if err != nil {
-		t.Fatalf("add: %v", err)
+	if err == nil || !kindIs(err, failure.Difference) {
+		t.Fatalf("add: %v, want a difference failure for a pending dry run", err)
 	}
 	if result.Summary.Planned != 1 {
 		t.Fatalf("summary = %+v, want one planned", result.Summary)
