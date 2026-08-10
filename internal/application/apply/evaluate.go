@@ -9,6 +9,7 @@ import (
 	"github.com/alyraffauf/cattery/internal/secrets"
 )
 
+// Service evaluates an apply request before decisions, hooks, or mutations.
 type Service struct {
 	evaluator   *evaluation.Service
 	state       StateReader
@@ -23,6 +24,7 @@ type Service struct {
 	resolver    DecisionResolver
 }
 
+// NewService constructs the apply service over its injected ports.
 func NewService(dependencies Dependencies) *Service {
 	return &Service{
 		evaluator: evaluation.NewService(evaluation.Dependencies{
@@ -48,6 +50,7 @@ func NewService(dependencies Dependencies) *Service {
 	}
 }
 
+// Evaluate returns the immutable candidate set for one apply request.
 func (service *Service) Evaluate(ctx context.Context, request Request) (Candidates, error) {
 	return service.evaluate(ctx, request)
 }
@@ -87,6 +90,8 @@ func (service *Service) evaluate(ctx context.Context, request Request) (Candidat
 }
 
 // Candidate is the apply-owned projection of one shared evaluation record.
+// Candidate joins one target evaluation with its classifications and semantic
+// fingerprints for the apply phases.
 type Candidate struct {
 	record     reconcile.Evaluation
 	file       reconcile.FileClassification
@@ -105,16 +110,21 @@ type Candidates struct {
 	records  []Candidate
 }
 
+// Root returns the canonical repository root.
 func (c Candidates) Root() string { return c.root }
 
+// Home returns the canonical home root.
 func (c Candidates) Home() string { return c.home }
 
+// Platform returns the selected deployment platform.
 func (c Candidates) Platform() string { return c.platform }
 
+// Hooks returns a defensive copy of the compiled hooks.
 func (c Candidates) Hooks() []deployment.Hook {
 	return append([]deployment.Hook(nil), c.hooks...)
 }
 
+// All returns a defensive copy of candidates in target-path order.
 func (c Candidates) All() []Candidate {
 	return append([]Candidate(nil), c.records...)
 }

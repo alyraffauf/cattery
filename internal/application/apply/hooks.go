@@ -14,12 +14,6 @@ const (
 	hookResultPartial = "partial"
 )
 
-// RunHookPipeline runs the hook-gated apply filesystem phase: before hooks
-// with CATTERY_RESULT=pending, the all-source guard and the file and alias
-// executors, then after hooks only when the phase completed, with
-// CATTERY_RESULT=success or partial (PLAN.md Sections 10.4-10.5). A
-// mid-filesystem operational failure skips every after hook, and after
-// failures never roll back completed writes.
 // PipelineInput bundles the request, plan, and candidates of one
 // hook-gated apply phase.
 type PipelineInput struct {
@@ -28,6 +22,12 @@ type PipelineInput struct {
 	Candidates Candidates
 }
 
+// RunHookPipeline runs the hook-gated apply filesystem phase: before hooks
+// with CATTERY_RESULT=pending, the all-source guard and the file and alias
+// executors, then after hooks only when the phase completed, with
+// CATTERY_RESULT=success or partial (PLAN.md Sections 10.4-10.5). A
+// mid-filesystem operational failure skips every after hook, and after
+// failures never roll back completed writes.
 func (service *Service) RunHookPipeline(ctx context.Context, input PipelineInput) ([]ItemResult, error) {
 	records := input.Plan.Records()
 	if input.Plan.WithHooks() {

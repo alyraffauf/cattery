@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -20,6 +19,16 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() (exitStatus int) {
+	defer func() {
+		if recover() != nil {
+			_, _ = os.Stderr.WriteString("cattery: internal panic\n")
+			exitStatus = cli.ExitFailure
+		}
+	}()
 	ctx, cancel := context.WithCancelCause(context.Background())
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
@@ -34,7 +43,7 @@ func main() {
 		Now:         time.Now,
 		Protected:   []string{stateHome},
 	})
-	os.Exit(exitCode(ctx, application, os.Args[1:]))
+	return exitCode(ctx, application, os.Args[1:])
 }
 
 // exitCode runs the application and maps an interrupted context to the
@@ -51,9 +60,9 @@ func exitCode(ctx context.Context, application *cli.Application, args []string) 
 func signalCode(cause error) int {
 	var interruption *failure.Interruption
 	if errors.As(cause, &interruption) && interruption.Signal == failure.Terminate {
-		return 143
+		return cli.ExitTerminate
 	}
-	return 130
+	return cli.ExitInterrupt
 }
 
 // forwardSignals cancels the process context with the typed interruption.
@@ -73,26 +82,15 @@ func forwardSignals(ctx context.Context, cancel context.CancelCauseFunc, signals
 // stateHomeOf derives the XDG state base directory; the state store
 // appends its own cattery directory beneath it.
 func stateHomeOf(environment []string) string {
-	base := envValue(environment, "XDG_STATE_HOME")
+	base := cli.EnvironmentValue(environment, "XDG_STATE_HOME")
 	if base == "" {
-		home := envValue(environment, "HOME")
+		home := cli.EnvironmentValue(environment, "HOME")
 		if home == "" {
 			return ""
 		}
 		base = filepath.Join(home, ".local", "state")
 	}
 	return base
-}
-
-// envValue returns the value of one environment entry.
-func envValue(environment []string, name string) string {
-	prefix := name + "="
-	for _, entry := range environment {
-		if strings.HasPrefix(entry, prefix) {
-			return strings.TrimPrefix(entry, prefix)
-		}
-	}
-	return ""
 }
 
 // workingDir returns the initial working directory.

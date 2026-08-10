@@ -30,24 +30,24 @@ func TestMainBoundary(t *testing.T) {
 }
 
 func testBoundaryInterrupt(t *testing.T) {
-	if code := signalCode(failure.NewInterruption(failure.Interrupt)); code != 130 {
-		t.Fatalf("code = %d, want 130", code)
+	if code := signalCode(failure.NewInterruption(failure.Interrupt)); code != cli.ExitInterrupt {
+		t.Fatalf("code = %d, want %d", code, cli.ExitInterrupt)
 	}
-	if code := signalCode(errors.New("other")); code != 130 {
-		t.Fatalf("unknown cause code = %d, want 130", code)
+	if code := signalCode(errors.New("other")); code != cli.ExitInterrupt {
+		t.Fatalf("unknown cause code = %d, want %d", code, cli.ExitInterrupt)
 	}
 }
 
 func testBoundaryTerminate(t *testing.T) {
-	if code := signalCode(failure.NewInterruption(failure.Terminate)); code != 143 {
-		t.Fatalf("code = %d, want 143", code)
+	if code := signalCode(failure.NewInterruption(failure.Terminate)); code != cli.ExitTerminate {
+		t.Fatalf("code = %d, want %d", code, cli.ExitTerminate)
 	}
 }
 
 func testBoundaryPassthrough(t *testing.T) {
 	application := stubApplication(t)
-	if code := exitCode(context.Background(), application, nil); code != 0 {
-		t.Fatalf("code = %d, want 0", code)
+	if code := exitCode(context.Background(), application, nil); code != cli.ExitSuccess {
+		t.Fatalf("code = %d, want %d", code, cli.ExitSuccess)
 	}
 }
 
@@ -69,8 +69,8 @@ func testBoundaryForwarding(t *testing.T) {
 	application := stubApplication(t)
 	ctx, cancel := context.WithCancelCause(context.Background())
 	cancel(failure.NewInterruption(failure.Interrupt))
-	if code := exitCode(ctx, application, nil); code != 130 {
-		t.Fatalf("code = %d, want 130 for an interrupted context", code)
+	if code := exitCode(ctx, application, nil); code != cli.ExitInterrupt {
+		t.Fatalf("code = %d, want %d for an interrupted context", code, cli.ExitInterrupt)
 	}
 }
 

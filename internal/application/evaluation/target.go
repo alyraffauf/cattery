@@ -26,6 +26,7 @@ func ReadTargetContent(home string, record reconcile.Evaluation, commandLabel st
 	if err != nil {
 		return nil, failure.New(failure.Operational, commandLabel+": read target "+record.TargetPath, err)
 	}
+	// Revalidate after reading: the target may have been replaced during ReadAll.
 	if err := validateOpenedTarget(targetReadInput{file: file, record: record, path: path, commandLabel: commandLabel}); err != nil {
 		return nil, err
 	}
