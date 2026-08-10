@@ -311,7 +311,7 @@ func containsBackendField(value any) bool {
 	reflected := reflect.TypeOf(value)
 	for index := 0; index < reflected.NumField(); index++ {
 		field := reflected.Field(index)
-		if field.Type.PkgPath() != "" && !strings.HasSuffix(field.Type.PkgPath(), "/internal/application/apply") {
+		if field.Type.PkgPath() != "" && !strings.Contains(field.Type.PkgPath(), "/internal/application/") {
 			return true
 		}
 	}

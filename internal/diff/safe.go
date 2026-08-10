@@ -34,6 +34,34 @@ const (
 	TagSecret
 )
 
+// String returns the stable lowercase name of one safe difference category.
+func (tag Tag) String() string {
+	switch tag {
+	case TagText:
+		return "text"
+	case TagBinary:
+		return "binary"
+	case TagSecret:
+		return "secret"
+	default:
+		return "none"
+	}
+}
+
+// ParseTag maps a stable lowercase name to its safe difference category.
+func ParseTag(name string) Tag {
+	switch name {
+	case "text":
+		return TagText
+	case "binary":
+		return TagBinary
+	case "secret":
+		return TagSecret
+	default:
+		return TagNone
+	}
+}
+
 // Valid reports whether tag is one of the supported constants.
 func (t Tag) Valid() bool { return t >= TagNone && t <= TagSecret }
 

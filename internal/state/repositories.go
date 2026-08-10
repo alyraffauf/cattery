@@ -207,7 +207,7 @@ type sqlStep struct {
 // execBatch executes named statements in order, stopping at the first failure.
 func execBatch(transaction *sql.Tx, steps []sqlStep) error {
 	for _, step := range steps {
-		if err := execNamed(transaction, step.operation, step.statement, step.arguments...); err != nil {
+		if err := execNamed(transaction, step); err != nil {
 			return err
 		}
 	}
@@ -216,10 +216,10 @@ func execBatch(transaction *sql.Tx, steps []sqlStep) error {
 
 // execNamed executes one named statement in the transaction, rolling back and
 // wrapping the error when the statement fails.
-func execNamed(transaction *sql.Tx, operation, statement string, arguments ...any) error {
-	if _, err := transaction.Exec(statement, arguments...); err != nil {
+func execNamed(transaction *sql.Tx, step sqlStep) error {
+	if _, err := transaction.Exec(step.statement, step.arguments...); err != nil {
 		_ = transaction.Rollback()
-		return fmt.Errorf("state: %s: %w", operation, err)
+		return fmt.Errorf("state: %s: %w", step.operation, err)
 	}
 	return nil
 }
@@ -227,7 +227,7 @@ func execNamed(transaction *sql.Tx, operation, statement string, arguments ...an
 // execIn executes one statement in the transaction, rolling back and wrapping
 // the error when the statement fails.
 func execIn(transaction *sql.Tx, statement string, arguments ...any) error {
-	return execNamed(transaction, statement, statement, arguments...)
+	return execNamed(transaction, sqlStep{operation: statement, statement: statement, arguments: arguments})
 }
 
 // canonicalRepositoryPair resolves both paths to canonical absolute form so
