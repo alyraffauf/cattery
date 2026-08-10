@@ -68,10 +68,14 @@ func plannedRecords(items []ItemPlan) []ItemResult {
 
 // plannedRecord renders one item as a StatusPlanned record.
 func plannedRecord(item ItemPlan) ItemResult {
+	return itemRecord(item, StatusPlanned)
+}
+
+func itemRecord(item ItemPlan, status ItemStatus) ItemResult {
 	return ItemResult{
 		Target: item.TargetRelativePath(),
 		Source: item.SourceRepositoryPath(),
-		Status: StatusPlanned,
+		Status: status,
 		Secret: item.Kind() == deployment.FileSecret,
 	}
 }

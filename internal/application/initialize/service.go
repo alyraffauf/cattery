@@ -213,7 +213,7 @@ func requireDirectory(path string) error {
 		return err
 	}
 	if !info.IsDir() {
-		return errors.New("not a directory")
+		return fmt.Errorf("initialize: %s is not a directory", path)
 	}
 	return nil
 }
