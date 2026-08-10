@@ -15,6 +15,7 @@ type Dependencies struct {
 	Status     StatusService
 	Diff       DiffService
 	Add        AddService
+	Forget     ForgetService
 	Apply      ApplyService
 }
 
@@ -55,6 +56,7 @@ func NewApplication(dependencies Dependencies, runtime Runtime) *Application {
 		newStatusCommand(dependencies.Status, runtime, options),
 		newDiffCommand(dependencies.Diff, runtime, options),
 		newAddCommand(dependencies.Add, runtime, options),
+		newForgetCommand(dependencies.Forget, runtime, options),
 		newApplyCommand(dependencies.Apply, runtime, options),
 	)
 	return &Application{root: root}

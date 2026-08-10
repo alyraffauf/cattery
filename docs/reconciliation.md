@@ -102,6 +102,13 @@ is removed, the target is left in place and only its tracking row is retired.
 
 ## Source removal
 
+`cattery forget DIRECTORY --yes` removes every base and platform-specific
+repository source that manages the named subtree, then retires its active file
+rows. It never deletes or rewrites anything under `$HOME`. Use `--dry-run` to
+inspect the exact sources first. Forget refuses a subtree involved in an alias,
+so aliases must be removed deliberately before the canonical files are
+forgotten.
+
 When a selected state row's target has no producer anywhere in the current plan,
 Cattery retires only the tracking row:
 

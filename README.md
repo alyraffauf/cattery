@@ -68,11 +68,14 @@ See [repository layout](docs/repository-layout.md) for the full grammar.
 | `cattery diff [GROUP ...]` | show safe content differences |
 | `cattery apply [GROUP ...]` | reconcile targets with the repository |
 | `cattery add [OPTIONS] TARGET ...` | adopt target files or directories into the repository |
+| `cattery forget DIRECTORY` | stop managing a directory while leaving its target files in place |
 | `cattery version` | print version, commit, and build metadata |
 
 Global options are `--repo PATH` and `--verbose`. Apply accepts `--dry-run`,
 `--non-interactive`, and `--no-hooks`. Add accepts `--group NAME`,
 `--platform linux|darwin`, `--secret`, and `--dry-run`.
+Forget accepts `--dry-run` to preview every source it would remove and requires
+`--yes` before it changes the repository.
 
 When `cattery apply` needs a decision it prompts for overwrite, skip, abort, or
 diff, and collects every decision before changing anything. Piped or

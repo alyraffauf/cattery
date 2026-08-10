@@ -5,6 +5,7 @@ import (
 
 	"github.com/alyraffauf/cattery/internal/application/add"
 	"github.com/alyraffauf/cattery/internal/application/apply"
+	"github.com/alyraffauf/cattery/internal/application/forget"
 	"github.com/alyraffauf/cattery/internal/application/initialize"
 	"github.com/alyraffauf/cattery/internal/application/inspect"
 	applicationrepository "github.com/alyraffauf/cattery/internal/application/repository"
@@ -22,6 +23,7 @@ type Applications struct {
 	Inspect    *inspect.Service
 	Apply      *apply.Service
 	Add        *add.Service
+	Forget     *forget.Service
 }
 
 // ApplicationsInput carries the adapters, home, platform, protected
@@ -81,7 +83,20 @@ func BuildApplications(input ApplicationsInput) Applications {
 		Inspect:    buildInspect(input, shared),
 		Apply:      buildApply(input, shared),
 		Add:        buildAdd(input, shared),
+		Forget:     buildForget(input, shared),
 	}
+}
+
+// buildForget wires source removal and baseline retirement without granting
+// the service any access to HOME targets.
+func buildForget(input ApplicationsInput, shared shared) *forget.Service {
+	return forget.NewService(forget.Dependencies{
+		RepositorySource: repositorySourceOf(shared.resolver, repositoryIdentity),
+		Compiler:         shared.compiler,
+		State:            shared.state,
+		Retirements:      shared.retirements,
+		Remover:          input.Adapters.Replacer,
+	})
 }
 
 // buildInitialize wires the repository initialization service.
