@@ -1,133 +1,76 @@
-# Secret operations
+# Secrets
 
-Cattery stores file-level secrets as SOPS-encrypted binary payloads and
-decrypts them only in memory, only when a command needs secret semantics. This
-document describes the storage and state model. Cattery does not embed or reimplement
-SOPS cryptography; it shells out to the installed `sops` executable.
+Cattery uses [SOPS](https://getsops.io/) for file-level secrets. You keep
+control of recipients and identities; Cattery keeps encrypted files in the
+repository and writes plaintext only to its intended target under `$HOME`.
 
-## Setup
+## Before you begin
 
-Install the verified external tools and put them on `PATH`:
-
-- `sops` v3.13.3 or newer
-- `age` v1.3.1 or newer
-
-Cattery runs SOPS with the repository root as its working directory. SOPS owns
-recipient selection, key discovery, and `.sops.yaml` creation rules. Cattery
-recommends age, but does not reject another SOPS-supported backend.
-
-Create an age identity pair outside Cattery (age identities are an external
-bootstrap prerequisite). A typical repository `.sops.yaml` references the age
-**public** recipient:
+Install `sops` and your chosen key backend, such as `age`, and make them
+available on `PATH`. Define recipients in `.sops.yaml` at the repository root.
 
 ```yaml
 creation_rules:
   - path_regex: .*
-    age: age1<your-public-recipient>
+    age: age1replace-with-your-public-recipient
 ```
 
-Never commit an age private identity as the sole key required to decrypt a
-Cattery-managed secret. Cattery cannot bootstrap the only key it needs.
+Keep private identities outside the repository. Make sure more than one trusted
+recovery path can decrypt important secrets; Cattery cannot recover a lost
+identity for you.
 
-## Storage layout
+If you install Cattery through its Nix package, the packaged command includes
+`sops` and `age` on its runtime path. Other installations use the tools from
+your shell’s `PATH`.
 
-Secrets live under `_secrets/` while preserving the target path literally. A
-platform-specific secret composes by putting `_secrets/` inside the platform
-layer:
+## Add a secret
 
-```
-repo/app/_secrets/.config/app/credentials          base secret
-repo/app/_darwin/_secrets/.config/app/credentials  macOS secret override
-```
+Adopt an existing file as an encrypted source:
 
-```
-repo/app/_secrets/.config/app/credentials -> $HOME/.config/app/credentials
+```sh
+cattery add --secret ~/.config/example/token
 ```
 
-Rules:
+The source is stored below `_secrets/` while keeping its target path:
 
-- `_secrets/` at a scope root holds base-layer secret sources.
-- `_darwin/_secrets/` and `_linux/_secrets/` hold platform-layer secret sources.
-- A normal source and a secret source at the same path in the same layer is an
-  error.
-- A platform source may replace a base source regardless of which is normal or
-  secret; the selected source decides secrecy and mode.
+```text
+repo/app/_secrets/.config/example/token -> ~/.config/example/token
+```
 
-## Binary storage format
+For a platform-specific secret, put `_secrets/` inside `_darwin/` or `_linux/`:
 
-Cattery treats every secret as an opaque binary file, even when the target is
-YAML, JSON, ENV, or INI.
+```text
+repo/app/_darwin/_secrets/.config/example/token
+```
 
-- Plaintext is encrypted with `sops encrypt --input-type binary --output-type json`.
-- Encrypted JSON is stored at the literal source path. There is no `.sops`,
-  `.enc`, or other filename transformation.
-- Decryption uses `sops decrypt --input-type json --output-type binary`.
-- Plaintext is sent to SOPS on stdin; Cattery never asks SOPS to reopen a mutable
-  repository path.
+Use `--group` or `--platform` with `add` when you need to choose where the
+source belongs. Run `cattery status` and `cattery apply` as usual afterward.
 
-Before adopting encrypted output, Cattery decrypts the candidate bytes back and
-requires a byte-exact match with the original plaintext. Syntax-valid but
-undecryptable output never replaces a repository source.
+## What Cattery protects
 
-## add and apply
+- Encrypted source files stay encrypted in the repository.
+- Secret plaintext is not printed by `status`, `diff`, or interactive prompts.
+- Plaintext is not stored in Cattery’s state database, logs, command arguments,
+  errors, or a general temporary directory.
+- Secret targets are always mode `0600`, or `0700` when executable.
 
-- `cattery add --secret FILE` adopts target bytes as an encrypted source under
-  the selected layer's `_secrets/`. A `--platform` may target the active
-  platform's overlay; absence writes the base layer.
-- `cattery apply` decrypts a secret only when raw encrypted bytes differ from
-  the stored source hash, the row is unbaselined, or target bytes must be
-  written. An unchanged encrypted source is classified without decrypting it.
+Cattery treats a secret as bytes, not as YAML, JSON, or an environment file.
+Re-encrypting a file without changing its plaintext does not create a content
+conflict.
 
-A SOPS re-encryption that leaves plaintext unchanged is not a semantic change;
-Cattery refreshes only the raw storage hash.
+Plaintext necessarily exists briefly in memory while Cattery encrypts,
+decrypts, compares, or writes it. Cattery minimizes that exposure, but no Go
+program can promise that every memory copy is erased.
 
-## Modes
+## Backup and recovery
 
-Secret modes are exact and enforced even when content is otherwise a no-op:
+Back up both your SOPS identities and Cattery’s local state directory. The
+state directory includes a local key used to recognize unchanged secret
+plaintext across applies. If that key no longer matches existing secret state,
+Cattery stops safely rather than guessing.
 
-- a non-executable secret target is always `0600`;
-- an executable secret target is always `0700`;
-- the executable bit of the encrypted source records whether the decrypted
-  target is executable.
+If `sops` is missing when an operation needs it, Cattery exits with code `4`
+without changing the repository, target, or state.
 
-## Plaintext boundaries
-
-Plaintext may exist briefly in Cattery memory during hashing, classification,
-encryption, and target writing. It is never:
-
-- stored in the SQLite database;
-- written to logs, command-line arguments, or error messages;
-- printed by `status`, `diff`, or interactive prompts;
-- written to a general temporary directory.
-
-Cattery uses bounded, overflow-checked writers when capturing SOPS output and
-clears its owned plaintext buffers best effort after use. Go does not guarantee
-elimination of every memory copy, so this is exposure reduction, not guaranteed
-erasure.
-
-## The hash key
-
-A 32-byte keyed-hash secret lives beside the state database so secret baseline
-fingerprints are keyed (BLAKE3 keyed mode) rather than stored as plain hashes.
-This reduces offline guessing if the database alone is disclosed.
-
-- The key is created from `crypto/rand` the first time a secret baseline is
-  recorded.
-- Only an identifier (`BLAKE3` of the key) is stored, so replacement can be
-  detected without storing the key itself.
-- If secret baseline rows exist but the key is missing or does not match its
-  identifier, Cattery fails safely and requires you to restore the matching key
-  or explicitly reset state. It never silently generates a replacement that
-  would make old baselines incomparable.
-
-Back up the hash key with your age identity. Both are operational prerequisites
-that Cattery cannot reconstruct.
-
-## Missing SOPS
-
-A missing `sops` executable is checked only when a selected operation needs
-encryption or decryption. The error names the missing dependency, returns exit
-status 4, and leaves repository, target, and managed state rows untouched.
-
-See [repository-layout.md](repository-layout.md) for the `_secrets/` grammar and
-[reconciliation.md](reconciliation.md) for the broader decision model.
+See [repository layout](repository-layout.md#secrets) for placement and
+[reconciliation](reconciliation.md) for apply behavior.

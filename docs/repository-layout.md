@@ -1,90 +1,70 @@
 # Repository layout
 
-A Cattery repository is a plain directory tree of literal files. There is no
-manifest, no marker file, and no templating. Cattery copies ordinary files
-beneath `$HOME` and records what it installed in a local SQLite state database.
+A Cattery repository is an ordinary directory tree. Its files are the desired
+contents of `$HOME`; there is no template language, marker file, or generated
+manifest to maintain. Cattery validates this layout before it applies anything.
 
-This document describes the layout Cattery's compiler accepts and is the
-contract every command validates against.
+## Files, directories, and groups
 
-## Root files
+A file at the repository root maps directly below `$HOME`:
 
-A regular file at the repository root deploys directly beneath `$HOME`:
-
-```
-repo/.bashrc      -> $HOME/.bashrc
-repo/Brewfile     -> $HOME/Brewfile
+```text
+repo/.bashrc                    -> ~/.bashrc
+repo/.config/starship.toml       -> ~/.config/starship.toml
 ```
 
-A top-level directory whose name begins with a dot is an ungrouped HOME-relative
-tree:
+Top-level dot-directories are also direct `$HOME` trees. Any other ordinary
+top-level directory is a **group**: a named bundle you can select independently.
 
-```
-repo/.config/starship.toml -> $HOME/.config/starship.toml
-```
-
-## Groups
-
-Every other ordinary top-level directory is a **group**: a named bundle of files
-for one application, integration, or project. The directory name is the group
-name.
-
-```
-repo/atuin/.config/atuin/config.toml        -> $HOME/.config/atuin/config.toml
-repo/atuin/.config/fish/conf.d/atuin.fish    -> $HOME/.config/fish/conf.d/atuin.fish
+```text
+repo/atuin/.config/atuin/config.toml       -> ~/.config/atuin/config.toml
+repo/atuin/.config/fish/conf.d/atuin.fish  -> ~/.config/fish/conf.d/atuin.fish
 ```
 
-Group names are single path segments. They cannot begin with `.` or `_`, cannot
-contain a slash, and cannot be `.` or `..`. Two group names that differ only by
-Unicode case or NFC/NFD form are rejected, even when their target trees do not
-overlap.
+Group names are one path segment. They cannot start with `.` or `_`, contain a
+slash, or be `.` or `..`. Names that only differ by Unicode case or
+normalization are rejected so the repository stays portable between filesystems.
 
-A non-dot target tree such as `Library/` or `bin/` cannot live at the root; put
-it inside a group.
+Put a non-dot target tree such as `Library/` or `bin/` inside a group. Root
+directories with those names are groups, not direct target trees.
 
-## Reserved control namespace
+## Controls
 
-Names beginning with `_` are reserved at the repository root and at each group
-root. Cattery recognizes these controls:
+At the repository root and each group root, names beginning with `_` are
+reserved:
 
-```
-_darwin/         macOS-only overlay
-_linux/          Linux-only overlay
-_secrets/        SOPS-encrypted secret sources
-_hooks/          trusted hook scripts
-_routes.toml     explicit symlink aliases
-```
+| Control | Purpose |
+| --- | --- |
+| `_darwin/` | macOS-only file overrides. |
+| `_linux/` | Linux-only file overrides. |
+| `_secrets/` | SOPS-encrypted sources. |
+| `_hooks/` | Trusted scripts run around `apply`. |
+| `_routes.toml` | Explicit target symlinks. |
 
-Unknown underscore-prefixed entries (for example `_notes/` or `_README.md`) are
-ignored recursively and never deployed.
+Unknown underscore-prefixed entries are ignored. Within a normal target tree,
+underscore-prefixed names are literal: `app/.config/app/_cache/value` deploys
+to `~/.config/app/_cache/value`.
 
-The reservation applies only at a control-bearing scope root. Once you are
-inside an ordinary target tree, every name is literal, including names that
-begin with `_`:
+## Platform overrides
 
-```
-repo/app/.config/app/_internal/value -> $HOME/.config/app/_internal/value
-```
+Use `_darwin/` or `_linux/` beside a base tree when a file differs by platform:
 
-## Repository metadata
-
-These repository-root entries are version-control metadata and are never
-deployed:
-
-```
-.git  .github  .gitignore  .gitattributes  .gitmodules  .sops.yaml  .catteryignore
+```text
+repo/ghostty/.config/ghostty/config              base
+repo/ghostty/_darwin/.config/ghostty/config      macOS override
+repo/ghostty/_linux/.config/ghostty/config       Linux override
 ```
 
-A group may deploy a file named `.gitignore`; the metadata exclusion applies
-only at the repository root. Other root regular files are literal sources, so
-repository-only prose should be named `_README.md` rather than `README.md`.
+An override wins at the same path. Directories merge recursively; an override
+file replaces a base directory at that path, and an override directory replaces
+a base file. `cattery validate` compiles both Linux and macOS plans, including
+the inactive one, so an error does not wait for another machine to discover it.
 
 ## Symlink routes
 
-`_routes.toml` declares explicit relative symlinks. A route's canonical path
-must be a managed file or a managed directory (a directory is established by
-one or more managed descendants) in the same scope. Routes may be common to
-both platforms or platform-specific:
+Source symlinks are rejected. If a target needs a symlink, declare it explicitly
+in `_routes.toml` instead. The canonical path must name a managed file or a
+managed directory in the same scope.
 
 ```toml
 version = 1
@@ -96,69 +76,50 @@ version = 1
 ".config/Code/User" = ["Library/Application Support/Code/User"]
 ```
 
-The right-hand paths become symlinks pointing at the left-hand path. Cattery
-never follows a route destination while creating it; an occupied directory
-still requires manual intervention rather than replacement.
+The paths on the right become relative symlinks to the path on the left. Cattery
+does not follow the destination while it creates a route. It will not replace an
+occupied directory automatically; resolve that case yourself, then apply again.
 
-## Ignoring helper files
+## Secrets
 
-Place `.catteryignore` at the repository root to keep helper files and
-directories from being deployed. Patterns are relative to the repository root;
-blank lines and lines beginning with `#` are ignored. `*`, `?`, and `**` are
-supported, while a trailing `/` ignores a directory and its contents.
+Put encrypted sources under `_secrets/` and preserve the target path below it:
 
+```text
+repo/app/_secrets/.config/app/credentials          -> ~/.config/app/credentials
+repo/app/_darwin/_secrets/.config/app/credentials  -> macOS-only secret
 ```
+
+See [secret operations](secrets.md) for setup and handling details.
+
+## Repository-only files
+
+At the repository root, `.git`, `.github`, `.gitignore`, `.gitattributes`,
+`.gitmodules`, `.sops.yaml`, and `.catteryignore` are metadata and never deploy.
+Use `.catteryignore` for other helper material:
+
+```gitignore
 # Repository-only material
 README.md
 scripts/
 **/*.example
 ```
 
-Patterns only exclude files; they do not support `!` re-inclusion rules.
+Patterns are relative to the repository root. Blank lines and `#` comments are
+ignored; `*`, `?`, `**`, and trailing `/` are supported. Negated patterns are
+not supported.
 
-## Platform overlays
+## What can be a source
 
-A root scope or a group may contain `_darwin/` and `_linux/` overlays. Cattery
-uses the active runtime (`runtime.GOOS`) and initially supports only `darwin`
-and `linux`.
+Regular files, including binary and empty files, are supported. Directories are
+structural. Symlinks, FIFOs, sockets, and device entries are rejected. Cattery
+does not preserve timestamps, ownership, ACLs, or extended attributes.
 
-```
-repo/ghostty/.config/ghostty/config      base layer
-repo/ghostty/_darwin/.config/ghostty/config   macOS override
-repo/ghostty/_linux/.config/ghostty/config    Linux override
-```
+## Selecting groups
 
-Overlay merge rules:
+`validate`, `status`, `diff`, and `apply` accept group names. With no names,
+they select the root scope and every current group; status-like commands also
+include state-only groups so removed sources can be retired safely. Unknown or
+repeated group names are errors.
 
-- a platform file always wins over a base file at the same relative path;
-- a platform directory replaces a base file at that path;
-- a platform file replaces a base directory and suppresses the base descendants
-  beneath it;
-- two platform directories merge recursively, with platform entries winning.
-
-Validation compiles and collision-checks both the Linux and Darwin plans
-regardless of host OS, so an error in an inactive overlay is caught before it
-reaches another machine.
-
-See [secrets.md](secrets.md) for platform-specific secrets and [hooks.md](hooks.md)
-for hook placement.
-
-## Supported source entries
-
-- Regular files, including empty and binary files.
-- Directories are structural and merged.
-- Source symlinks are rejected; Cattery does not follow them.
-- FIFOs, sockets, and device entries are rejected.
-- Timestamps, ownership, ACLs, and extended attributes are not copied.
-
-## Selecting scopes
-
-- `cattery validate` selects root scope plus every current group; explicit group
-  names must exist in the compiled repository.
-- `cattery status`, `cattery diff`, and `cattery apply` with no arguments select
-  root scope plus every current and active state-only group. An explicit name
-  may also name a deleted group that still has state rows, so it can be retired.
-- Unknown or duplicate group arguments are usage errors.
-
-See [reconciliation.md](reconciliation.md) for how selected scopes are compared,
-and the [README](../README.md) for the command summary.
+Next: [reconciliation and recovery](reconciliation.md), [secret operations](secrets.md),
+and [trusted hooks](hooks.md).

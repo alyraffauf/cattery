@@ -1,126 +1,117 @@
 # Cattery
 
-Cattery is a safe, cross-platform dotfiles manager. It stores literal files in a
-central repository, materializes ordinary files beneath `$HOME`, detects drift
-with SQLite-backed three-way reconciliation, supports literal platform overlays,
-protects file-level secrets with SOPS and age, and runs deterministic hooks.
+Cattery is a safe, cross-platform dotfiles manager for Linux and macOS. Keep
+your configuration as ordinary files in one repository; Cattery installs them
+under `$HOME`, supports platform overrides and SOPS-encrypted secrets, and
+shows you when a local edit needs a decision.
 
-Cattery targets Linux and macOS. It copies ordinary files (not symlinks), never
-silently destroys existing content, and records what it installed in a local
-state database so it can tell an intentional edit from a conflict.
+It is intentionally small: no templates, daemon, plugin runtime, or surprise
+symlink farm. You own plain files and explicit rules; Cattery does the careful
+part of getting them into place.
 
-## Install
+## Start here
 
-Cattery is a single static binary. Build it with Go 1.26 or newer:
+Build from source with Go 1.26 or newer:
 
-```
-go build ./cmd/cattery
-```
-
-Or with the Nix flake:
-
-```
-nix build
-nix run . -- version
+```sh
+go build -o ~/.local/bin/cattery ./cmd/cattery
 ```
 
-A development shell is also available:
+Or install the package with Nix:
 
+```sh
+nix profile install .#cattery
 ```
-nix develop
-just check
+
+Create a repository, register it, inspect the plan, then apply it:
+
+```sh
+mkdir -p ~/src/dots/.config/ghostty
+cp ~/.config/ghostty/config ~/src/dots/.config/ghostty/config
+
+cattery init ~/src/dots
+cattery status
+cattery apply
 ```
 
-## Repository example
+`status` never changes anything. `apply` asks before replacing a locally
+modified file. See [repository layout](docs/repository-layout.md) for the full
+layout and [reconciliation](docs/reconciliation.md) for exactly how decisions
+work.
 
-A repository is a plain directory of literal files. Root files and dot-trees
-deploy beneath `$HOME`; other top-level directories are groups.
+## Repository layout
 
-```
-cattery/
-  .bashrc                     -> ~/.bashrc
-  .config/starship.toml       -> ~/.config/starship.toml
-  atuin/
-    .config/atuin/config.toml -> ~/.config/atuin/config.toml
+Root files and dot-directories map directly into `$HOME`. Other top-level
+directories are named groups, useful for selecting one application at a time.
+
+```text
+dots/
+  .bashrc                              -> ~/.bashrc
+  .config/starship.toml                 -> ~/.config/starship.toml
   ghostty/
-    .config/ghostty/config        base layer
-    _darwin/.config/ghostty/config   macOS override
-    _linux/.config/ghostty/config    Linux override
-    _secrets/.config/ghostty/key     encrypted secret
-    _hooks/after/reload.sh
+    .config/ghostty/config              -> ~/.config/ghostty/config
+    _darwin/.config/ghostty/config      -> macOS-only override
+    _linux/.config/ghostty/config       -> Linux-only override
+    _secrets/.config/ghostty/token      -> encrypted secret
+    _routes.toml                        -> explicit symlink routes
 ```
 
-Register a repository as the default for your home:
+The layout is regular files first. Cattery rejects source symlinks, but you can
+declare a deliberate target symlink—for example, a Flatpak application’s
+configuration directory—in `_routes.toml`.
 
-```
-cattery init ~/src/cattery
-```
+## Everyday commands
 
-See [repository layout](docs/repository-layout.md) for the full grammar.
+| Command | What it does |
+| --- | --- |
+| `cattery init [PATH]` | Register a repository as this home’s default. |
+| `cattery validate [GROUP ...]` | Check repository structure on Linux and macOS. |
+| `cattery status [GROUP ...]` | Report pending changes without modifying anything. |
+| `cattery diff [GROUP ...]` | Show safe differences for ordinary files. |
+| `cattery apply [GROUP ...]` | Reconcile selected files with the repository. |
+| `cattery add [OPTIONS] TARGET ...` | Adopt existing files or directories into the repository. |
+| `cattery forget DIRECTORY --yes` | Stop managing a directory; leaves its files in `$HOME`. |
+| `cattery version` | Print build information. |
 
-## Commands
+Global options are `--repo PATH` and `--verbose`. `apply` supports `--dry-run`,
+`--non-interactive`, and `--no-hooks`; `add` supports `--group`, `--platform`,
+`--secret`, and `--dry-run`; `forget` supports `--dry-run` and requires `--yes`
+to remove repository sources.
 
-| Command | Purpose |
-|---|---|
-| `cattery init [PATH]` | register a repository as the default for this home |
-| `cattery validate [GROUP ...]` | compile and validate the repository |
-| `cattery status [GROUP ...]` | report drift without changing anything |
-| `cattery diff [GROUP ...]` | show safe content differences |
-| `cattery apply [GROUP ...]` | reconcile targets with the repository |
-| `cattery add [OPTIONS] TARGET ...` | adopt target files or directories into the repository |
-| `cattery forget DIRECTORY` | stop managing a directory while leaving its target files in place |
-| `cattery version` | print version, commit, and build metadata |
+## Safety, in plain English
 
-Global options are `--repo PATH` and `--verbose`. Apply accepts `--dry-run`,
-`--non-interactive`, and `--no-hooks`. Add accepts `--group NAME`,
-`--platform linux|darwin`, `--secret`, and `--dry-run`.
-Forget accepts `--dry-run` to preview every source it would remove and requires
-`--yes` before it changes the repository.
+- Cattery tracks the repository file, the file in `$HOME`, and the last known
+  good baseline. It does not silently overwrite a local edit.
+- Every file publication uses a temporary file, revalidation, atomic rename,
+  and directory sync before state is updated.
+- Cattery never deletes a target in `$HOME`. `forget` removes management, not
+  your files.
+- If the local state database is lost, equal files are adopted again and
+  different files require a decision.
+- A non-interactive session stops before any change that would need a prompt.
 
-When `cattery apply` needs a decision it prompts for overwrite, skip, abort, or
-diff, and collects every decision before changing anything. Piped or
-non-terminal input is non-interactive: any required prompt stops the command
-before any write.
+## Secrets and hooks
 
-## Safety model
+Secrets use your existing [SOPS](https://getsops.io/) setup. Cattery stores
+encrypted payloads in `_secrets/`, decrypts only when necessary, and never
+prints secret plaintext in status, diff, or prompts. Read
+[secret operations](docs/secrets.md) before adopting your first secret.
 
-- Cattery compares source, target, and the last baseline, so it never silently
-  overwrites a file you edited.
-- Every write goes through a same-directory temporary file, an `fsync`, a
-  revalidation, an atomic rename, and a parent-directory sync before its
-  baseline row is committed.
-- Cattery never deletes a target and never rolls back a completed write.
-- Deleting the state database is recoverable: equal files are re-adopted and
-  differing files are left for an explicit decision.
+Hooks are trusted scripts run before and after `apply`. They are a good place
+for intentional work outside the file model, such as installing packages or
+reloading a service. Read [trusted hooks](docs/hooks.md) before enabling them.
 
-See [reconciliation and recovery](docs/reconciliation.md) for the full model.
+## What Cattery does not do
 
-## Secrets
+- Template, interpolate, or patch configuration files.
+- Watch files or sync automatically.
+- Manage packages directly.
+- Provide rollback, generations, or target deletion.
+- Support Windows.
 
-Secrets are stored as SOPS-encrypted binary payloads under `_secrets/` and
-decrypted only in memory when needed. Plaintext never enters the database, logs,
-arguments, errors, diff output, or a general temporary directory. Secret targets
-are always mode `0600`, or `0700` when executable. See
-[secret operations](docs/secrets.md).
+## Contributing
 
-## Hooks
-
-Hooks are trusted programs that run before and after an apply, for the whole
-repository and per group. They inherit your environment plus Cattery variables,
-run in their own process group, and are cancelled with SIGTERM, a five-second
-grace period, then SIGKILL. See [trusted hooks](docs/hooks.md).
-
-## Non-goals
-
-Cattery is deliberately narrow. The initial release has:
-
-- no templating, interpolation, or patch language;
-- no GNU Stow-style symlink farm (targets are ordinary files);
-- no daemon, file watcher, or automatic sync;
-- no plugin system;
-- no package-manager integration (install software with hooks);
-- no rollback or target deletion (Cattery never destroys existing files);
-- no Windows support in the initial release.
+See [CONTRIBUTING.md](CONTRIBUTING.md). The normal local check is `just check`.
 
 ## License
 
