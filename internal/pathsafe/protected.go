@@ -17,7 +17,7 @@ func ProtectedTree(target, protected string) bool {
 	targetSegments := segmentsOf(target)
 	protectedSegments := segmentsOf(protected)
 	return nativeOverlap(targetSegments, protectedSegments) ||
-		portableOverlap(targetSegments, protectedSegments)
+		PortableOverlap(targetSegments, protectedSegments)
 }
 
 // Equal reports whether two canonical absolute paths name the same native
@@ -43,7 +43,7 @@ func nativeOverlap(target, protected []string) bool {
 
 // portableOverlap reports a collision when the two segment lists are portably
 // equivalent or one is a strict portable prefix of the other.
-func portableOverlap(target, protected []string) bool {
+func PortableOverlap(target, protected []string) bool {
 	return PathsEquivalent(target, protected) ||
 		IsParentEquivalent(protected, target) ||
 		IsParentEquivalent(target, protected)
