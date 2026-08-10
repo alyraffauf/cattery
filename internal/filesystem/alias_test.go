@@ -15,6 +15,7 @@ func TestAliasRealization(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{"missing alias is created", testMissingAliasCreated},
+		{"missing nested parent is created", testMissingAliasParentCreated},
 		{"exact link is a no-op", testExactLinkNoOp},
 		{"absolute link is drift", testAbsoluteLinkDrift},
 		{"wrong or dangling link is drift", testWrongLinkDrift},
@@ -25,6 +26,7 @@ func TestAliasRealization(t *testing.T) {
 		{"directory requires manual intervention", testDirectoryManualIntervention},
 		{"special entry requires manual intervention", testSpecialManualIntervention},
 		{"parent race fails before any mutation", testParentRace},
+		{"missing parent race fails before mutation", testMissingAliasParentRace},
 		{"cancellation creates nothing", testAliasCancellation},
 	}
 	for _, scenario := range scenarios {
@@ -70,6 +72,16 @@ func testMissingAliasCreated(t *testing.T) {
 	if names := dirEntries(t, root); len(names) != 1 {
 		t.Fatalf("dir entries = %v, want only .config", names)
 	}
+}
+
+func testMissingAliasParentCreated(t *testing.T) {
+	root := t.TempDir()
+	precondition := mustFreeze(t, root, ".var/app/example/config/zed")
+	realization, err := NewReplacer().RealizeAlias(context.Background(), precondition, AliasSpec{Payload: "../../../../../.config/zed"})
+	if err != nil || realization != AliasCreated {
+		t.Fatalf("realization = %v, err = %v, want created", realization, err)
+	}
+	assertLink(t, filepath.Join(root, ".var/app/example/config/zed"), "../../../../../.config/zed")
 }
 
 func testExactLinkNoOp(t *testing.T) {
@@ -224,6 +236,21 @@ func testParentRace(t *testing.T) {
 	}
 	if names := dirEntries(t, parent); len(names) != 0 {
 		t.Fatalf("dir entries = %v, want nothing created", names)
+	}
+}
+
+func testMissingAliasParentRace(t *testing.T) {
+	root := t.TempDir()
+	precondition := mustFreeze(t, root, "nested/config/zed")
+	moved := filepath.Join(root, "moved")
+	must(t, os.Mkdir(moved, 0o755))
+	must(t, os.Symlink(moved, filepath.Join(root, "nested")))
+	_, err := NewReplacer().RealizeAlias(context.Background(), precondition, AliasSpec{Payload: "../../../.config/zed"})
+	if err == nil {
+		t.Fatal("missing parent symlink race must fail")
+	}
+	if names := dirEntries(t, moved); len(names) != 0 {
+		t.Fatalf("raced referent entries = %v, want none", names)
 	}
 }
 

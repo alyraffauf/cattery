@@ -12,6 +12,7 @@ func TestExecutableAliases(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{"exact alias created", testAliasExact},
+		{"nested alias creates missing parents", testAliasMissingParents},
 		{"wrong payload decides", testAliasWrong},
 		{"occupied path decides", testAliasOccupied},
 		{"dangling exact stays", testAliasDangling},
@@ -60,6 +61,24 @@ func testAliasExact(t *testing.T) {
 	}
 	if payload := readLink(t, env, "bin/tool"); payload != "../.config/tool" {
 		t.Fatalf("payload = %q, want ../.config/tool", payload)
+	}
+}
+
+func testAliasMissingParents(t *testing.T) {
+	env := newExecEnv(t)
+	env.initRepository(t)
+	writeRoutes(t, env, `version = 1
+
+[symlinks.all]
+".config/zed" = [".var/app/dev.zed.Zed/config/zed"]
+`)
+	env.source(t, ".config/zed", "content")
+	result := env.run(t, nil, "apply")
+	if result.Code != 0 {
+		t.Fatalf("apply: code=%d stderr=%q", result.Code, result.Stderr)
+	}
+	if payload := readLink(t, env, ".var/app/dev.zed.Zed/config/zed"); payload != "../../../../.config/zed" {
+		t.Fatalf("payload = %q, want the nested relative target", payload)
 	}
 }
 

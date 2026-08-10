@@ -63,3 +63,20 @@ func (p Precondition) Revalidate() error {
 	}
 	return p.entry.Revalidate()
 }
+
+// revalidateBeforeCreatingParent accepts a parent that was absent at freeze
+// and remains absent. An existing frozen parent must retain its identity, and
+// the destination entry must remain unchanged in both cases.
+func (p Precondition) revalidateBeforeCreatingParent() error {
+	if err := walkParentsValid(p.destination.Root, p.destination.Relative); err != nil {
+		return err
+	}
+	parent, err := parentIdentity(p.destination.Root, p.destination.Relative)
+	if err != nil {
+		return err
+	}
+	if p.parent.Path() != "" && !pathsafe.SameIdentity(p.parent, parent) {
+		return fmt.Errorf("filesystem: parent changed at %s", p.parent.Path())
+	}
+	return p.entry.Revalidate()
+}

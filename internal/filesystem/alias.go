@@ -84,7 +84,7 @@ func (r *Replacer) RealizeAlias(ctx context.Context, precondition Precondition, 
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
-	if err := precondition.Revalidate(); err != nil {
+	if err := precondition.revalidateBeforeCreatingParent(); err != nil {
 		return 0, err
 	}
 	outcome, err := classifyAlias(precondition, spec)
