@@ -57,6 +57,9 @@ func readFrozenTarget(precondition filesystem.Precondition) ([]byte, error) {
 		return nil, failure.New(failure.Operational, "apply: read target "+destination.Relative, err)
 	}
 	defer file.Close()
+	if err := validateFrozenTarget(file, precondition); err != nil {
+		return nil, err
+	}
 	content, err := io.ReadAll(file)
 	if err != nil {
 		return nil, failure.New(failure.Operational, "apply: read target "+destination.Relative, err)
@@ -65,6 +68,15 @@ func readFrozenTarget(precondition filesystem.Precondition) ([]byte, error) {
 		return nil, failure.New(failure.Operational, "apply: target changed "+destination.Relative, err)
 	}
 	return content, nil
+}
+
+func validateFrozenTarget(file *os.File, precondition filesystem.Precondition) error {
+	info, err := file.Stat()
+	if err != nil || !filesystem.MatchesIdentityAndMode(precondition.Target().Identity(), info, precondition.Target().Mode()) {
+		destination := precondition.Destination()
+		return failure.New(failure.Operational, "apply: target changed "+destination.Relative, err)
+	}
+	return nil
 }
 
 func safeDifferenceFrom(record diff.SafeRecord) SafeDifference {

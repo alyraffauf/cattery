@@ -14,8 +14,12 @@ func ResolvePlatform(root string, baseScan ScanResult, platformLayer deployment.
 	if !platformLayer.Valid() {
 		return nil, fmt.Errorf("repository: unknown platform layer %q", platformLayer)
 	}
-	platformResolver := platformResolver{root: root, base: baseScan, platform: platformLayer}
-	platformRootView, err := scanLayerTree(root, deployment.NewScope(""), platformLayer)
+	ignores, err := loadIgnoreMatcher(root)
+	if err != nil {
+		return nil, err
+	}
+	platformResolver := platformResolver{root: root, base: baseScan, platform: platformLayer, ignores: ignores}
+	platformRootView, err := scanLayerTree(root, deployment.NewScope(""), platformLayer, ignores)
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +42,7 @@ type platformResolver struct {
 	root     string
 	base     ScanResult
 	platform deployment.Layer
+	ignores  ignoreMatcher
 }
 
 func (resolver *platformResolver) resolveScope(scope deployment.Scope, platformRootView layerView) ([]deployment.ManagedFile, error) {
@@ -45,7 +50,7 @@ func (resolver *platformResolver) resolveScope(scope deployment.Scope, platformR
 	if _, replaced := platformRootView.files[scope.Group]; replaced {
 		return nil, nil
 	}
-	platformView, err := scanLayerTree(resolver.root, scope, resolver.platform)
+	platformView, err := scanLayerTree(resolver.root, scope, resolver.platform, resolver.ignores)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +160,7 @@ func recordsFor(merged map[string]Candidate) ([]deployment.ManagedFile, error) {
 	return records, nil
 }
 
-func scanLayerTree(root string, scope deployment.Scope, platform deployment.Layer) (layerView, error) {
+func scanLayerTree(root string, scope deployment.Scope, platform deployment.Layer, ignores ignoreMatcher) (layerView, error) {
 	relative := filepath.Join(scope.Group, "_"+string(platform))
 	info, err := os.Lstat(filepath.Join(root, relative))
 	if err != nil {
@@ -169,7 +174,7 @@ func scanLayerTree(root string, scope deployment.Scope, platform deployment.Laye
 	}
 	walker := layerWalker{
 		absolute: filepath.Join(root, relative), relative: relative, scope: scope, layer: platform,
-		view: layerView{files: map[string]Candidate{}, dirs: map[string]struct{}{}},
+		view: layerView{files: map[string]Candidate{}, dirs: map[string]struct{}{}}, ignores: ignores,
 	}
 	if err := walker.walk("", deployment.FileOrdinary); err != nil {
 		return layerView{}, err
@@ -183,6 +188,7 @@ type layerWalker struct {
 	scope    deployment.Scope
 	layer    deployment.Layer
 	view     layerView
+	ignores  ignoreMatcher
 }
 
 func (walker *layerWalker) walk(relativePath string, fileKind deployment.FileKind) error {
@@ -191,6 +197,10 @@ func (walker *layerWalker) walk(relativePath string, fileKind deployment.FileKin
 		return err
 	}
 	for _, entry := range entries {
+		path := filepath.Join(relativePath, entry.Name())
+		if walker.ignores.ignores(filepath.Join(walker.relative, path), entry.IsDir()) {
+			continue
+		}
 		entryKind, skip, err := classifyEntry(relativePath, entry, fileKind)
 		if err != nil {
 			return err
@@ -198,7 +208,7 @@ func (walker *layerWalker) walk(relativePath string, fileKind deployment.FileKin
 		if skip {
 			continue
 		}
-		if err := walker.visit(filepath.Join(relativePath, entry.Name()), entry, entryKind); err != nil {
+		if err := walker.visit(path, entry, entryKind); err != nil {
 			return err
 		}
 	}

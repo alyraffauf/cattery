@@ -72,12 +72,28 @@ These repository-root entries are version-control metadata and are never
 deployed:
 
 ```
-.git  .github  .gitignore  .gitattributes  .gitmodules  .sops.yaml
+.git  .github  .gitignore  .gitattributes  .gitmodules  .sops.yaml  .catteryignore
 ```
 
 A group may deploy a file named `.gitignore`; the metadata exclusion applies
 only at the repository root. Other root regular files are literal sources, so
 repository-only prose should be named `_README.md` rather than `README.md`.
+
+## Ignoring helper files
+
+Place `.catteryignore` at the repository root to keep helper files and
+directories from being deployed. Patterns are relative to the repository root;
+blank lines and lines beginning with `#` are ignored. `*`, `?`, and `**` are
+supported, while a trailing `/` ignores a directory and its contents.
+
+```
+# Repository-only material
+README.md
+scripts/
+**/*.example
+```
+
+Patterns only exclude files; they do not support `!` re-inclusion rules.
 
 ## Platform overlays
 

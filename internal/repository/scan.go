@@ -32,7 +32,11 @@ type ScanResult struct {
 // root in deterministic order. Symlinks and
 // special entries are rejected.
 func Scan(root string) (ScanResult, error) {
-	scanner := scopeScanner{repoRoot: root, rootTree: true}
+	ignores, err := loadIgnoreMatcher(root)
+	if err != nil {
+		return ScanResult{}, err
+	}
+	scanner := scopeScanner{repoRoot: root, rootTree: true, ignores: ignores}
 	if err := scanner.scanScopeRoot(); err != nil {
 		return ScanResult{}, err
 	}
@@ -47,6 +51,7 @@ type scopeScanner struct {
 	scopeRoot string
 	scope     deployment.Scope
 	rootTree  bool
+	ignores   ignoreMatcher
 	groups    []string
 	files     []Candidate
 }
@@ -65,6 +70,9 @@ func (scanner *scopeScanner) scanScopeRoot() error {
 }
 
 func (scanner *scopeScanner) scanEntry(entry os.DirEntry) error {
+	if scanner.ignores.ignores(filepath.Join(scanner.scopeRoot, entry.Name()), entry.IsDir()) {
+		return nil
+	}
 	control := ClassifyRoot(entry.Name())
 	switch {
 	// Root dot-directories do not promote to groups: pathsafe.GroupName
@@ -136,6 +144,9 @@ func (scanner *scopeScanner) walkTree(relative string, kind deployment.FileKind)
 
 func (scanner *scopeScanner) walkEntry(parent string, entry os.DirEntry, kind deployment.FileKind) error {
 	path := filepath.Join(parent, entry.Name())
+	if scanner.ignores.ignores(filepath.Join(scanner.scopeRoot, path), entry.IsDir()) {
+		return nil
+	}
 	if entry.IsDir() {
 		return scanner.walkTree(path, kind)
 	}

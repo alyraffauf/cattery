@@ -47,7 +47,7 @@ func testIgnoredUnderscore(t *testing.T) {
 func testMetadata(t *testing.T) {
 	names := []string{
 		".git", ".github", ".gitignore",
-		".gitattributes", ".gitmodules", ".sops.yaml",
+		".gitattributes", ".gitmodules", ".sops.yaml", ignoreFileName,
 	}
 	for _, name := range names {
 		if got := ClassifyRoot(name); got != ControlMetadata {

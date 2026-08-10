@@ -44,7 +44,7 @@ func ClassifyRoot(name string) Control {
 		return ControlHooks
 	case "_routes.toml":
 		return ControlRoutes
-	case ".git", ".github", ".gitignore", ".gitattributes", ".gitmodules", ".sops.yaml":
+	case ".git", ".github", ".gitignore", ".gitattributes", ".gitmodules", ".sops.yaml", ignoreFileName:
 		return ControlMetadata
 	}
 	if strings.HasPrefix(name, "_") {

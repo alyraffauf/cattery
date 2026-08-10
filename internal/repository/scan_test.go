@@ -20,6 +20,7 @@ func TestRepositoryScan(t *testing.T) {
 		{"groups", testScanGroups},
 		{"empty files", testScanEmptyFiles},
 		{"controls are excluded", testScanControlsExcluded},
+		{"ignored files are excluded", testScanIgnoredFiles},
 		{"symlinks rejected", testScanSymlinkRejected},
 		{"specials rejected", testScanSpecialRejected},
 		{"group collisions", testScanGroupCollisions},
@@ -109,6 +110,25 @@ func testScanControlsExcluded(t *testing.T) {
 		t.Fatalf("files = %d, want only the secret candidate", len(result.Files))
 	}
 	assertCandidate(t, result.Files[0], newCandidate(root, wantFile{repoPath: "_secrets/token", secret: true}))
+}
+
+func testScanIgnoredFiles(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ignoreFileName), []byte("README.md\nhelpers/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(root, ".bashrc"), 0o644)
+	writeFile(t, filepath.Join(root, "README.md"), 0o644)
+	writeFile(t, filepath.Join(root, "helpers", "generator.go"), 0o644)
+
+	result, err := Scan(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("files = %d, want one", len(result.Files))
+	}
+	assertCandidate(t, result.Files[0], newCandidate(root, wantFile{repoPath: ".bashrc"}))
 }
 
 func testScanSymlinkRejected(t *testing.T) {

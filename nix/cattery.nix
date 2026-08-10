@@ -1,6 +1,9 @@
 {
+  age,
   buildGoModule,
   lib,
+  makeWrapper,
+  sops,
 }:
 buildGoModule {
   pname = "cattery";
@@ -14,6 +17,12 @@ buildGoModule {
   # subprocesses, which doesn't fit the hermetic build sandbox. CI runs
   # `go test ./...` against a full Go toolchain instead.
   doCheck = false;
+
+  nativeBuildInputs = [makeWrapper];
+
+  postFixup = ''
+    wrapProgram $out/bin/cattery --prefix PATH : ${lib.makeBinPath [sops age]}
+  '';
 
   ldflags = [
     "-s"
