@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestFilesystemIdentity(t *testing.T) {
@@ -13,6 +14,7 @@ func TestFilesystemIdentity(t *testing.T) {
 	}{
 		{"same path matches itself", testSamePathIdentity},
 		{"hard links share identity", testHardLinksShareIdentity},
+		{"recycled inode changes identity", testRecycledInodeChangesIdentity},
 		{"distinct files differ", testDistinctFilesDiffer},
 		{"missing path errors", testMissingIdentityErrors},
 		{"identity reports mode and size", testIdentityAccessors},
@@ -53,6 +55,28 @@ func testHardLinksShareIdentity(t *testing.T) {
 	}
 	if !SameIdentity(first, second) {
 		t.Fatal("hard links must share filesystem identity")
+	}
+}
+
+func testRecycledInodeChangesIdentity(t *testing.T) {
+	path := writeFile(t, "target")
+	first, err := FilesystemIdentity(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	recycled := first.info.ModTime().Add(time.Hour)
+	if err := os.Chtimes(path, recycled, recycled); err != nil {
+		t.Skipf("Chtimes unsupported: %v", err)
+	}
+	second, err := FilesystemIdentity(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !os.SameFile(first.info, second.info) {
+		t.Fatal("test premise: Chtimes must keep the inode")
+	}
+	if SameIdentity(first, second) {
+		t.Fatal("an inode carrying a fresh mtime must not match")
 	}
 }
 
