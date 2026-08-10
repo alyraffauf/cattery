@@ -16,7 +16,6 @@ import (
 	"github.com/alyraffauf/cattery/internal/state"
 )
 
-// Service performs one apply evaluation against the injectable ports.
 type Service struct {
 	source         RepositorySource
 	compiler       Compiler
@@ -62,7 +61,6 @@ func NewService(dependencies Dependencies) *Service {
 		platformError:  platformError,
 	}
 }
-
 func (service *Service) Evaluate(ctx context.Context, request Request) (Candidates, error) {
 	return service.evaluate(ctx, request)
 }
@@ -94,7 +92,6 @@ type scopeInput struct {
 	groups   []string
 }
 
-// evaluateRows compiles the full plan, selects the scopes, and assembles one classified snapshot of the selected rows.
 func (service *Service) evaluateRows(ctx context.Context, input scopeInput) (Candidates, error) {
 	full, chosen, err := service.chosen(input)
 	if err != nil {
@@ -216,7 +213,6 @@ type stateRows struct {
 	aliases []state.AliasBaseline
 }
 
-// persistedGroups derives Active and All group names from the persisted rows.
 func persistedGroups(rows stateRows) selection.PersistedGroups {
 	sets := &groupSets{active: make(map[string]bool), all: make(map[string]bool)}
 	for _, row := range rows.files {
@@ -277,7 +273,6 @@ func rowKept(group string, chosen selection.Selection) bool {
 	return slices.Contains(chosen.Groups, group)
 }
 
-// Candidate is one immutable evaluation record with its three pure classifications and the semantic fingerprints used to derive them.
 type Candidate struct {
 	record     reconcile.Evaluation
 	file       reconcile.FileClassification
@@ -309,7 +304,6 @@ func (c Candidates) All() []Candidate {
 	return append([]Candidate(nil), c.records...)
 }
 
-// classify computes the semantic fingerprints and the file, alias, and retirement classifications of every evaluation record.
 func (service *Service) classify(ctx context.Context, assembly reconcile.EvaluationSnapshot) ([]Candidate, error) {
 	semantics := &semanticState{reader: service.state, client: service.secrets}
 	records := assembly.All()
@@ -372,11 +366,18 @@ func (state *semanticState) secretFingerprints(ctx context.Context, home string,
 	if secretDecryptNeeded(record) {
 		source, err := record.Source.KeyedSemantic(ctx, state.key)
 		if err != nil {
-			return semantics, failure.New(failure.Operational, "apply: decrypt source "+record.File.SourceRepositoryPath, err)
+			return semantics, categorized(err, "apply: decrypt source "+record.File.SourceRepositoryPath)
 		}
 		semantics.Source = source
 	}
 	return semantics, nil
+}
+
+func categorized(err error, message string) error {
+	if _, ok := failure.HasKind(err); ok {
+		return err
+	}
+	return failure.New(failure.Operational, message, err)
 }
 
 func secretDecryptNeeded(record reconcile.Evaluation) bool {
@@ -394,7 +395,6 @@ func (state *semanticState) recover() error {
 	if err != nil {
 		return failure.New(failure.Operational, "apply: recover hash key", err)
 	}
-	state.key = key
-	state.haveKey = true
+	state.key, state.haveKey = key, true
 	return nil
 }

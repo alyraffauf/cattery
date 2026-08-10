@@ -14,9 +14,6 @@ import (
 	"github.com/alyraffauf/cattery/internal/state"
 )
 
-// Service performs one immutable inspection evaluation against the injectable
-// ports. Construction is side-effect-free: every repository, state, and
-// filesystem effect happens inside Evaluate.
 type Service struct {
 	source         RepositorySource
 	compiler       Compiler
@@ -157,7 +154,6 @@ func repositoryRequest(input RepositoryInput) selection.RepositoryRequest {
 	}
 }
 
-// readRows reads every persisted file and alias row of the repository pair.
 func (service *Service) readRows(identity RepositoryIdentity) (stateRows, error) {
 	files, err := service.state.FileBaselines(identity.Root, identity.Home)
 	if err != nil {
@@ -219,7 +215,6 @@ func emptyPlan(identity RepositoryIdentity, platform deployment.Layer) (deployme
 	})
 }
 
-// stateRows bundles the persisted rows of one repository pair.
 type stateRows struct {
 	files   []state.FileBaseline
 	aliases []state.AliasBaseline
@@ -238,7 +233,6 @@ func persistedGroups(rows stateRows) selection.PersistedGroups {
 	return selection.PersistedGroups{Active: sortedKeys(sets.active), All: sortedKeys(sets.all)}
 }
 
-// groupSets accumulates the distinct group names of the persisted rows.
 type groupSets struct {
 	active map[string]bool
 	all    map[string]bool
@@ -369,11 +363,18 @@ func (state *semanticState) secretFingerprints(ctx context.Context, home string,
 	if secretDecryptNeeded(record) {
 		source, err := record.Source.KeyedSemantic(ctx, state.key)
 		if err != nil {
-			return semantics, failure.New(failure.Operational, "inspect: decrypt source "+record.File.SourceRepositoryPath, err)
+			return semantics, categorized(err, "inspect: decrypt source "+record.File.SourceRepositoryPath)
 		}
 		semantics.Source = source
 	}
 	return semantics, nil
+}
+
+func categorized(err error, message string) error {
+	if _, ok := failure.HasKind(err); ok {
+		return err
+	}
+	return failure.New(failure.Operational, message, err)
 }
 
 // secretDecryptNeeded reports whether a secret source must decrypt for
@@ -394,7 +395,6 @@ func (state *semanticState) recover() error {
 	if err != nil {
 		return failure.New(failure.Operational, "inspect: recover hash key", err)
 	}
-	state.key = key
-	state.haveKey = true
+	state.key, state.haveKey = key, true
 	return nil
 }
