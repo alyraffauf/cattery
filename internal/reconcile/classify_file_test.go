@@ -9,7 +9,7 @@ import (
 
 // TestFileClassification exhaustively classifies the complete
 // source/target/baseline matrix for regular files, modes, and unbaselined
-// safety (PLAN.md Sections 7.1, 7.3, 9.2, and 9.3), including database loss
+// safety, including database loss
 // and source-only and target-only changes.
 func TestFileClassification(t *testing.T) {
 	for _, row := range fileClassificationCases {

@@ -1,4 +1,4 @@
-// Package initialize implements `cattery init` (PLAN.md Section 11.1): it
+// Package initialize implements `cattery init`: it
 // creates a missing repository directory, rejects repository/home/state
 // overlaps, and registers the canonical pair as the sole default of its home.
 // The package is Cobra-free: no CLI type appears here, and the CLI talks to

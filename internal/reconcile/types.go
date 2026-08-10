@@ -1,5 +1,5 @@
 // Package reconcile owns the immutable evaluation records and precondition
-// vocabulary of the snapshot pipeline (PLAN.md Sections 9 and 12.4); no
+// vocabulary of the snapshot pipeline; no
 // provider-owned interface lives in this package.
 package reconcile
 
@@ -181,7 +181,7 @@ func (snapshot SourceSnapshot) Storage() deployment.Digest { return snapshot.sto
 func (snapshot SourceSnapshot) Executable() fs.FileMode    { return snapshot.executable }
 
 // TargetSnapshot freezes the immutable facts of one destination observation
-// and doubles as the immutable target precondition (PLAN.md Section 12.4).
+// and doubles as the immutable target precondition.
 type TargetSnapshot struct {
 	destination Destination
 	parent      pathsafe.Identity

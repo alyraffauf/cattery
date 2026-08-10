@@ -8,8 +8,8 @@ import (
 
 // Apply performs one complete apply: evaluation, dependency preflight,
 // decision collection, plan preparation, the hook-gated filesystem phase
-// with the all-source guard, and post-hook verification (PLAN.md Section
-// 11.5). Dry runs return the planned records without any hook or write.
+// with the all-source guard, and post-hook verification. Dry runs return the
+// planned records without any hook or write.
 // The service contains no phase implementation; every step is a frozen
 // phase above.
 func (service *Service) Apply(ctx context.Context, request Request) (Result, error) {

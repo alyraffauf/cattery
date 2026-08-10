@@ -1,4 +1,4 @@
-// Package validate implements `cattery validate` (PLAN.md Section 11.2): it
+// Package validate implements `cattery validate`: it
 // compiles and validates the full repository for Linux and Darwin, checks the
 // JSON storage shape of every secret, and reports deterministic counts of the
 // selected scopes. The package is Cobra-free: no CLI type appears here, and

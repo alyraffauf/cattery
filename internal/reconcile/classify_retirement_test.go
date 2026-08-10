@@ -10,8 +10,8 @@ import (
 // TestRetirementClassification classifies every state-only row shape: source
 // removal of files and aliases, whole deleted scopes, cross-scope ownership
 // moves that preserve the baseline, inactive platform layers, and rows that
-// are already retired, without any target action (PLAN.md Sections 8.5 and
-// 9.5). Snapshot-level scenarios verify complete-plan producer checks and
+// are already retired, without any target action. Snapshot-level scenarios
+// verify complete-plan producer checks and
 // selected state subsets.
 func TestRetirementClassification(t *testing.T) {
 	scenarios := []struct {

@@ -6,7 +6,7 @@ import (
 )
 
 // AncestorWalk validates that every existing component from root through the
-// parent of relativePath is a real directory (PLAN.md Section 6.2). It uses
+// parent of relativePath is a real directory. It uses
 // os.Lstat so a symlinked parent component is rejected even when it resolves
 // beneath the same root. The walk is read-only: no path is created.
 //

@@ -15,7 +15,7 @@ import (
 // ExecuteAliases runs the alias and retirement actions of one apply: each
 // alias is created or replaced, file-alias representation transitions
 // switch active state only after the durable write, and retirement tracks
-// source removal without deleting targets (PLAN.md Section 11.5).
+// source removal without deleting targets.
 func (service *Service) ExecuteAliases(ctx context.Context, plan PreparedPlan, candidates Candidates) ([]ItemResult, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func aliasRecord(job aliasJob, status ItemStatus) ItemResult {
 }
 
 // aliasPayload derives the exact relative payload one alias link must
-// carry, mirroring the routes activation contract (PLAN.md Section 5.4).
+// carry, mirroring the routes activation contract.
 func aliasPayload(alias deployment.Alias) (string, error) {
 	canonical, err := pathsafe.Segments(alias.CanonicalTargetRelativePath)
 	if err != nil {

@@ -4,8 +4,8 @@ A Cattery repository is a plain directory tree of literal files. There is no
 manifest, no marker file, and no templating. Cattery copies ordinary files
 beneath `$HOME` and records what it installed in a local SQLite state database.
 
-This document describes the layout Cattery's compiler accepts. It mirrors
-PLAN.md Section 2 and is the contract every command validates against.
+This document describes the layout Cattery's compiler accepts and is the
+contract every command validates against.
 
 ## Root files
 

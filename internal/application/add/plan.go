@@ -8,8 +8,7 @@ import (
 
 // BuildPlan freezes the preflighted items into a BatchPlan. Items are sorted
 // by target path for display while execution proceeds in that same order
-// (PLAN.md Section 11.6: sources and baselines are written sequentially in
-// target-path order).
+// Sources and baselines are written sequentially in target-path order.
 func BuildPlan(items []ItemPlanInput) (BatchPlan, error) {
 	plans, err := buildItems(items)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 )
 
 // AliasSpec is the desired relative payload of one alias and whether the
-// caller has confirmed replacing an occupied path (PLAN.md Section 5.4).
+// caller has confirmed replacing an occupied path.
 type AliasSpec struct {
 	Payload   string
 	Overwrite bool
@@ -126,7 +126,7 @@ func (r *Replacer) replaceOccupied(ctx context.Context, precondition Preconditio
 // commitAlias prepares a uniquely named relative symlink, revalidates the
 // destination, renames it into place, and makes the parent directory
 // durable. Only the rename or a barrier failure can publish a partial
-// result (PLAN.md Section 7.2 steps 10-11).
+// result.
 func (r *Replacer) commitAlias(ctx context.Context, precondition Precondition, payload string) error {
 	if err := r.prepareAliasParent(precondition); err != nil {
 		return err

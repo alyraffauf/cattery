@@ -1,5 +1,5 @@
 // Package inspect implements the `cattery status` and `cattery diff`
-// evaluation pipeline (PLAN.md Sections 11.3 and 11.4): one immutable
+// evaluation pipeline: one immutable
 // selection, compile, snapshot, and classification evaluation with on-demand
 // secret semantics. The package is Cobra-free: no CLI type appears here, and
 // the CLI talks to the service through the frozen Request and Result shapes

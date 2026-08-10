@@ -1,7 +1,7 @@
 // Package main is the sole process boundary of cattery: it creates the
 // signal-aware cancellation causes, requests one application from
 // bootstrap, calls the CLI executor, and owns the only production
-// os.Exit (PLAN.md Section 12.1).
+// os.Exit.
 package main
 
 import (

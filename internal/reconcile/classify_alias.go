@@ -18,8 +18,8 @@ type AliasClassification struct {
 	Convergence Convergence
 }
 
-// ClassifyAlias purely classifies one alias or representation evaluation
-// (PLAN.md Sections 5.4 and 9.5). A plan alias classifies against its exact
+// ClassifyAlias purely classifies one alias or representation evaluation. A
+// plan alias classifies against its exact
 // relative payload; a plan alias over an active file row, or a plan file over
 // an active alias row, classifies the representation transition. The current
 // target semantic fingerprint arrives precomputed because a secret file row
@@ -95,7 +95,7 @@ func classifyAliasToFile(record Evaluation) AliasClassification {
 // representationIntact reports whether the current regular target provably
 // matches the retained file row: the baseline semantic fingerprint plus the
 // managed mode, which is executable bits for ordinary files and the exact
-// forced 0600/0700 mode for secrets (PLAN.md Section 9.5).
+// forced 0600/0700 mode for secrets.
 func representationIntact(record Evaluation, semantics FileSemantics) bool {
 	row := record.FileState
 	if record.Target.Kind() != KindFile || semantics.Target != row.BaselineContent() {
@@ -130,7 +130,7 @@ func payloadFor(canonical, alias string) string {
 
 // relativePayload computes the exact relative symlink payload from the alias
 // destination's parent directory to the canonical target, mirroring the
-// route-activation derivation of PLAN.md Section 5.4 without importing it.
+// route-activation derivation without importing it.
 func relativePayload(canonical, alias string) (string, error) {
 	canonicalSegments, err := pathsafe.Segments(canonical)
 	if err != nil {

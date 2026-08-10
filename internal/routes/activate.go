@@ -89,7 +89,7 @@ func canonicalSet(canonical []string) map[string]bool {
 }
 
 // AliasPayload computes the exact relative symlink payload for the alias at
-// destination pointing at canonical (PLAN.md Section 5.4): the payload is
+// destination pointing at canonical: the payload is
 // relative from the alias destination's parent directory, never absolute,
 // and never needs to climb above the home root. Both paths must be valid
 // HOME-relative paths.

@@ -27,7 +27,7 @@ type SyncResult struct {
 // CommitFile makes a still-open temporary file durable: sync while open so
 // bytes and final mode precede the barrier, then close. It always closes so
 // no descriptor leaks; a sync failure is reported because the write is not
-// durable (PLAN.md Section 7.2 steps 7-8).
+// durable.
 func CommitFile(ctx context.Context, handle SyncHandle) error {
 	if err := ctx.Err(); err != nil {
 		_ = handle.Close()
@@ -45,8 +45,7 @@ func CommitFile(ctx context.Context, handle SyncHandle) error {
 
 // SyncError reports a failed directory durability barrier. Unsupported is
 // true when the filesystem refused directory sync itself, which callers
-// report as a partial operation rather than a racing mutation
-// (PLAN.md Section 7.2 step 11).
+// report as a partial operation rather than a racing mutation.
 type SyncError struct {
 	Result      SyncResult
 	Unsupported bool

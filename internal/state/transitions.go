@@ -50,7 +50,7 @@ type fileTransition struct {
 }
 
 // TransitionToAlias replaces one active file row with an active alias row at
-// the same target path in a single transaction, per PLAN.md Section 9.5.
+// the same target path in a single transaction.
 func (store *Store) TransitionToAlias(root, home string, baseline AliasBaseline) (AliasBaseline, error) {
 	root, home, err := prepareAliasBaseline(root, home, baseline)
 	if err != nil {
@@ -92,7 +92,7 @@ func (store *Store) applyAliasTransition(transaction *sql.Tx, transition aliasTr
 }
 
 // TransitionToFile replaces one active alias row with an active file row at
-// the same target path in a single transaction, per PLAN.md Section 9.5.
+// the same target path in a single transaction.
 func (store *Store) TransitionToFile(root, home string, baseline FileBaseline) (FileBaseline, error) {
 	root, home, err := prepareFileBaseline(root, home, baseline)
 	if err != nil {

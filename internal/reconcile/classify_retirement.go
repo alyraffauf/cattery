@@ -12,7 +12,7 @@ type RetirementClassification struct {
 }
 
 // ClassifyRetirement purely classifies one state-only evaluation record
-// (PLAN.md Sections 8.5 and 9.5): an active row whose target has no producer
+// An active row whose target has no producer
 // anywhere in the complete current platform plan retires tracking only, never
 // the target. Rows on an inactive platform layer stay active for this
 // platform; rows already retired stay put. Records with a plan producer or

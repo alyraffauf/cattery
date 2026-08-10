@@ -1,5 +1,5 @@
 // Package selection owns repository and group resolution for the
-// repository-using commands (PLAN.md Section 8.2): explicit --repo path and
+// repository-using commands: explicit --repo path and
 // presence, raw CATTERY_REPO and presence, then the default repository of
 // the canonical home. Resolution never registers a repository and never
 // imports CLI concepts.

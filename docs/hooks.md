@@ -3,7 +3,7 @@
 Hooks let a repository run arbitrary trusted programs around an apply, such as
 installing packages, reloading a service, or bootstrapping a tool. Cattery has
 no plugin runtime and no built-in package-manager integration; hooks are the
-extensibility point. This document mirrors PLAN.md Section 10.
+extensibility point.
 
 ## Layout
 

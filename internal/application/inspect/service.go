@@ -25,8 +25,8 @@ func NewService(dependencies Dependencies) *Service {
 }
 
 // Evaluate performs one immutable selection, compile, snapshot, and
-// classification evaluation with on-demand secret semantics (PLAN.md Section
-// 9.1). No status/diff rendering, hook, prompt, registration, or mutation
+// classification evaluation with on-demand secret semantics. No status/diff
+// rendering, hook, prompt, registration, or mutation
 // occurs.
 func (service *Service) Evaluate(ctx context.Context, request Request) (Result, error) {
 	return service.evaluate(ctx, request)

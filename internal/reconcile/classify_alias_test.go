@@ -17,7 +17,6 @@ const (
 // representation combination: fresh, baselined, and reactivated alias rows,
 // intact and drifted file-to-alias and alias-to-file transitions, unexpected
 // target types, and the records the alias classifier must leave untouched
-// (PLAN.md Sections 5.4 and 9.5).
 func TestAliasClassification(t *testing.T) {
 	for _, row := range aliasClassificationCases {
 		t.Run(row.name, func(t *testing.T) {

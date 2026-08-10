@@ -9,7 +9,7 @@ import (
 )
 
 // hashKeyIDMetadataKey names the metadata row holding the derived identifier
-// of hash.key (PLAN.md Section 8.1), so replacement can be detected without
+// of hash.key, so replacement can be detected without
 // storing the key itself.
 const hashKeyIDMetadataKey = "hash_key_id"
 

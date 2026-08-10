@@ -1,4 +1,4 @@
-// Package apply implements `cattery apply` (PLAN.md Section 11.5): the
+// Package apply implements `cattery apply`: the
 // target-mutating deployment path with pre-decision collection, hook-gated
 // source revalidation, and per-target execution preconditions. The package
 // is Cobra-free; the CLI talks to the service through the frozen Request,

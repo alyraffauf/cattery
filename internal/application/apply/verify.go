@@ -10,7 +10,7 @@ import (
 
 // Verify re-snapshots every selected source, target, and alias after hooks
 // and downgrades any record whose facts no longer match its source to
-// partial (PLAN.md Section 11.5). Verification never rewrites drift and
+// partial. Verification never rewrites drift and
 // performs no baseline or state commit; equality baselines were already
 // established per durable write.
 func (service *Service) Verify(ctx context.Context, records []ItemResult, candidates Candidates) ([]ItemResult, error) {

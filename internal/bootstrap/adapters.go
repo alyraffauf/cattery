@@ -1,6 +1,6 @@
 // Package bootstrap owns the composition root: lazy concrete adapters,
-// per-application services, and the opaque CLI application (PLAN.md
-// Section 12.1). Nothing here imports Cobra and nothing opens or probes
+// per-application services, and the opaque CLI application. Nothing here
+// imports Cobra and nothing opens or probes
 // backend resources at construction time.
 package bootstrap
 

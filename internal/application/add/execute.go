@@ -14,7 +14,7 @@ import (
 // execute runs one batch sequentially in plan execution order, writing each
 // source, revalidating the target, and establishing the equal baseline. A
 // later failure leaves earlier adopted items accurately recorded; the batch
-// is never rolled back (PLAN.md Section 11.6 step 10).
+// is never rolled back.
 func (service *Service) execute(ctx context.Context, identity RepositoryIdentity, plan BatchPlan) (Result, error) {
 	items := plan.Items()
 	exec := &executor{service: service, identity: identity, records: make([]ItemResult, 0, len(items))}

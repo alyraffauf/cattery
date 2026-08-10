@@ -10,7 +10,7 @@ import (
 )
 
 // stateKeyFileName is the 32-byte keyed-hash secret beside the database
-// (PLAN.md Section 8.1). It is created on demand, never during Acquire.
+// It is created on demand, never during Acquire.
 const stateKeyFileName = "hash.key"
 
 // keyByteLength is the fixed size of the keyed-hash secret.

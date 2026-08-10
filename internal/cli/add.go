@@ -15,7 +15,7 @@ type AddService interface {
 
 // newAddCommand declares the add syntax and mechanically maps the raw
 // targets, repository fields, and exact group/platform/secret presence
-// bits into one add call (PLAN.md Section 11.6). No ownership inference or
+// bits into one add call. No ownership inference or
 // filesystem access appears here.
 func newAddCommand(service AddService, runtime Runtime, options *Options) *cobra.Command {
 	command := &cobra.Command{

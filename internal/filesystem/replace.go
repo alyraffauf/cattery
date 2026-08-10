@@ -50,8 +50,7 @@ type temporaryFile struct {
 
 // prepare writes the exact validated bytes once, applies the final mode,
 // commits the entry (sync then close), and revalidates the on-disk result so
-// no renamed entry can carry wrong bytes or mode (PLAN.md Section 7.2 steps
-// 5-9).
+// no renamed entry can carry wrong bytes or mode.
 func (file *temporaryFile) prepare(ctx context.Context, spec ReplacementSpec) error {
 	if _, err := file.temp.Write(spec.Content); err != nil {
 		return fmt.Errorf("filesystem: write temporary file: %w", err)
@@ -110,7 +109,7 @@ func NewReplacer() *Replacer {
 	}
 }
 
-// Replace performs the atomic replacement (PLAN.md Section 7.2): the exact
+// Replace performs the atomic replacement: the exact
 // validated bytes are written once to a same-directory temporary entry,
 // committed, revalidated, and renamed over the target, then the parent
 // directory is made durable. Failure before the rename leaves the old target

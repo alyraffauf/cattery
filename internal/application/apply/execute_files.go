@@ -13,7 +13,7 @@ import (
 // ExecuteFiles runs the regular-file actions of one apply sequentially:
 // each target is re-frozen, written durably with its mode policy, and
 // baselined in a short state commit. A later failure preserves accurate
-// earlier state and never imports target bytes (PLAN.md Section 11.5).
+// earlier state and never imports target bytes.
 func (service *Service) ExecuteFiles(ctx context.Context, plan PreparedPlan, candidates Candidates) ([]ItemResult, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err

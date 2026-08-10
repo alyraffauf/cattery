@@ -31,7 +31,7 @@ func (c CollectedDecisions) Specs() []reconcile.DecisionSpec {
 
 // CollectDecisions resolves every candidate that requires an explicit
 // decision, in bytewise target-path order, and validates each response
-// before any hook or mutation (PLAN.md Section 11.5). An abort answer stops
+// before any hook or mutation. An abort answer stops
 // the whole apply; a diff answer re-requests the adapter, which shows the
 // safe difference and asks again.
 func (service *Service) CollectDecisions(ctx context.Context, candidates Candidates) (CollectedDecisions, error) {

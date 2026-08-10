@@ -165,8 +165,7 @@ func installIdentity(t *testing.T, home, keyHome string) {
 
 // testSecretsRealRoundTrip proves an actual binary-mode encrypt/decrypt
 // round trip through the pinned real sops and age tools with an ephemeral
-// identity. It skips only when the real tools are absent, which never
-// happens under just test-sops in the pinned shell.
+// identity. It skips only when the real tools are absent.
 func testSecretsRealRoundTrip(t *testing.T) {
 	env := newExecEnv(t)
 	env.initRepository(t)
