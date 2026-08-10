@@ -281,8 +281,8 @@ func NewActionPlan(actions []PlanAction) ActionPlan {
 	return ActionPlan{actions: append([]PlanAction(nil), actions...)}
 }
 
-// Actions returns a defensive copy of the ordered execution actions.
-func (p ActionPlan) Actions() []PlanAction {
+// Items returns a defensive copy of the ordered execution actions.
+func (p ActionPlan) Items() []PlanAction {
 	return append([]PlanAction(nil), p.actions...)
 }
 

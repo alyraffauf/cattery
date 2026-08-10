@@ -80,7 +80,7 @@ func testPrepareDryRun(t *testing.T) {
 	if len(records) != 1 || records[0].Status != StatusPlanned || records[0].Kind != ActionKindWriteSource {
 		t.Fatalf("dry-run records = %+v, want one planned write-source record", records)
 	}
-	if len(plan.Actions().Actions()) != 0 || plan.WithHooks() {
+	if len(plan.Actions().Items()) != 0 || plan.WithHooks() {
 		t.Fatal("dry-run must carry no actions and no hooks")
 	}
 	if plan.Summary().Planned != 1 {
@@ -114,7 +114,7 @@ func testPrepareSkip(t *testing.T) {
 	if len(records) != 1 || records[0].Status != StatusPlanned {
 		t.Fatalf("skip records = %+v, want one planned record", records)
 	}
-	if len(plan.Actions().Actions()) != 0 {
+	if len(plan.Actions().Items()) != 0 {
 		t.Fatal("a skipped plan must carry no actions")
 	}
 	if !plan.WithHooks() {
@@ -136,7 +136,7 @@ func testPrepareNoop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
-	if len(plan.Actions().Actions()) != 0 || len(plan.Records()) != 0 || plan.WithHooks() {
+	if len(plan.Actions().Items()) != 0 || len(plan.Records()) != 0 || plan.WithHooks() {
 		t.Fatal("a converged apply must stay empty")
 	}
 }
@@ -159,7 +159,7 @@ func assertPreparedAction(t *testing.T, pair evalPair, decisions CollectedDecisi
 	if !plan.WithHooks() {
 		t.Fatal("an executing plan with actions must run hooks")
 	}
-	actions := plan.Actions().Actions()
+	actions := plan.Actions().Items()
 	if len(actions) != 1 || actions[0].Kind != ActionKindWriteSource || actions[0].TargetPath != "a.conf" {
 		t.Fatalf("actions = %+v, want one write-source action", actions)
 	}
