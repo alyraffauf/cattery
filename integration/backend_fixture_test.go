@@ -27,6 +27,7 @@ type BackendFixture struct {
 	Home         string
 	StateHome    string
 	Store        *state.Store
+	Adapters     bootstrap.Adapters
 	Applications bootstrap.Applications
 	Platform     deployment.Layer
 }
@@ -54,6 +55,7 @@ func NewBackendFixture(t *testing.T) BackendFixture {
 		Home:         home,
 		StateHome:    stateHome,
 		Store:        adapters.Store,
+		Adapters:     adapters,
 		Applications: applications,
 		Platform:     currentPlatform(),
 	}
