@@ -59,21 +59,33 @@ type stateReaderAdapter struct {
 
 // FileBaselines returns the persisted file rows of one repository pair.
 func (adapter stateReaderAdapter) FileBaselines(root, home string) ([]state.FileBaseline, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return nil, err
+	}
 	return adapter.store.FileBaselines(root, home)
 }
 
 // AliasBaselines returns the persisted alias rows of one repository pair.
 func (adapter stateReaderAdapter) AliasBaselines(root, home string) ([]state.AliasBaseline, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return nil, err
+	}
 	return adapter.store.AliasBaselines(root, home)
 }
 
 // RecoverHashKey loads the per-installation secret hash key.
 func (adapter stateReaderAdapter) RecoverHashKey() ([32]byte, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return [32]byte{}, err
+	}
 	return adapter.store.RecoverHashKey()
 }
 
 // DefaultRepository returns the default repository of one home.
 func (adapter stateReaderAdapter) DefaultRepository(home string) (state.Repository, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return state.Repository{}, err
+	}
 	return adapter.store.DefaultRepository(home)
 }
 
@@ -84,11 +96,17 @@ type baselineAdapter struct {
 
 // UpsertFileBaseline establishes or replaces one file row.
 func (adapter baselineAdapter) UpsertFileBaseline(root, home string, baseline state.FileBaseline) (state.FileBaseline, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return state.FileBaseline{}, err
+	}
 	return adapter.store.UpsertFileBaseline(root, home, baseline)
 }
 
 // UpsertAliasBaseline establishes or replaces one alias row.
 func (adapter baselineAdapter) UpsertAliasBaseline(root, home string, baseline state.AliasBaseline) (state.AliasBaseline, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return state.AliasBaseline{}, err
+	}
 	return adapter.store.UpsertAliasBaseline(root, home, baseline)
 }
 
@@ -99,11 +117,17 @@ type transitionAdapter struct {
 
 // TransitionToAlias switches one file row to an alias row.
 func (adapter transitionAdapter) TransitionToAlias(root, home string, baseline state.AliasBaseline) (state.AliasBaseline, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return state.AliasBaseline{}, err
+	}
 	return adapter.store.TransitionToAlias(root, home, baseline)
 }
 
 // TransitionToFile switches one alias row to a file row.
 func (adapter transitionAdapter) TransitionToFile(root, home string, baseline state.FileBaseline) (state.FileBaseline, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return state.FileBaseline{}, err
+	}
 	return adapter.store.TransitionToFile(root, home, baseline)
 }
 
@@ -114,11 +138,17 @@ type retirementAdapter struct {
 
 // RetireFileBaseline retires one file row.
 func (adapter retirementAdapter) RetireFileBaseline(root, home, target string) (state.FileBaseline, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return state.FileBaseline{}, err
+	}
 	return adapter.store.RetireFileBaseline(root, home, target)
 }
 
 // RetireAliasBaseline retires one alias row.
 func (adapter retirementAdapter) RetireAliasBaseline(root, home, aliasPath string) (state.AliasBaseline, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return state.AliasBaseline{}, err
+	}
 	return adapter.store.RetireAliasBaseline(root, home, aliasPath)
 }
 

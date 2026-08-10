@@ -40,6 +40,9 @@ func (service *Service) Initialize(ctx context.Context, request Request) (Result
 	if err := ctx.Err(); err != nil {
 		return Result{}, err
 	}
+	if err := service.store.EnsureAcquired(); err != nil {
+		return Result{}, failure.New(failure.Operational, "initialize: acquire state store", err)
+	}
 	environment, err := service.prepare(request)
 	if err != nil {
 		return Result{}, err

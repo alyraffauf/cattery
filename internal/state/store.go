@@ -42,6 +42,16 @@ func (store *Store) Database() *Database {
 	return store.database
 }
 
+// EnsureAcquired lazily opens the state store for application adapters that do
+// not receive a context. Repeated calls after a successful acquisition are
+// no-ops; construction and version/help paths remain side-effect-free.
+func (store *Store) EnsureAcquired() error {
+	if store.database != nil {
+		return nil
+	}
+	return store.Acquire(context.Background())
+}
+
 // Acquire resolves the canonical state directory, creates it, acquires the
 // advisory lock, opens the database, and applies any required migration. On any
 // failure it releases what was acquired so the Store is safe to drop.

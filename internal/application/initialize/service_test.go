@@ -26,7 +26,7 @@ func TestInitializeService(t *testing.T) {
 		{"rejects home overlap", testServiceRejectsHomeOverlap},
 		{"rejects state overlap", testServiceRejectsStateOverlap},
 		{"rejects portable case-equivalent overlap", testServiceRejectsPortableOverlap},
-		{"requires an acquired store", testServiceRequiresAcquiredStore},
+		{"acquires the store lazily", testServiceAcquiresStoreLazily},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
@@ -186,12 +186,12 @@ func testServiceRejectsPortableOverlap(t *testing.T) {
 	}
 }
 
-func testServiceRequiresAcquiredStore(t *testing.T) {
+func testServiceAcquiresStoreLazily(t *testing.T) {
 	store := state.NewStore(state.Dependencies{StateHome: t.TempDir()})
+	defer store.Close()
 	service := NewService(Dependencies{Home: t.TempDir(), Store: store})
-	_, err := service.Initialize(context.Background(), Request{Path: t.TempDir()})
-	if kind, matched := failure.HasKind(err); !matched || kind != failure.Operational {
-		t.Fatalf("error = %v, want Operational", err)
+	if _, err := service.Initialize(context.Background(), Request{Path: t.TempDir()}); err != nil {
+		t.Fatalf("Initialize: %v", err)
 	}
 }
 
