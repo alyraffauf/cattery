@@ -103,7 +103,7 @@ func (service *Service) evaluateRows(ctx context.Context, input scopeInput) (Can
 	if err != nil {
 		return Candidates{}, err
 	}
-	return Candidates{root: input.identity.Root, home: input.identity.Home, records: candidates}, nil
+	return Candidates{root: input.identity.Root, home: input.identity.Home, platform: string(service.platform), hooks: plan.Hooks(), records: candidates}, nil
 }
 
 func (service *Service) chosen(input scopeInput) (deployment.Plan, selection.Selection, error) {
@@ -130,7 +130,6 @@ func (service *Service) selected(input scopeInput, full deployment.Plan, chosen 
 	return plan, snapshot, nil
 }
 
-// resolve maps the raw repository fields and resolves the canonical pair.
 func (service *Service) resolve(input RepositoryInput) (RepositoryIdentity, error) {
 	identity, err := service.source.Resolve(repositoryRequest(input))
 	if err != nil {
@@ -149,7 +148,6 @@ func repositoryRequest(input RepositoryInput) selection.RepositoryRequest {
 	}
 }
 
-// readRows reads every persisted file and alias row of the repository pair.
 func (service *Service) readRows(identity RepositoryIdentity) (stateRows, error) {
 	files, err := service.state.FileBaselines(identity.Root, identity.Home)
 	if err != nil {
@@ -162,7 +160,6 @@ func (service *Service) readRows(identity RepositoryIdentity) (stateRows, error)
 	return stateRows{files: files, aliases: aliases}, nil
 }
 
-// compile validates the repository and returns the plan restricted to the selection (nil selects everything).
 func (service *Service) compile(identity RepositoryIdentity, selected []string) (deployment.Plan, error) {
 	plan, err := service.compiler.Compile(repository.CompileInput{
 		Platform:       service.platform,
@@ -177,8 +174,6 @@ func (service *Service) compile(identity RepositoryIdentity, selected []string) 
 	return plan, nil
 }
 
-// selectedPlan restricts the full plan to the selection: root-only selections keep it, explicit selections filter to the selected repository
-// groups, and pure state-only selections yield an empty plan.
 func (service *Service) selectedPlan(identity RepositoryIdentity, full deployment.Plan, chosen selection.Selection) (deployment.Plan, error) {
 	if chosen.Root {
 		return full, nil
@@ -190,7 +185,6 @@ func (service *Service) selectedPlan(identity RepositoryIdentity, full deploymen
 	return service.compile(identity, selected)
 }
 
-// intersectGroups keeps selected names that are also current groups.
 func intersectGroups(selected, current []string) []string {
 	var common []string
 	for _, name := range selected {
@@ -201,7 +195,6 @@ func intersectGroups(selected, current []string) []string {
 	return common
 }
 
-// emptyPlan builds the degenerate plan of a pure state-only selection, which carries no producer and only joins persisted rows.
 func emptyPlan(identity RepositoryIdentity, platform deployment.Layer) (deployment.Plan, error) {
 	return deployment.NewPlan(deployment.PlanInput{
 		RepositoryRoot: identity.Root,
@@ -209,7 +202,6 @@ func emptyPlan(identity RepositoryIdentity, platform deployment.Layer) (deployme
 	})
 }
 
-// stateRows bundles the persisted rows of one repository pair.
 type stateRows struct {
 	files   []state.FileBaseline
 	aliases []state.AliasBaseline
@@ -290,14 +282,22 @@ type Candidate struct {
 
 // Candidates freezes the evaluated records of one apply in deterministic target-path order.
 type Candidates struct {
-	root    string
-	home    string
-	records []Candidate
+	root     string
+	home     string
+	platform string
+	hooks    []deployment.Hook
+	records  []Candidate
 }
 
 func (c Candidates) Root() string { return c.root }
 
 func (c Candidates) Home() string { return c.home }
+
+func (c Candidates) Platform() string { return c.platform }
+
+func (c Candidates) Hooks() []deployment.Hook {
+	return append([]deployment.Hook(nil), c.hooks...)
+}
 
 func (c Candidates) All() []Candidate {
 	return append([]Candidate(nil), c.records...)

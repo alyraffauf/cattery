@@ -23,14 +23,15 @@ func (service *Service) ExecuteAliases(ctx context.Context, plan PreparedPlan, c
 	byPath := candidatesByPath(candidates)
 	results := make([]ItemResult, 0)
 	for _, action := range plan.Actions().Actions() {
-		job := aliasJob{action: action, candidate: byPath[action.TargetPath], root: candidates.Root(), home: candidates.Home()}
-		record, err := service.executeAliasAction(ctx, job)
-		if err == nil {
-			results = append(results, record)
+		if action.Kind != ActionKindRealizeAlias && action.Kind != ActionKindRetireFile && action.Kind != ActionKindRetireAlias {
 			continue
 		}
+		job := aliasJob{action: action, candidate: byPath[action.TargetPath], root: candidates.Root(), home: candidates.Home()}
+		record, err := service.executeAliasAction(ctx, job)
 		results = append(results, record)
-		return results, err
+		if err != nil {
+			return results, err
+		}
 	}
 	return results, nil
 }

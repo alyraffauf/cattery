@@ -56,6 +56,7 @@ type evalInput struct {
 	baselines   BaselineStore
 	transitions TransitionStore
 	retirements RetirementStore
+	hooks       HookExecutor
 }
 
 // evalFixture builds an evaluation service over the frozen input.
@@ -68,9 +69,9 @@ func evalFixture(t *testing.T, input evalInput) *Service {
 		Baselines:        input.baselines,
 		Transitions:      input.transitions,
 		Retirements:      input.retirements,
+		Hooks:            input.hooks,
 		Secrets:          input.client,
 		Replacer:         input.replacer,
-		Hooks:            fakeHookExecutor{},
 		Probe:            input.probe,
 		ProtectedTrees:   []string{filepath.Join(input.repo, "state")},
 		Platform:         "linux",
