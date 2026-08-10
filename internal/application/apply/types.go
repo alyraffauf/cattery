@@ -115,6 +115,16 @@ type DecisionResolver interface {
 	Resolve(context.Context, DecisionRequest) (DecisionResponse, error)
 }
 
+// DifferenceProvider renders one safe difference for the current apply
+// candidate. It returns false when the target cannot produce a difference.
+type DifferenceProvider func(context.Context, string) (SafeDifference, bool)
+
+// DifferenceResolver is the optional prompt seam for resolvers that can show
+// a safe difference before asking for the final decision.
+type DifferenceResolver interface {
+	ResolveWithDifference(context.Context, DecisionRequest, DifferenceProvider) (DecisionResponse, error)
+}
+
 // RepositoryInput carries the raw repository fields the CLI adapter copies
 // mechanically: the explicit --repo value and its presence, the raw
 // CATTERY_REPO value and its presence, and the initial working directory for

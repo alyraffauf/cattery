@@ -18,6 +18,7 @@ func TestApplyDecisionCollection(t *testing.T) {
 		{"skip is collected", testDecisionSkip},
 		{"overwrite is collected", testDecisionOverwrite},
 		{"diff re-requests", testDecisionDiff},
+		{"diff provider receives the candidate", testDecisionDifferenceProvider},
 		{"invalid response", testDecisionInvalid},
 		{"resolver errors propagate", testDecisionResolverError},
 		{"collection order", testDecisionOrder},
@@ -29,9 +30,10 @@ func TestApplyDecisionCollection(t *testing.T) {
 
 // resolverFake returns queued responses and records the requests.
 type resolverFake struct {
-	responses []DecisionResponse
-	requests  []string
-	err       error
+	responses       []DecisionResponse
+	requests        []string
+	err             error
+	differenceCalls int
 }
 
 func (resolver *resolverFake) Resolve(ctx context.Context, request DecisionRequest) (DecisionResponse, error) {
@@ -45,6 +47,14 @@ func (resolver *resolverFake) Resolve(ctx context.Context, request DecisionReque
 	response := resolver.responses[0]
 	resolver.responses = resolver.responses[1:]
 	return response, nil
+}
+
+func (resolver *resolverFake) ResolveWithDifference(ctx context.Context, request DecisionRequest, difference DifferenceProvider) (DecisionResponse, error) {
+	resolver.differenceCalls++
+	if _, ok := difference(ctx, request.TargetPath()); !ok {
+		return DecisionResponse{}, fmt.Errorf("difference unavailable")
+	}
+	return resolver.Resolve(ctx, request)
 }
 
 // decisionFixture evaluates one drifting target per name over an empty
@@ -120,6 +130,18 @@ func testDecisionDiff(t *testing.T) {
 	}
 	if collected.All()[0].response.Choice != ChoiceSkip {
 		t.Fatalf("final decision = %+v, want skip", collected.All()[0])
+	}
+}
+
+func testDecisionDifferenceProvider(t *testing.T) {
+	resolver := &resolverFake{responses: []DecisionResponse{{Choice: ChoiceSkip}}}
+	service, candidates := decisionFixture(t, "a.conf")
+	service.resolver = resolver
+	if _, err := service.CollectDecisions(context.Background(), candidates); err != nil {
+		t.Fatalf("collect: %v", err)
+	}
+	if resolver.differenceCalls != 1 {
+		t.Fatalf("difference calls = %d, want one", resolver.differenceCalls)
 	}
 }
 
