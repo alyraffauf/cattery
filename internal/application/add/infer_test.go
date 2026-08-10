@@ -11,146 +11,246 @@ func TestAddInference(t *testing.T) {
 		name string
 		run  func(*testing.T)
 	}{
-		{"unmanaged root ordinary", testInferUnmanagedRoot},
-		{"explicit group and platform", testInferExplicit},
-		{"managed ordinary reused", testInferManagedOrdinary},
-		{"managed secret with flag", testInferManagedSecret},
-		{"storage class conflict", testInferStorageConflict},
-		{"alias target rejected", testInferAlias},
-		{"inactive platform rejected", testInferInactivePlatform},
-		{"omitted flags default", testInferDefaults},
+		{"unmanaged root base ordinary", testInferRootBaseOrdinary},
+		{"unmanaged dot tree is representable", testInferDotTree},
+		{"unmanaged root base secret", testInferRootBaseSecret},
+		{"unmanaged group ordinary", testInferGroupOrdinary},
+		{"unmanaged platform layer", testInferPlatformLayer},
+		{"unmanaged group platform secret", testInferGroupPlatformSecret},
+		{"managed adopts owner", testInferManagedAdopts},
+		{"managed rejects conflicting group", testInferManagedConflictGroup},
+		{"managed rejects conflicting platform", testInferManagedConflictPlatform},
+		{"alias target rejected", testInferAliasRejected},
+		{"underscore target rejected", testInferUnderscoreRejected},
+		{"metadata name rejected", testInferMetadataRejected},
+		{"multi-segment non-dot rejected", testInferMultiSegmentRejected},
+		{"platform must equal runtime", testInferPlatformMismatch},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
 	}
 }
 
-// inferPlan freezes one platform plan over the given files and aliases.
-func inferPlan(t *testing.T, platform string, files []deployment.ManagedFile, aliases []deployment.Alias) deployment.Plan {
-	t.Helper()
-	plan, err := deployment.NewPlan(deployment.PlanInput{
-		RepositoryRoot: "/repo", Platform: platform, Files: files, Aliases: aliases,
+func testInferRootBaseOrdinary(t *testing.T) {
+	item, err := inferOneCase(t, request{}, ".bashrc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertItem(t, item, expectedItem{
+		scope: deployment.NewScope(""), layer: deployment.LayerBase,
+		kind: deployment.FileOrdinary, source: ".bashrc",
+	})
+}
+
+func testInferDotTree(t *testing.T) {
+	item, err := inferOneCase(t, request{}, ".config/app/config.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertItem(t, item, expectedItem{
+		scope: deployment.NewScope(""), layer: deployment.LayerBase,
+		kind: deployment.FileOrdinary, source: ".config/app/config.toml",
+	})
+}
+
+func testInferRootBaseSecret(t *testing.T) {
+	item, err := inferOneCase(t, request{SecretSet: true, Secret: true}, ".aws/creds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertItem(t, item, expectedItem{
+		scope: deployment.NewScope(""), layer: deployment.LayerBase,
+		kind: deployment.FileSecret, source: "_secrets/.aws/creds",
+	})
+}
+
+func testInferGroupOrdinary(t *testing.T) {
+	item, err := inferOneCase(t, request{GroupSet: true, Group: "atuin"}, "config.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertItem(t, item, expectedItem{
+		scope: deployment.NewScope("atuin"), layer: deployment.LayerBase,
+		kind: deployment.FileOrdinary, source: "atuin/config.toml",
+	})
+}
+
+func testInferPlatformLayer(t *testing.T) {
+	item, err := inferOneCase(t, request{PlatformSet: true, Platform: "linux"}, "bin/tool")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertItem(t, item, expectedItem{
+		scope: deployment.NewScope(""), layer: deployment.LayerLinux,
+		kind: deployment.FileOrdinary, source: "_linux/bin/tool",
+	})
+}
+
+func testInferGroupPlatformSecret(t *testing.T) {
+	item, err := inferOneCase(t,
+		request{GroupSet: true, Group: "atuin", PlatformSet: true, Platform: "linux",
+			SecretSet: true, Secret: true}, "db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertItem(t, item, expectedItem{
+		scope: deployment.NewScope("atuin"), layer: deployment.LayerLinux,
+		kind: deployment.FileSecret, source: "atuin/_linux/_secrets/db",
+	})
+}
+
+func testInferManagedAdopts(t *testing.T) {
+	plan := planWith(t, managedRoot(t, ".vimrc", deployment.FileOrdinary), nil)
+	context := inferContext{
+		identity: RepositoryIdentity{Root: "/repo", Home: "/home/user"},
+		plan:     plan, platform: deployment.LayerLinux,
+		targets: []string{"/home/user/.vimrc"},
+	}
+	items, err := Infer(context, request{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if items[0].SourceRepositoryPath != ".vimrc" {
+		t.Fatalf("source = %q, want the owner path .vimrc", items[0].SourceRepositoryPath)
+	}
+}
+
+func testInferManagedConflictGroup(t *testing.T) {
+	plan := planWith(t, managedRoot(t, ".vimrc", deployment.FileOrdinary), nil)
+	context := inferContext{
+		identity: RepositoryIdentity{Root: "/repo", Home: "/home/user"},
+		plan:     plan, platform: deployment.LayerLinux,
+		targets: []string{"/home/user/.vimrc"},
+	}
+	if _, err := Infer(context, request{GroupSet: true, Group: "other"}); err == nil {
+		t.Fatal("managed owner accepted a conflicting group")
+	}
+}
+
+func testInferManagedConflictPlatform(t *testing.T) {
+	plan := planWith(t, managedRoot(t, ".vimrc", deployment.FileOrdinary), nil)
+	context := inferContext{
+		identity: RepositoryIdentity{Root: "/repo", Home: "/home/user"},
+		plan:     plan, platform: deployment.LayerLinux,
+		targets: []string{"/home/user/.vimrc"},
+	}
+	if _, err := Infer(context, request{PlatformSet: true, Platform: "linux"}); err == nil {
+		t.Fatal("managed base owner accepted a conflicting platform")
+	}
+}
+
+func testInferAliasRejected(t *testing.T) {
+	alias, err := deployment.NewAlias(deployment.Alias{
+		Scope: deployment.NewScope(""), Platform: "linux",
+		AliasRelativePath: "readme", CanonicalTargetRelativePath: "README.md",
 	})
 	if err != nil {
-		t.Fatalf("plan: %v", err)
+		t.Fatal(err)
+	}
+	plan := planWith(t, nil, []deployment.Alias{alias})
+	context := inferContext{
+		identity: RepositoryIdentity{Root: "/repo", Home: "/home/user"},
+		plan:     plan, platform: deployment.LayerLinux,
+		targets: []string{"/home/user/readme"},
+	}
+	_, err = Infer(context, request{})
+	if err == nil {
+		t.Fatal("alias target was accepted")
+	}
+}
+
+func testInferUnderscoreRejected(t *testing.T) {
+	if _, err := inferOneCase(t, request{}, "_secrets/secret"); err == nil {
+		t.Fatal("underscore target was accepted")
+	}
+}
+
+func testInferMetadataRejected(t *testing.T) {
+	if _, err := inferOneCase(t, request{}, ".gitignore"); err == nil {
+		t.Fatal("metadata name was accepted")
+	}
+}
+
+func testInferMultiSegmentRejected(t *testing.T) {
+	if _, err := inferOneCase(t, request{}, "bin/tool"); err == nil {
+		t.Fatal("root base multi-segment non-dot target was accepted")
+	}
+}
+
+func testInferPlatformMismatch(t *testing.T) {
+	context := inferContext{
+		identity: RepositoryIdentity{Root: "/repo", Home: "/home/user"},
+		plan:     planWith(t, nil, nil), platform: deployment.LayerLinux,
+		targets: []string{"/home/user/bin/tool"},
+	}
+	if _, err := Infer(context, request{PlatformSet: true, Platform: "darwin"}); err == nil {
+		t.Fatal("cross-platform add was accepted")
+	}
+}
+
+// inferOneCase runs Infer for one unmanaged target with an empty plan.
+func inferOneCase(t *testing.T, request request, relative string) (ItemPlanInput, error) {
+	t.Helper()
+	context := inferContext{
+		identity: RepositoryIdentity{Root: "/repo", Home: "/home/user"},
+		plan:     planWith(t, nil, nil), platform: deployment.LayerLinux,
+		targets: []string{"/home/user/" + relative},
+	}
+	items, err := Infer(context, request)
+	if err != nil {
+		return ItemPlanInput{}, err
+	}
+	return items[0], nil
+}
+
+// request re-exports Request for table brevity; the field set mirrors the
+// presence bits the CLI captures.
+type request = Request
+
+// expectedItem bundles the inferred fields one assertion checks.
+type expectedItem struct {
+	scope  deployment.Scope
+	layer  deployment.Layer
+	kind   deployment.FileKind
+	source string
+}
+
+func assertItem(t *testing.T, item ItemPlanInput, want expectedItem) {
+	t.Helper()
+	if item.Scope != want.scope {
+		t.Fatalf("scope = %v, want %v", item.Scope, want.scope)
+	}
+	if item.Layer != want.layer {
+		t.Fatalf("layer = %v, want %v", item.Layer, want.layer)
+	}
+	if item.Kind != want.kind {
+		t.Fatalf("kind = %v, want %v", item.Kind, want.kind)
+	}
+	if item.SourceRepositoryPath != want.source {
+		t.Fatalf("source = %q, want %q", item.SourceRepositoryPath, want.source)
+	}
+}
+
+func planWith(t *testing.T, files []deployment.ManagedFile, aliases []deployment.Alias) deployment.Plan {
+	t.Helper()
+	plan, err := deployment.NewPlan(deployment.PlanInput{
+		RepositoryRoot: "/repo", Platform: "linux", Files: files, Aliases: aliases,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	return plan
 }
 
-// inferFile freezes one managed file entry.
-func inferFile(t *testing.T, group, target, source string, kind deployment.FileKind, layer deployment.Layer) deployment.ManagedFile {
+func managedRoot(t *testing.T, target string, kind deployment.FileKind) []deployment.ManagedFile {
 	t.Helper()
 	file, err := deployment.NewManagedFile(deployment.ManagedFile{
-		Scope: deployment.NewScope(group), Layer: layer, Kind: kind,
-		SourceAbsolutePath: "/repo/" + source, SourceRepositoryPath: source, TargetRelativePath: target,
+		Scope: deployment.NewScope(""), Layer: deployment.LayerBase, Kind: kind,
+		SourceAbsolutePath: "/repo/" + target, SourceRepositoryPath: target,
+		TargetRelativePath: target,
 	})
 	if err != nil {
-		t.Fatalf("managed file: %v", err)
+		t.Fatal(err)
 	}
-	return file
-}
-
-// inferAlias freezes one alias entry.
-func inferAlias(t *testing.T, aliasPath, canonical string) deployment.Alias {
-	t.Helper()
-	alias, err := deployment.NewAlias(deployment.Alias{
-		Scope: deployment.NewScope(""), Platform: "linux",
-		AliasRelativePath: aliasPath, CanonicalTargetRelativePath: canonical,
-	})
-	if err != nil {
-		t.Fatalf("alias: %v", err)
-	}
-	return alias
-}
-
-// inferCheck asserts the frozen ownership of one inference.
-func inferCheck(t *testing.T, inference Inference, group, source string, kind deployment.FileKind, layer deployment.Layer) {
-	t.Helper()
-	if inference.Scope().Group != group {
-		t.Fatalf("scope = %q, want %q", inference.Scope().Group, group)
-	}
-	if inference.SourceRepositoryPath() != source {
-		t.Fatalf("source = %q, want %q", inference.SourceRepositoryPath(), source)
-	}
-	if inference.Kind() != kind {
-		t.Fatalf("kind = %v, want %v", inference.Kind(), kind)
-	}
-	if inference.Layer() != layer {
-		t.Fatalf("layer = %v, want %v", inference.Layer(), layer)
-	}
-}
-
-// inferBase carries the shared inputs of one inference.
-func inferBase(t *testing.T, target string) InferInput {
-	t.Helper()
-	return InferInput{Target: target, Home: "/home", Plan: inferPlan(t, "linux", nil, nil)}
-}
-
-func testInferUnmanagedRoot(t *testing.T) {
-	inference, err := InferOwnership(inferBase(t, "a.conf"))
-	if err != nil {
-		t.Fatalf("infer: %v", err)
-	}
-	inferCheck(t, inference, "", "a.conf", deployment.FileOrdinary, deployment.LayerBase)
-	if inference.TargetAbsolutePath() != "/home/a.conf" || inference.SourceAbsolutePath() != "/repo/a.conf" {
-		t.Fatalf("paths = %q %q, want canonical joins", inference.TargetAbsolutePath(), inference.SourceAbsolutePath())
-	}
-}
-
-func testInferExplicit(t *testing.T) {
-	request := Request{Group: "apps", GroupSet: true, Platform: "linux", PlatformSet: true, Secret: true, SecretSet: true}
-	inference, err := InferOwnership(InferInput{Request: request, Target: "app.conf", Home: "/home", Plan: inferPlan(t, "linux", nil, nil)})
-	if err != nil {
-		t.Fatalf("infer: %v", err)
-	}
-	inferCheck(t, inference, "apps", "apps/app.conf", deployment.FileSecret, deployment.LayerLinux)
-}
-
-func testInferManagedOrdinary(t *testing.T) {
-	plan := inferPlan(t, "linux", []deployment.ManagedFile{inferFile(t, "apps", "a.conf", "apps/a.conf", deployment.FileOrdinary, deployment.LayerBase)}, nil)
-	inference, err := InferOwnership(InferInput{Target: "a.conf", Home: "/home", Plan: plan})
-	if err != nil {
-		t.Fatalf("infer: %v", err)
-	}
-	inferCheck(t, inference, "apps", "apps/a.conf", deployment.FileOrdinary, deployment.LayerBase)
-}
-
-func testInferManagedSecret(t *testing.T) {
-	plan := inferPlan(t, "linux", []deployment.ManagedFile{inferFile(t, "", "token", "token", deployment.FileSecret, deployment.LayerBase)}, nil)
-	inference, err := InferOwnership(InferInput{Request: Request{Secret: true, SecretSet: true}, Target: "token", Home: "/home", Plan: plan})
-	if err != nil {
-		t.Fatalf("infer: %v", err)
-	}
-	inferCheck(t, inference, "", "token", deployment.FileSecret, deployment.LayerBase)
-}
-
-func testInferStorageConflict(t *testing.T) {
-	plan := inferPlan(t, "linux", []deployment.ManagedFile{inferFile(t, "", "a.conf", "a.conf", deployment.FileOrdinary, deployment.LayerBase)}, nil)
-	_, err := InferOwnership(InferInput{Request: Request{Secret: true, SecretSet: true}, Target: "a.conf", Home: "/home", Plan: plan})
-	if err == nil {
-		t.Fatal("an explicit secret flag must conflict with a managed ordinary file")
-	}
-}
-
-func testInferAlias(t *testing.T) {
-	plan := inferPlan(t, "linux", nil, []deployment.Alias{inferAlias(t, "bin/tool", "files/tool")})
-	_, err := InferOwnership(InferInput{Target: "bin/tool", Home: "/home", Plan: plan})
-	if err == nil {
-		t.Fatal("an alias target must be rejected")
-	}
-}
-
-func testInferInactivePlatform(t *testing.T) {
-	_, err := InferOwnership(InferInput{Request: Request{Platform: "darwin", PlatformSet: true}, Target: "a.conf", Home: "/home", Plan: inferPlan(t, "linux", nil, nil)})
-	if err == nil {
-		t.Fatal("an inactive explicit platform must be rejected")
-	}
-}
-
-func testInferDefaults(t *testing.T) {
-	inference, err := InferOwnership(InferInput{Target: "dir/app.conf", Home: "/home", Plan: inferPlan(t, "linux", nil, nil)})
-	if err != nil {
-		t.Fatalf("infer: %v", err)
-	}
-	inferCheck(t, inference, "", "dir/app.conf", deployment.FileOrdinary, deployment.LayerBase)
+	return []deployment.ManagedFile{file}
 }
