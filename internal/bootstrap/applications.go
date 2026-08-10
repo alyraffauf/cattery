@@ -8,7 +8,6 @@ import (
 	"github.com/alyraffauf/cattery/internal/application/initialize"
 	"github.com/alyraffauf/cattery/internal/application/inspect"
 	"github.com/alyraffauf/cattery/internal/application/validate"
-	"github.com/alyraffauf/cattery/internal/application/version"
 	"github.com/alyraffauf/cattery/internal/cli"
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/selection"
@@ -22,7 +21,6 @@ type Applications struct {
 	Inspect    *inspect.Service
 	Apply      *apply.Service
 	Add        *add.Service
-	Version    *version.Service
 }
 
 // ApplicationsInput carries the adapters, home, platform, protected
@@ -82,7 +80,6 @@ func BuildApplications(input ApplicationsInput) Applications {
 		Inspect:    buildInspect(input, shared),
 		Apply:      buildApply(input, shared),
 		Add:        buildAdd(input, shared),
-		Version:    version.NewService(),
 	}
 }
 

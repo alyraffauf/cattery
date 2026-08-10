@@ -43,17 +43,13 @@ func appFixture(t *testing.T) (Applications, Adapters) {
 func testApplicationsBuilt(t *testing.T) {
 	applications, _ := appFixture(t)
 	if applications.Initialize == nil || applications.Validate == nil || applications.Inspect == nil ||
-		applications.Apply == nil || applications.Add == nil || applications.Version == nil {
+		applications.Apply == nil || applications.Add == nil {
 		t.Fatal("every application service must be constructed")
 	}
 }
 
 func testApplicationsSideEffects(t *testing.T) {
-	applications, adapters := appFixture(t)
-	result := applications.Version.Version()
-	if result.Version != "dev" {
-		t.Fatalf("version = %q, want the development default", result.Version)
-	}
+	_, adapters := appFixture(t)
 	if adapters.Store.Database() != nil {
 		t.Fatal("construction must not open the database")
 	}
