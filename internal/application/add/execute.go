@@ -153,12 +153,7 @@ func partialRecord(item ItemPlan) ItemResult {
 
 // record renders one item with its target, source, kind, and status.
 func record(item ItemPlan, status ItemStatus) ItemResult {
-	return ItemResult{
-		Target: item.TargetRelativePath(),
-		Source: item.SourceRepositoryPath(),
-		Status: status,
-		Secret: item.Kind() == deployment.FileSecret,
-	}
+	return itemRecord(item, status)
 }
 
 // finish assembles the result and outcome summary.
