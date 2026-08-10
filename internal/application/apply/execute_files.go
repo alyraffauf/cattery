@@ -74,9 +74,6 @@ func (service *Service) executeFile(ctx context.Context, job fileJob) (ItemResul
 	if err := service.commitBaseline(ctx, job, baselineCommit{contentHash: contentHash, durable: durable}); err != nil {
 		return partialRecord(job), err
 	}
-	if !durable {
-		return partialRecord(job), nil
-	}
 	return completedRecord(job), nil
 }
 
@@ -115,10 +112,10 @@ type writeSpec struct {
 	candidate    Candidate
 }
 
-// sourceContent returns the exact source bytes of one file action: the
-// retained ordinary bytes, or the decrypted plaintext for secrets. The
-// content hash is the keyed secret fingerprint or the ordinary digest.
-func (service *Service) sourceContent(ctx context.Context, candidate Candidate) ([]byte, deployment.Digest, func(), error) {
+// sourceContent returns exact source bytes, their semantic hash, and a cleanup
+// function that must be called after the bytes are no longer needed. The
+// cleanup function is non-nil only when the bytes contain decrypted plaintext.
+func (service *Service) sourceContent(ctx context.Context, candidate Candidate) (content []byte, contentHash deployment.Digest, clear func(), err error) {
 	snapshot := candidate.record.Source.Snapshot()
 	if candidate.record.File.Kind != deployment.FileSecret {
 		return candidate.record.Source.Bytes(), snapshot.Semantic(), nil, nil

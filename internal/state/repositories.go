@@ -82,8 +82,12 @@ func (store *Store) SetDefaultRepository(root, home string) (Repository, error) 
 	if err != nil {
 		return Repository{}, err
 	}
-	batches := [][]any{{root, home, now, now}, {home}, {now, root, home}}
-	if err := execBatch(transaction, []string{repositoryUpsertSQL, clearDefaultsSQL, markDefaultSQL}, batches); err != nil {
+	steps := []sqlStep{
+		{operation: "register repository", statement: repositoryUpsertSQL, arguments: []any{root, home, now, now}},
+		{operation: "clear repository defaults", statement: clearDefaultsSQL, arguments: []any{home}},
+		{operation: "mark repository default", statement: markDefaultSQL, arguments: []any{now, root, home}},
+	}
+	if err := execBatch(transaction, steps); err != nil {
 		return Repository{}, err
 	}
 	repository, err := scanAndCommit(transaction, root, home)
@@ -194,13 +198,28 @@ func scanAndCommit(transaction *sql.Tx, root, home string) (Repository, error) {
 	return repository, nil
 }
 
-// execBatch executes each statement with its own argument batch in order,
-// stopping at the first failure. Statement and batch indices correspond.
-func execBatch(transaction *sql.Tx, statements []string, batches [][]any) error {
-	for index, statement := range statements {
-		if err := execIn(transaction, statement, batches[index]...); err != nil {
+type sqlStep struct {
+	operation string
+	statement string
+	arguments []any
+}
+
+// execBatch executes named statements in order, stopping at the first failure.
+func execBatch(transaction *sql.Tx, steps []sqlStep) error {
+	for _, step := range steps {
+		if err := execNamed(transaction, step.operation, step.statement, step.arguments...); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// execNamed executes one named statement in the transaction, rolling back and
+// wrapping the error when the statement fails.
+func execNamed(transaction *sql.Tx, operation, statement string, arguments ...any) error {
+	if _, err := transaction.Exec(statement, arguments...); err != nil {
+		_ = transaction.Rollback()
+		return fmt.Errorf("state: %s: %w", operation, err)
 	}
 	return nil
 }
@@ -208,11 +227,7 @@ func execBatch(transaction *sql.Tx, statements []string, batches [][]any) error 
 // execIn executes one statement in the transaction, rolling back and wrapping
 // the error when the statement fails.
 func execIn(transaction *sql.Tx, statement string, arguments ...any) error {
-	if _, err := transaction.Exec(statement, arguments...); err != nil {
-		_ = transaction.Rollback()
-		return fmt.Errorf("state: %s: %w", statement, err)
-	}
-	return nil
+	return execNamed(transaction, statement, statement, arguments...)
 }
 
 // canonicalRepositoryPair resolves both paths to canonical absolute form so

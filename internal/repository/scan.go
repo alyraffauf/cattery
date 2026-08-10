@@ -156,6 +156,8 @@ func (scanner *scopeScanner) scanHookPhase(hooksDir string, phase deployment.Hoo
 		return err
 	}
 	if !info.IsDir() {
+		// Missing hook phases are optional; a non-directory phase is ignored like
+		// an absent phase because hook discovery only consumes regular children.
 		return nil
 	}
 	entries, err := os.ReadDir(path)
