@@ -61,7 +61,6 @@ func (service *Service) Evaluate(ctx context.Context, request Request) (Candidat
 	return service.evaluate(ctx, request)
 }
 
-// evaluate resolves the repository and runs the selection, compile, snapshot, and classification pipeline.
 func (service *Service) evaluate(ctx context.Context, request Request) (Candidates, error) {
 	if err := ctx.Err(); err != nil {
 		return Candidates{}, err
@@ -140,7 +139,6 @@ func (service *Service) resolve(input RepositoryInput) (RepositoryIdentity, erro
 	return identity, nil
 }
 
-// repositoryRequest copies the raw repository fields into the selection request shape.
 func repositoryRequest(input RepositoryInput) selection.RepositoryRequest {
 	return selection.RepositoryRequest{
 		RawExplicit: input.RawExplicit,
@@ -297,7 +295,6 @@ type Candidates struct {
 	records []Candidate
 }
 
-// Root returns the canonical repository root of the evaluated pair.
 func (c Candidates) Root() string { return c.root }
 
 func (c Candidates) Home() string { return c.home }
@@ -338,6 +335,9 @@ type semanticState struct {
 // fingerprints derives the semantic fingerprints of one evaluation record; secrets fingerprint on demand per PLAN.md Section 9.1.
 func (state *semanticState) fingerprints(ctx context.Context, home string, record reconcile.Evaluation) (reconcile.FileSemantics, error) {
 	if record.Entry != reconcile.PlanEntryFile {
+		if record.Target.Kind() == reconcile.KindFile {
+			return reconcile.FileSemantics{Target: record.Target.Digest()}, nil
+		}
 		return reconcile.FileSemantics{}, nil
 	}
 	if record.File.Kind == deployment.FileOrdinary {

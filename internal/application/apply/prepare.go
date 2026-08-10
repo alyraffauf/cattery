@@ -131,7 +131,17 @@ func prepareOne(candidate Candidate, records []ItemResult, scope prepareScope) (
 	if scope.dryRun {
 		return false, kind, "", false, append(records, plannedRecord(candidate, kind)), nil
 	}
-	return true, kind, source, decided && choice == ChoiceOverwrite, records, nil
+	return true, kind, source, confirmedReplace(candidate, decided, choice), records, nil
+}
+
+// confirmedReplace reports whether the action may replace an occupied
+// alias path: a decided overwrite or an automatic intact representation
+// transition.
+func confirmedReplace(candidate Candidate, decided bool, choice DecisionChoice) bool {
+	if decided && choice == ChoiceOverwrite {
+		return true
+	}
+	return candidate.record.Entry == reconcile.PlanEntryAlias && candidate.record.FileState != nil && candidate.record.FileState.Active()
 }
 
 // needsDecision reports whether one candidate required an explicit choice.

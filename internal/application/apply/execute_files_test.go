@@ -70,7 +70,11 @@ func (r *replacerFake) ReplaceResult(ctx context.Context, precondition filesyste
 }
 
 func (r *replacerFake) RealizeAlias(ctx context.Context, precondition filesystem.Precondition, spec filesystem.AliasSpec) (filesystem.AliasRealization, error) {
-	return 0, nil
+	r.calls++
+	if r.err != nil {
+		return 0, r.err
+	}
+	return filesystem.NewReplacer().RealizeAlias(ctx, precondition, spec)
 }
 
 // executePair bundles one evaluated service, its candidates, and the home.

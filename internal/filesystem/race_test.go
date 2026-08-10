@@ -11,9 +11,17 @@ func TestInvalidAliasPayload(t *testing.T) {
 	root := t.TempDir()
 	must(t, os.Mkdir(filepath.Join(root, ".config"), 0o755))
 	precondition := mustFreeze(t, root, ".config/x")
-	for _, payload := range []string{"", ".", "../x", "a/../x", "/absolute"} {
+	for _, payload := range []string{"", ".", "a//x", "/absolute"} {
 		if _, err := NewReplacer().RealizeAlias(context.Background(), precondition, AliasSpec{Payload: payload}); err == nil {
 			t.Fatalf("payload %q must be rejected", payload)
+		}
+	}
+	for _, payload := range []string{"../x", "a/../x", "dotfiles/x"} {
+		acceptRoot := t.TempDir()
+		must(t, os.Mkdir(filepath.Join(acceptRoot, ".config"), 0o755))
+		fresh := mustFreeze(t, acceptRoot, ".config/x")
+		if _, err := NewReplacer().RealizeAlias(context.Background(), fresh, AliasSpec{Payload: payload}); err != nil {
+			t.Fatalf("payload %q must be accepted: %v", payload, err)
 		}
 	}
 }

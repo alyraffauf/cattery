@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/alyraffauf/cattery/internal/pathsafe"
+	"strings"
 )
 
 // AliasSpec is the desired relative payload of one alias and whether the
@@ -167,8 +166,16 @@ func (r *Replacer) prepareAliasParent(precondition Precondition) error {
 // validateAliasPayload accepts only the exact lexical form that may be stored
 // in a symlink. In particular, cleaned or absolute paths are not equivalent.
 func validateAliasPayload(payload string) error {
-	if _, err := pathsafe.Segments(payload); err != nil {
-		return fmt.Errorf("filesystem: invalid alias payload: %w", err)
+	if payload == "" {
+		return fmt.Errorf("filesystem: empty alias payload")
+	}
+	if strings.HasPrefix(payload, "/") {
+		return fmt.Errorf("filesystem: absolute alias payload %q", payload)
+	}
+	for _, segment := range strings.Split(payload, "/") {
+		if segment == "" || segment == "." {
+			return fmt.Errorf("filesystem: invalid alias payload segment %q", segment)
+		}
 	}
 	return nil
 }

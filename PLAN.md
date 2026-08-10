@@ -2499,7 +2499,7 @@ The exact direct prerequisites below, not the ranges above, determine readiness.
 
 **Owns:** `internal/filesystem/alias.go`, `internal/filesystem/alias_test.go`.
 
-**Deliverable:** Create, verify, and replace exact relative symlink entries without following final referents.
+**Deliverable:** Create, verify, and replace exact relative symlink entries without following final referents; payloads are slash-relative without absolute or empty segments and may traverse upward with `..`.
 
 **Tests:** `TestAliasRealization` covers missing/exact/absolute/wrong/dangling/occupied/special/parent-race/cancellation cases.
 

@@ -71,7 +71,7 @@ func (service *Service) executeFile(ctx context.Context, job fileJob) (ItemResul
 	if err != nil {
 		return partialRecord(job), err
 	}
-	if err := service.commitBaseline(ctx, job, contentHash, durable); err != nil {
+	if err := service.commitBaseline(ctx, job, baselineCommit{contentHash: contentHash, durable: durable}); err != nil {
 		return partialRecord(job), err
 	}
 	if !durable {
@@ -80,20 +80,27 @@ func (service *Service) executeFile(ctx context.Context, job fileJob) (ItemResul
 	return completedRecord(job), nil
 }
 
+// baselineCommit bundles the content fingerprint and durability of one
+// completed file write.
+type baselineCommit struct {
+	contentHash deployment.Digest
+	durable     bool
+}
+
 // commitBaseline switches an active alias row to the file representation or
 // upserts the file baseline, only after a durable write.
-func (service *Service) commitBaseline(ctx context.Context, job fileJob, contentHash deployment.Digest, durable bool) error {
+func (service *Service) commitBaseline(ctx context.Context, job fileJob, commit baselineCommit) error {
 	if job.candidate.record.AliasState != nil && job.candidate.record.AliasState.Active() {
-		if !durable {
+		if !commit.durable {
 			return failure.New(failure.Operational, "apply: alias-to-file transition is not durable: "+job.action.TargetPath, nil)
 		}
-		_, err := service.transitions.TransitionToFile(job.root, job.home, baselineRow(job.candidate, contentHash))
+		_, err := service.transitions.TransitionToFile(job.root, job.home, baselineRow(job.candidate, commit.contentHash))
 		if err != nil {
 			return failure.New(failure.Operational, "apply: transition to file "+job.action.TargetPath, err)
 		}
 		return nil
 	}
-	_, err := service.baselines.UpsertFileBaseline(job.root, job.home, baselineRow(job.candidate, contentHash))
+	_, err := service.baselines.UpsertFileBaseline(job.root, job.home, baselineRow(job.candidate, commit.contentHash))
 	if err != nil {
 		return failure.New(failure.Operational, "apply: baseline "+job.action.TargetPath, err)
 	}
