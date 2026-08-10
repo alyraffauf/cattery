@@ -3,7 +3,6 @@ package integration
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -156,7 +155,6 @@ func testAliasAliasToFile(t *testing.T) {
 	if result := env.run(t, nil, "apply"); result.Code != 0 {
 		t.Fatalf("alias apply: %+v", result)
 	}
-	_ = strings.TrimSpace("")
 	env.source(t, "x/tool", "content")
 	writeRoutes(t, env, "version = 1\n\n[symlinks.all]\n")
 	result := env.run(t, nil, "apply")

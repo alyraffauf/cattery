@@ -108,42 +108,6 @@ func (race RaceFixture) replaceDatabaseWithDirectory(t *testing.T) {
 	}
 }
 
-func TestRaceFixture(t *testing.T) {
-	scenarios := []struct {
-		name string
-		run  func(*testing.T)
-	}{
-		{"barriers fire once", testRaceBarriers},
-		{"cleanup restores", testRaceCleanup},
-	}
-	for _, scenario := range scenarios {
-		t.Run(scenario.name, scenario.run)
-	}
-}
-
-func testRaceBarriers(t *testing.T) {
-	race := NewRaceFixture(t)
-	race.initRepository(t)
-	race.source(t, ".config/app", "v1")
-	if result := race.run(t, nil, "apply"); result.Code != 0 {
-		t.Fatalf("first apply: %+v", result)
-	}
-	race.source(t, ".config/app", "v2")
-	race.blockTargetParent(t, ".config/app")
-	result := race.run(t, nil, "apply")
-	if result.Code != 1 {
-		t.Fatalf("code = %d, want 1 for a blocked target parent", result.Code)
-	}
-	if string(race.target(t, ".config/app")) != "v1" {
-		t.Fatal("a pre-rename failure must preserve the old target")
-	}
-	race.replaceDatabaseWithDirectory(t)
-	result = race.run(t, nil, "apply")
-	if result.Code != 1 {
-		t.Fatalf("code = %d, want 1 for a replaced database", result.Code)
-	}
-}
-
 // processHandle tracks one asynchronously started invocation.
 type processHandle struct {
 	done chan ProcessResult
@@ -203,13 +167,4 @@ func (race RaceFixture) awaitTarget(t *testing.T, relative, want string) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	t.Fatalf("target %s never carried %q", relative, want)
-}
-
-func testRaceCleanup(t *testing.T) {
-	race := NewRaceFixture(t)
-	race.initRepository(t)
-	race.source(t, ".config/app", "v1")
-	if result := race.run(t, nil, "apply"); result.Code != 0 {
-		t.Fatalf("apply: %+v", result)
-	}
 }

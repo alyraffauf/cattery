@@ -19,9 +19,6 @@ import (
 // public surface.
 const (
 	catteryDirectory = "cattery"
-	databaseFile     = "state.db"
-	lockFile         = "cattery.lock"
-	keyFile          = "hash.key"
 )
 
 // fixtureOrigin returns the fixed instant every fixture clock starts at, so
@@ -80,7 +77,7 @@ func New(t *testing.T) *Fixture {
 		t.Fatalf("fixture store acquire: %v", err)
 	}
 	fixture := &Fixture{Root: root, Home: home, StateHome: stateHome, Clock: clock, Store: store}
-	t.Cleanup(func() { _ = fixture.Cleanup() })
+	t.Cleanup(func() { _ = fixture.cleanup() })
 	return fixture
 }
 
@@ -89,24 +86,7 @@ func (fixture *Fixture) Directory() string {
 	return filepath.Join(fixture.StateHome, catteryDirectory)
 }
 
-// DatabasePath returns the state database path.
-func (fixture *Fixture) DatabasePath() string {
-	return filepath.Join(fixture.Directory(), databaseFile)
-}
-
-// LockPath returns the advisory lock path.
-func (fixture *Fixture) LockPath() string {
-	return filepath.Join(fixture.Directory(), lockFile)
-}
-
-// KeyPath returns the hash-key path.
-func (fixture *Fixture) KeyPath() string {
-	return filepath.Join(fixture.Directory(), keyFile)
-}
-
-// Cleanup closes the store and removes every created path beneath the fixture
-// root. It is idempotent and registered automatically by New.
-func (fixture *Fixture) Cleanup() error {
+func (fixture *Fixture) cleanup() error {
 	if fixture.Store != nil {
 		if err := fixture.Store.Close(); err != nil {
 			return err

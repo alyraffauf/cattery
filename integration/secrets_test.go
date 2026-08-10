@@ -77,12 +77,8 @@ func readTargetFile(t *testing.T, home, relative string) []byte {
 // secretRun executes the binary under the fake sops environment.
 func (env execEnv) secretRun(t *testing.T, stdin []string, args ...string) ProcessResult {
 	t.Helper()
-	input := ""
-	if len(stdin) > 0 {
-		input = strings.Join(stdin, "\n") + "\n"
-	}
 	return env.fixture.Run(t, ProcessInput{
-		Args: args, Home: env.home, Stdin: input, Timeout: 30 * time.Second, Env: env.extraEnv,
+		Args: args, Home: env.home, Stdin: joined(stdin), Timeout: 30 * time.Second, Env: env.extraEnv,
 	})
 }
 
