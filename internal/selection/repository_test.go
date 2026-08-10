@@ -24,6 +24,7 @@ func TestRepositorySelection(t *testing.T) {
 		{"absent default fails", testSelectionAbsentDefault},
 		{"two homes keep separate defaults", testSelectionTwoHomes},
 		{"canonical results", testSelectionCanonical},
+		{"canonical home", testSelectionCanonicalHome},
 		{"no implicit registration", testSelectionNoRegistration},
 	}
 	for _, scenario := range scenarios {
@@ -180,6 +181,27 @@ func testSelectionCanonical(t *testing.T) {
 	}
 	if result.RootPath != real {
 		t.Fatalf("canonical root = %q, want %q", result.RootPath, real)
+	}
+}
+
+func testSelectionCanonicalHome(t *testing.T) {
+	fixture := database.New(t)
+	realHome := filepath.Join(fixture.Root, "real-home")
+	if err := os.Mkdir(realHome, 0o700); err != nil {
+		t.Fatalf("make real home: %v", err)
+	}
+	linkedHome := filepath.Join(fixture.Root, "linked-home")
+	if err := os.Symlink(realHome, linkedHome); err != nil {
+		t.Fatalf("make linked home: %v", err)
+	}
+	repository := filepath.Join(fixture.Root, "repository")
+	resolver := NewRepositoryResolver(linkedHome, fixture.Store)
+	result, err := resolver.Resolve(RepositoryRequest{RawExplicit: repository, ExplicitSet: true, WorkingDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("resolve linked home: %v", err)
+	}
+	if result.HomePath != realHome {
+		t.Fatalf("home = %q, want %q", result.HomePath, realHome)
 	}
 }
 

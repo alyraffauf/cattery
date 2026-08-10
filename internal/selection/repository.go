@@ -35,7 +35,7 @@ type RepositoryResolver struct {
 	defaults *state.Store
 }
 
-// NewRepositoryResolver constructs a resolver bound to the canonical home
+// NewRepositoryResolver constructs a resolver bound to the raw home path
 // and the read-only default lookup. Construction performs no filesystem or
 // state access.
 func NewRepositoryResolver(home string, defaults *state.Store) *RepositoryResolver {
@@ -45,27 +45,31 @@ func NewRepositoryResolver(home string, defaults *state.Store) *RepositoryResolv
 // Resolve applies explicit path, then environment, then the canonical-home
 // default, failing with instructions when nothing selects a repository.
 func (resolver *RepositoryResolver) Resolve(request RepositoryRequest) (state.Repository, error) {
+	home, err := pathsafe.CanonicalRoot(resolver.home)
+	if err != nil {
+		return state.Repository{}, err
+	}
 	if request.ExplicitSet {
 		if request.RawExplicit == "" {
 			return state.Repository{}, fmt.Errorf("selection: explicit repository path is empty")
 		}
-		return resolver.canonical(request.RawExplicit, request.WorkingDir)
+		return resolver.canonical(request.RawExplicit, request.WorkingDir, home)
 	}
 	if request.EnvSet {
 		if request.RawEnv == "" {
 			return state.Repository{}, fmt.Errorf("selection: CATTERY_REPO is empty")
 		}
-		return resolver.canonical(request.RawEnv, request.WorkingDir)
+		return resolver.canonical(request.RawEnv, request.WorkingDir, home)
 	}
 	if err := resolver.defaults.EnsureAcquired(); err != nil {
 		return state.Repository{}, err
 	}
-	return resolver.defaults.DefaultRepository(resolver.home)
+	return resolver.defaults.DefaultRepository(home)
 }
 
 // canonical resolves raw against the working directory and returns the
 // canonical pair under the resolver's home.
-func (resolver *RepositoryResolver) canonical(raw, workingDir string) (state.Repository, error) {
+func (resolver *RepositoryResolver) canonical(raw, workingDir, home string) (state.Repository, error) {
 	path := raw
 	if !filepath.IsAbs(raw) {
 		path = filepath.Join(workingDir, raw)
@@ -74,5 +78,5 @@ func (resolver *RepositoryResolver) canonical(raw, workingDir string) (state.Rep
 	if err != nil {
 		return state.Repository{}, err
 	}
-	return state.Repository{RootPath: root, HomePath: resolver.home}, nil
+	return state.Repository{RootPath: root, HomePath: home}, nil
 }
