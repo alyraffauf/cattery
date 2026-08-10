@@ -80,6 +80,10 @@ func (s *scopeScanner) scanScopeRoot() error {
 func (s *scopeScanner) scanEntry(entry os.DirEntry) error {
 	control := ClassifyRoot(entry.Name())
 	switch {
+	// Root dot-directories do not promote to groups: pathsafe.GroupName
+	// rejects leading-"." names, so they must route to ordinary scanning
+	// (e.g. an ungrouped HOME tree rooted at a dot-directory) rather than
+	// being treated as a group.
 	case s.rootTree && control == ControlNone && entry.IsDir() && !strings.HasPrefix(entry.Name(), "."):
 		return s.beginGroup(entry)
 	case control == ControlNone:
@@ -142,8 +146,8 @@ func (s *scopeScanner) scanHooks(entry os.DirEntry) error {
 	return nil
 }
 
-func (s *scopeScanner) scanHookPhase(hooks string, phase deployment.HookPhase) error {
-	path := filepath.Join(s.repoRoot, s.scopeRoot, hooks, string(phase))
+func (s *scopeScanner) scanHookPhase(hooksDir string, phase deployment.HookPhase) error {
+	path := filepath.Join(s.repoRoot, s.scopeRoot, hooksDir, string(phase))
 	info, err := os.Lstat(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -160,7 +164,7 @@ func (s *scopeScanner) scanHookPhase(hooks string, phase deployment.HookPhase) e
 	}
 	for _, entry := range entries {
 		if entry.Type().IsRegular() {
-			s.hooks = append(s.hooks, s.hookCandidate(hooks, phase, entry.Name()))
+			s.hooks = append(s.hooks, s.hookCandidate(hooksDir, phase, entry.Name()))
 		}
 	}
 	return nil
@@ -202,7 +206,7 @@ func (s *scopeScanner) addFileAt(relative string, entry os.DirEntry, kind deploy
 		Kind:           kind,
 		SourceRepoPath: path,
 		SourceAbsPath:  filepath.Join(s.repoRoot, path),
-		ExecutableBits: info.Mode() & 0o111,
+		ExecutableBits: info.Mode() & deployment.ExecutableBitMask,
 	})
 	return nil
 }

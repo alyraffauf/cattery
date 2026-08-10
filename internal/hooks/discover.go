@@ -74,7 +74,7 @@ func discoverEntry(scope deployment.Scope, phasePath string, entry os.DirEntry) 
 	if !info.Mode().IsRegular() {
 		return deployment.Hook{}, fmt.Errorf("hooks: %q is not a regular file", full)
 	}
-	if info.Mode().Perm()&0o111 == 0 {
+	if info.Mode().Perm()&deployment.ExecutableBitMask == 0 {
 		return deployment.Hook{}, fmt.Errorf("hooks: %q is not executable", full)
 	}
 	return deployment.NewHook(deployment.Hook{

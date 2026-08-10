@@ -92,8 +92,14 @@ func canonicalSet(canonical []string) map[string]bool {
 // destination pointing at canonical (PLAN.md Section 5.4): the payload is
 // relative from the alias destination's parent directory, never absolute,
 // and never needs to climb above the home root. Both paths must be valid
-// HOME-relative paths; a canonical that equals or contains the alias parent
-// would produce an empty or self-referential payload and is rejected.
+// HOME-relative paths.
+//
+// AliasPayload rejects only the case where the canonical segments that remain
+// after the common prefix with the alias's parent directory are empty — i.e.
+// when canonical is the alias parent or one of its ancestors, which would
+// leave no target to point at. A self-referential single-segment alias where
+// canonical == alias is not rejected here; that case is caught upstream by
+// Activate (which errors when destination == canonical).
 func AliasPayload(canonical, alias string) (string, error) {
 	canonicalSegments, err := pathsafe.Segments(canonical)
 	if err != nil {
