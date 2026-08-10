@@ -20,7 +20,7 @@ type AddService interface {
 func newAddCommand(service AddService, runtime Runtime, options *Options) *cobra.Command {
 	command := &cobra.Command{
 		Use:   "add TARGET...",
-		Short: "Adopt target files into the repository",
+		Short: "Adopt target files or directories into the repository",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(command *cobra.Command, args []string) error {
 			request := addRequest(command, addRequestInput{runtime: runtime, options: *options, targets: args})

@@ -67,7 +67,7 @@ See [repository layout](docs/repository-layout.md) for the full grammar.
 | `cattery status [GROUP ...]` | report drift without changing anything |
 | `cattery diff [GROUP ...]` | show safe content differences |
 | `cattery apply [GROUP ...]` | reconcile targets with the repository |
-| `cattery add [OPTIONS] FILE ...` | adopt target content into the repository |
+| `cattery add [OPTIONS] TARGET ...` | adopt target files or directories into the repository |
 | `cattery version` | print version, commit, and build metadata |
 
 Global options are `--repo PATH` and `--verbose`. Apply accepts `--dry-run`,

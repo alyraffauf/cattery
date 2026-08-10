@@ -13,6 +13,7 @@ func TestExecutableAdd(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{"ordinary adoption", testExecAddOrdinary},
+		{"directory adoption", testExecAddDirectory},
 		{"raw argument order", testExecAddOrder},
 		{"explicit presence", testExecAddPresence},
 		{"dry run", testExecAddDryRun},
@@ -41,6 +42,23 @@ func testExecAddOrdinary(t *testing.T) {
 	}
 	if !strings.Contains(result.Stdout, "completed") {
 		t.Fatalf("stdout = %q, want the completed verb", result.Stdout)
+	}
+}
+
+func testExecAddDirectory(t *testing.T) {
+	env := newExecEnv(t)
+	env.initRepository(t)
+	writeFile(t, filepath.Join(env.home, ".config", "git", "config"), []byte("[user]\nname = Aly\n"))
+	result := env.run(t, nil, "add", ".config/git", "--group", "git")
+	if result.Code != 0 {
+		t.Fatalf("add directory: code=%d stderr=%q", result.Code, result.Stderr)
+	}
+	content, err := os.ReadFile(filepath.Join(env.repo, "git", ".config", "git", "config"))
+	if err != nil {
+		t.Fatalf("directory source: %v", err)
+	}
+	if string(content) != "[user]\nname = Aly\n" {
+		t.Fatalf("source content = %q", content)
 	}
 }
 

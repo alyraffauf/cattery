@@ -15,6 +15,7 @@ func TestAddBatchPreflight(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{"resolves relative argument", testResolveRelative},
+		{"expands directory argument", testResolveDirectory},
 		{"rejects target outside home", testResolveOutsideHome},
 		{"rejects home itself", testResolveHomeItself},
 		{"rejects duplicate canonical path", testResolveDuplicate},
@@ -37,6 +38,18 @@ func testResolveRelative(t *testing.T) {
 	}
 	if canonical[0] != filepath.Join(home, ".bashrc") {
 		t.Fatalf("canonical = %q, want %q", canonical[0], filepath.Join(home, ".bashrc"))
+	}
+}
+
+func testResolveDirectory(t *testing.T) {
+	home := materializeHome(t, directoryEntry)
+	targets, err := resolveTargets(home, home, []string{"subdir"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{filepath.Join(home, "subdir", "inside")}
+	if len(targets) != len(want) || targets[0] != want[0] {
+		t.Fatalf("targets = %q, want %q", targets, want)
 	}
 }
 

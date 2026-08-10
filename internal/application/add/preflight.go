@@ -1,6 +1,7 @@
 package add
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -19,24 +20,77 @@ type preflightContext struct {
 }
 
 // resolveTargets canonicalizes each raw argument against the working
-// directory, requires it to be a strict descendant of home, and rejects
-// duplicate canonical paths. It is the canonicalization half of preflight:
-// inference needs canonical absolute targets, so resolution runs first.
+// directory, requires it to be a strict descendant of home, expands directory
+// arguments into descendants, and rejects duplicate canonical paths. It is the
+// canonicalization half of preflight: inference needs canonical absolute
+// targets, so resolution runs first.
 func resolveTargets(workingDir, home string, raw []string) ([]string, error) {
-	canonical := make([]string, 0, len(raw))
-	seen := make(map[string]bool, len(raw))
+	targets := make([]string, 0, len(raw))
+	seenArguments := make(map[string]bool, len(raw))
+	seenTargets := make(map[string]bool, len(raw))
 	for _, argument := range raw {
 		resolved, err := resolveOneTarget(workingDir, home, argument)
 		if err != nil {
 			return nil, err
 		}
-		if seen[resolved] {
+		if seenArguments[resolved] {
 			return nil, failure.New(failure.InvalidInput, "add: duplicate target "+argument, nil)
 		}
-		seen[resolved] = true
-		canonical = append(canonical, resolved)
+		seenArguments[resolved] = true
+
+		expanded, err := expandTarget(resolved)
+		if err != nil {
+			return nil, err
+		}
+		for _, target := range expanded {
+			if seenTargets[target] {
+				return nil, failure.New(failure.InvalidInput, "add: duplicate target "+target, nil)
+			}
+			seenTargets[target] = true
+			targets = append(targets, target)
+		}
 	}
-	return canonical, nil
+	return targets, nil
+}
+
+// expandTarget returns target itself unless it is a directory, in which case
+// it returns every non-directory descendant. Directories are not repository
+// entries, so empty directories are intentionally omitted.
+func expandTarget(target string) ([]string, error) {
+	info, err := os.Lstat(target)
+	if err != nil || !info.IsDir() {
+		return []string{target}, nil
+	}
+	return expandDirectory(target)
+}
+
+// expandDirectory recursively collects descendants in lexical order. It uses
+// Lstat so a symlinked directory remains a leaf for preflight to reject rather
+// than redirecting the traversal outside the requested tree.
+func expandDirectory(directory string) ([]string, error) {
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		return nil, failure.New(failure.InvalidInput, "add: read directory "+directory, err)
+	}
+
+	targets := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		path := filepath.Join(directory, entry.Name())
+		info, err := os.Lstat(path)
+		if err != nil {
+			return nil, failure.New(failure.InvalidInput, "add: stat target "+path, err)
+		}
+		if !info.IsDir() {
+			targets = append(targets, path)
+			continue
+		}
+		children, err := expandDirectory(path)
+		if err != nil {
+			return nil, err
+		}
+		targets = append(targets, children...)
+	}
+	return targets, nil
 }
 
 // resolveOneTarget resolves one argument to its canonical absolute form and
