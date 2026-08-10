@@ -22,7 +22,6 @@ import (
 const (
 	behaviorSpecEnvironment     = "FAKE_SOPS_SPEC"
 	invocationRecordEnvironment = "FAKE_SOPS_RECORD"
-	fixtureChildEnvironment     = "FAKE_SOPS_CHILD"
 )
 
 // Executable is a handle to the compiled fake binary.
@@ -146,7 +145,6 @@ type record struct {
 	Argv     []string
 	Cwd      string
 	Stdin    []byte
-	Pid      int
 	ChildPid int
 }
 
@@ -161,7 +159,7 @@ func main() {
 func run() {
 	behavior := loadBehavior()
 	stdin, _ := io.ReadAll(os.Stdin)
-	invocationRecord := record{Argv: os.Args, Cwd: currentWorkingDirectory(), Stdin: stdin, Pid: os.Getpid()}
+	invocationRecord := record{Argv: os.Args, Cwd: currentWorkingDirectory(), Stdin: stdin}
 	if behavior.Sleep > 0 {
 		invocationRecord.ChildPid = spawnChild()
 	}
