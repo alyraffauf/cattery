@@ -39,6 +39,11 @@ func testFailuresPreRename(t *testing.T) {
 	if string(race.target(t, ".config/app")) != "v1" {
 		t.Fatal("a pre-rename failure must keep the old destination")
 	}
+	race.replaceDatabaseWithDirectory(t)
+	result = race.run(t, nil, "apply")
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1 for a replaced database", result.Code)
+	}
 }
 
 func testFailuresLaterItem(t *testing.T) {

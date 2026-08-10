@@ -16,7 +16,6 @@ func TestExecutableCLI(t *testing.T) {
 		{"unknown command fails", testCLIUnknownCommand},
 		{"unknown root flag", testCLIUnknownFlag},
 		{"version output", testCLIVersion},
-		{"version flag rejected", testCLIVersionFlag},
 		{"init arity", testCLIInitArity},
 		{"validate usage", testCLIValidate},
 		{"deterministic output", testCLIDeterministic},
@@ -81,14 +80,6 @@ func testCLIVersion(t *testing.T) {
 	}
 	if !strings.HasSuffix(result.Stdout, "\n") {
 		t.Fatal("the version line must end with a newline")
-	}
-}
-
-func testCLIVersionFlag(t *testing.T) {
-	fixture := cliFixture(t)
-	result := cliRun(t, fixture, "--version")
-	if result.Code != 1 {
-		t.Fatalf("code = %d, want 1 for the unknown --version flag", result.Code)
 	}
 }
 

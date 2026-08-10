@@ -1,6 +1,6 @@
 // Package filesystem provides a test-only tree builder for materializing
-// files, directories, symlinks, hard links, and injected mutation points
-// beneath a temporary root. Production code must not import this package.
+// files, directories, symlinks, and hard links beneath a temporary root.
+// Production code must not import this package.
 package filesystem
 
 import (
@@ -27,18 +27,10 @@ type Entry struct {
 	LinkTarget string
 }
 
-// Mutation is a hook invoked at its Path after entries materialize. The hook
-// receives the materialized absolute path beneath Root.
-type Mutation struct {
-	Path  string
-	Apply func(string) error
-}
-
 // Tree is a fluent builder that records entries beneath Root.
 type Tree struct {
-	Root      string
-	entries   []Entry
-	mutations []Mutation
+	Root    string
+	entries []Entry
 }
 
 // New returns a Tree anchored at root.
@@ -63,8 +55,7 @@ func (builder *Tree) Dir(path string, mode os.FileMode) *Tree {
 	return builder
 }
 
-// Symlink records a symlink at path pointing at target. Dangling targets are
-// accepted because os.Symlink stores the target string verbatim.
+// Symlink records a symlink at path pointing at target.
 func (builder *Tree) Symlink(path, target string) *Tree {
 	builder.entries = append(builder.entries, Entry{
 		Path: path, Type: EntrySymlink, LinkTarget: target,
@@ -80,24 +71,8 @@ func (builder *Tree) HardLink(path, existing string) *Tree {
 	return builder
 }
 
-// MutationPoint registers a hook fired at path after entries materialize.
-func (builder *Tree) MutationPoint(path string, apply func(string) error) *Tree {
-	builder.mutations = append(builder.mutations, Mutation{Path: path, Apply: apply})
-	return builder
-}
-
-// Entries returns a copy of the recorded entries.
-func (builder *Tree) Entries() []Entry {
-	return append([]Entry(nil), builder.entries...)
-}
-
-// Mutations returns a copy of the recorded mutation hooks.
-func (builder *Tree) Mutations() []Mutation {
-	return append([]Mutation(nil), builder.mutations...)
-}
-
 // Materialize writes every recorded entry beneath Root in dependency order
-// (directories, regular files, symlinks, hard links) then fires mutations.
+// (directories, regular files, symlinks, hard links).
 func (builder *Tree) Materialize() error {
 	if err := builder.materializeDirectories(); err != nil {
 		return err
@@ -111,12 +86,7 @@ func (builder *Tree) Materialize() error {
 	if err := builder.materializeHardLinks(); err != nil {
 		return err
 	}
-	return builder.runMutations()
-}
-
-// Cleanup removes the materialized root tree.
-func (builder *Tree) Cleanup() error {
-	return os.RemoveAll(builder.Root)
+	return nil
 }
 
 func (builder *Tree) materializeDirectories() error {
@@ -169,15 +139,6 @@ func (builder *Tree) materializeHardLinks() error {
 			return err
 		}
 		if err := os.Link(source, full); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (builder *Tree) runMutations() error {
-	for _, mutation := range builder.mutations {
-		if err := mutation.Apply(builder.resolve(mutation.Path)); err != nil {
 			return err
 		}
 	}

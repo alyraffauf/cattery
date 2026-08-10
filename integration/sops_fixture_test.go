@@ -15,14 +15,13 @@ import (
 // SOPSFixture bundles the fake executable and the ephemeral real sops
 // environment, when the pinned real tools are discoverable.
 type SOPSFixture struct {
-	Fake        *sops.Executable
-	Client      *secrets.Client
-	RealSOPS    string
-	RealAge     string
-	RealAgeGen  string
-	AgeKey      string
-	ConfigDir   string
-	CleanupDirs []string
+	Fake       *sops.Executable
+	Client     *secrets.Client
+	RealSOPS   string
+	RealAge    string
+	RealAgeGen string
+	AgeKey     string
+	ConfigDir  string
 }
 
 // NewSOPSFixture installs the fake executable and probes for the pinned
