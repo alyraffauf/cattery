@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -17,6 +18,7 @@ type ProcessInput struct {
 	Stdin   string
 	Env     []string
 	Timeout time.Duration
+	Pty     bool
 }
 
 // ProcessResult captures one subprocess outcome.
@@ -60,6 +62,9 @@ func (fixture ProcessFixture) Run(t *testing.T, input ProcessInput) ProcessResul
 		"PATH=" + os.Getenv("PATH"),
 	}, input.Env...)
 	command := exec.CommandContext(ctx, fixture.Binary, input.Args...)
+	if input.Pty {
+		command = exec.CommandContext(ctx, "script", "-qec", quotedCommand(fixture.Binary, input.Args...), "/dev/null")
+	}
 	command.Env = environment
 	command.Stdin = bytes.NewBufferString(input.Stdin)
 	stdout := &bytes.Buffer{}
@@ -80,6 +85,16 @@ func exitCodeOf(err error) int {
 		return exit.ExitCode()
 	}
 	return -1
+}
+
+// quotedCommand shell-quotes one command line for the pty wrapper.
+func quotedCommand(binary string, args ...string) string {
+	parts := make([]string, 0, len(args)+1)
+	parts = append(parts, "'"+binary+"'")
+	for _, arg := range args {
+		parts = append(parts, "'"+arg+"'")
+	}
+	return strings.Join(parts, " ")
 }
 
 // IsolateEnvironment clears every cattery-affecting variable.

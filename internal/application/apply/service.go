@@ -2,6 +2,8 @@ package apply
 
 import (
 	"context"
+
+	"github.com/alyraffauf/cattery/internal/failure"
 )
 
 // Apply performs one complete apply: evaluation, dependency preflight,
@@ -30,7 +32,11 @@ func (service *Service) Apply(ctx context.Context, request Request) (Result, err
 		return Result{}, err
 	}
 	if request.DryRun {
-		return Result{Items: plan.Records(), Summary: plan.Summary()}, nil
+		result := Result{Items: plan.Records(), Summary: plan.Summary()}
+		if result.Summary.Planned > 0 {
+			return result, failure.New(failure.Difference, "apply: dry run reports pending changes", nil)
+		}
+		return result, nil
 	}
 	return service.execute(ctx, executeInput{request: request, plan: plan, candidates: candidates})
 }
@@ -46,7 +52,17 @@ func (service *Service) execute(ctx context.Context, input executeInput) (Result
 	if err != nil {
 		return Result{Items: records, Summary: summarize(records)}, err
 	}
-	return Result{Items: records, Summary: summarize(records)}, nil
+	return service.outcome(records)
+}
+
+// outcome freezes the final result and reports pending items as a
+// difference so the CLI exits 2 for skips.
+func (service *Service) outcome(records []ItemResult) (Result, error) {
+	result := Result{Items: records, Summary: summarize(records)}
+	if result.Summary.Planned > 0 {
+		return result, failure.New(failure.Difference, "apply: unresolved items remain", nil)
+	}
+	return result, nil
 }
 
 // executeInput bundles the request, plan, and candidates of one execution.

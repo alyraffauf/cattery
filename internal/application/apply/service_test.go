@@ -75,8 +75,8 @@ func testServiceNoop(t *testing.T) {
 func testServiceDryRun(t *testing.T) {
 	pair := serviceFixture(t)
 	result, err := pair.service.Apply(context.Background(), Request{DryRun: true, DryRunSet: true})
-	if err != nil {
-		t.Fatalf("apply: %v", err)
+	if err == nil || !kindIs(err, failure.Difference) {
+		t.Fatalf("apply: %v, want a difference failure for a pending dry run", err)
 	}
 	if len(result.Items) != 1 || result.Items[0].Status != StatusPlanned {
 		t.Fatalf("result = %+v, want one planned record", result.Items)
