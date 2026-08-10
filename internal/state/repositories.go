@@ -227,7 +227,7 @@ func execNamed(transaction *sql.Tx, step sqlStep) error {
 // execIn executes one statement in the transaction, rolling back and wrapping
 // the error when the statement fails.
 func execIn(transaction *sql.Tx, statement string, arguments ...any) error {
-	return execNamed(transaction, sqlStep{operation: statement, statement: statement, arguments: arguments})
+	return execNamed(transaction, sqlStep{operation: "execute SQL statement", statement: statement, arguments: arguments})
 }
 
 // canonicalRepositoryPair resolves both paths to canonical absolute form so
@@ -250,11 +250,36 @@ func formatTimestamp(when time.Time) string {
 }
 
 func errUnknownRepository(root, home string) error {
-	return fmt.Errorf("state: repository %q for home %q is not registered", root, home)
+	return unknownRepositoryError{root: root, home: home}
 }
 
 func errDefaultMissing(home string) error {
-	return fmt.Errorf(
-		"state: no default repository for home %q; run `cattery init PATH` or pass --repo",
-		home)
+	return defaultRepositoryMissingError{home: home}
+}
+
+type unknownRepositoryError struct {
+	root string
+	home string
+}
+
+func (err unknownRepositoryError) Error() string {
+	return fmt.Sprintf("state: repository %q for home %q is not registered", err.root, err.home)
+}
+
+func (err unknownRepositoryError) Is(target error) bool {
+	_, ok := target.(unknownRepositoryError)
+	return ok
+}
+
+type defaultRepositoryMissingError struct {
+	home string
+}
+
+func (err defaultRepositoryMissingError) Error() string {
+	return fmt.Sprintf("state: no default repository for home %q; run `cattery init PATH` or pass --repo", err.home)
+}
+
+func (err defaultRepositoryMissingError) Is(target error) bool {
+	_, ok := target.(defaultRepositoryMissingError)
+	return ok
 }
