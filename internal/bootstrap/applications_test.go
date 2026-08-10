@@ -43,7 +43,7 @@ func appFixture(t *testing.T) (Applications, Adapters) {
 func testApplicationsBuilt(t *testing.T) {
 	applications, _ := appFixture(t)
 	if applications.Initialize == nil || applications.Validate == nil || applications.Inspect == nil ||
-		applications.Apply == nil || applications.Add == nil {
+		applications.Apply == nil || applications.Add == nil || applications.Secrets == nil {
 		t.Fatal("every application service must be constructed")
 	}
 }

@@ -86,6 +86,14 @@ type baselineAdapter struct {
 	store *state.Store
 }
 
+// RefreshSecretSourceHash updates only a matching active secret baseline.
+func (adapter baselineAdapter) RefreshSecretSourceHash(root, home, source string, hash deployment.Digest) (bool, error) {
+	if err := adapter.store.EnsureAcquired(); err != nil {
+		return false, err
+	}
+	return adapter.store.RefreshSecretSourceHash(root, home, source, hash)
+}
+
 // UpsertFileBaseline establishes or replaces one file row.
 func (adapter baselineAdapter) UpsertFileBaseline(root, home string, baseline state.FileBaseline) (state.FileBaseline, error) {
 	if err := adapter.store.EnsureAcquired(); err != nil {

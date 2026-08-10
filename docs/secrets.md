@@ -46,6 +46,54 @@ repo/app/_darwin/_secrets/.config/example/token
 Use `--group` or `--platform` with `add` when you need to choose where the
 source belongs. Run `cattery status` and `cattery apply` as usual afterward.
 
+`cattery add --secret` is the adoption workflow. The lifecycle commands below
+inventory, verify, or rotate sources that are already managed; they do not
+create, edit, or delete plaintext secrets.
+
+## Inventory and verification
+
+List every managed encrypted source across base, Linux, and macOS layers:
+
+```sh
+cattery secrets list
+cattery secrets verify
+```
+
+Both commands accept group arguments and repeatable exact source selectors.
+Selectors are combined as a union:
+
+```sh
+cattery secrets verify work --source _secrets/.config/example/root-token
+```
+
+`list` reads repository metadata only and does not invoke SOPS. `verify`
+decrypts each selected source in memory, reports only `verified` or `failed`,
+continues after independent failures, and never reads the corresponding file
+under `$HOME`.
+
+## Rotate recipients or creation rules
+
+SOPS and `.sops.yaml` remain the authority for recipients. A practical
+rotation is:
+
+1. Edit the repository's `.sops.yaml` creation rules or recipients.
+2. Run `cattery secrets verify` to confirm the existing identities work.
+3. Preview with `cattery secrets reencrypt` (or explicitly add `--dry-run`).
+4. Apply with `cattery secrets reencrypt --yes`.
+5. Review and commit the encrypted repository changes.
+
+Re-encryption decrypts the source in memory, encrypts the same bytes using the
+repository-relative source path as SOPS's filename override, then decrypts the
+new ciphertext and compares it with the original plaintext before publishing.
+Publication preserves the source mode and uses Cattery's atomic replacement
+path. Each source is processed independently, so a failure does not prevent
+other selected sources from being checked or rotated.
+
+The command never synchronizes or inspects `$HOME`, runs hooks, or writes
+plaintext state. A successful replacement refreshes only a matching active
+baseline's raw encrypted-source fingerprint; inactive platform sources and
+secrets without a baseline do not change state.
+
 ## What Cattery protects
 
 - Encrypted source files stay encrypted in the repository.

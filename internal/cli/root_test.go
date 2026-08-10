@@ -31,6 +31,7 @@ type rootFakes struct {
 	diff       *diffServiceFake
 	add        *addServiceFake
 	apply      *applyServiceFake
+	secrets    *secretsServiceFake
 }
 
 // rootFixture builds one application over recording services.
@@ -43,6 +44,7 @@ func rootFixture(t *testing.T) (*Application, *rootFakes, *bytes.Buffer, *bytes.
 		diff:       &diffServiceFake{},
 		add:        &addServiceFake{},
 		apply:      &applyServiceFake{},
+		secrets:    &secretsServiceFake{},
 	}
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -56,6 +58,7 @@ func rootFixture(t *testing.T) (*Application, *rootFakes, *bytes.Buffer, *bytes.
 		Diff:       fakes.diff,
 		Add:        fakes.add,
 		Apply:      fakes.apply,
+		Secrets:    fakes.secrets,
 	}, runtime)
 	return application, fakes, stdout, stderr
 }
@@ -64,7 +67,8 @@ func rootFixture(t *testing.T) (*Application, *rootFakes, *bytes.Buffer, *bytes.
 func zeroCalls(fakes *rootFakes) bool {
 	return len(fakes.initialize.requests) == 0 && len(fakes.validate.requests) == 0 &&
 		len(fakes.status.requests) == 0 && len(fakes.diff.requests) == 0 &&
-		len(fakes.add.requests) == 0 && len(fakes.apply.requests) == 0
+		len(fakes.add.requests) == 0 && len(fakes.apply.requests) == 0 &&
+		len(fakes.secrets.listRequests) == 0 && len(fakes.secrets.verifyRequests) == 0 && len(fakes.secrets.reencryptRequests) == 0
 }
 
 func testRootHelp(t *testing.T) {
@@ -85,7 +89,7 @@ func testRootInventory(t *testing.T) {
 	if err := application.Execute(context.Background(), []string{"--help"}); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	for _, name := range []string{"init", "validate", "version", "status", "diff", "add", "apply"} {
+	for _, name := range []string{"init", "validate", "version", "status", "diff", "add", "apply", "secrets"} {
 		if !strings.Contains(stdout.String(), name) {
 			t.Fatalf("stdout = %q, want the %s command listed", stdout.String(), name)
 		}

@@ -27,6 +27,11 @@ ON CONFLICT(repository_id, target_path) DO UPDATE SET
 
 const fileRetireSQL = "UPDATE files SET status = 'retired', retired_at = ? WHERE repository_id = ? AND target_path = ?"
 
+const refreshSecretSourceHashSQL = `
+UPDATE files SET baseline_source_hash = ?
+WHERE repository_id = (SELECT id FROM repositories WHERE root_path = ? AND home_path = ?)
+  AND source_path = ? AND source_kind = 'secret' AND status = 'active'`
+
 const fileByPairTargetSQL = `
 SELECT ` + fileColumns + `
 FROM files f JOIN repositories r ON r.id = f.repository_id
@@ -144,4 +149,22 @@ func (store *Store) FileGroups(root, home string) ([]string, error) {
 		return nil, err
 	}
 	return store.readFileGroups(allFileGroupsSQL, root, home)
+}
+
+// RefreshSecretSourceHash updates the raw ciphertext fingerprint only when an
+// active secret baseline for the canonical repository pair names source.
+func (store *Store) RefreshSecretSourceHash(root, home, source string, hash deployment.Digest) (bool, error) {
+	root, home, err := canonicalRepositoryPair(root, home)
+	if err != nil {
+		return false, err
+	}
+	if !IsSlashRelative(source) {
+		return false, fmt.Errorf("state: file source %q is not a slash-relative path", source)
+	}
+	result, err := store.database.conn.Exec(refreshSecretSourceHashSQL, hash[:], root, home, source)
+	if err != nil {
+		return false, err
+	}
+	changed, err := result.RowsAffected()
+	return changed > 0, err
 }

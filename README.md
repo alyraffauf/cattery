@@ -71,12 +71,17 @@ configuration directory—in `_routes.toml`.
 | `cattery apply [GROUP ...]` | Reconcile selected files with the repository. |
 | `cattery add [OPTIONS] TARGET ...` | Adopt existing files or directories into the repository. |
 | `cattery forget DIRECTORY --yes` | Stop managing a directory; leaves its files in `$HOME`. |
+| `cattery secrets list [GROUP ...]` | List safe metadata for encrypted sources. |
+| `cattery secrets verify [GROUP ...]` | Check that encrypted sources can be decrypted. |
+| `cattery secrets reencrypt [GROUP ...]` | Preview or apply current SOPS rules and recipients. |
 | `cattery version` | Print build information. |
 
 Global options are `--repo PATH` and `--verbose`. `apply` supports `--dry-run`,
 `--non-interactive`, and `--no-hooks`; `add` supports `--group`, `--platform`,
 `--secret`, and `--dry-run`; `forget` supports `--dry-run` and requires `--yes`
-to remove repository sources.
+to remove repository sources. Secret lifecycle commands accept repeatable
+`--source REPOSITORY_PATH` selectors; `secrets reencrypt` previews by default
+and requires `--yes` to replace encrypted sources.
 
 ## Safety, in plain English
 

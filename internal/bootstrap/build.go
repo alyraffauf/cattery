@@ -56,6 +56,7 @@ func Build(input BuildInput) *cli.Application {
 		Diff:       services.Inspect,
 		Add:        services.Add,
 		Forget:     services.Forget,
+		Secrets:    services.Secrets,
 		Apply:      services.Apply,
 	}, runtimeValues)
 }

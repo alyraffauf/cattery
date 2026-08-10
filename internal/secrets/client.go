@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/subprocess"
@@ -69,7 +70,7 @@ func (client *Client) Run(ctx context.Context, request Request) ([]byte, error) 
 	defer cancel()
 	stdout := newBounded(request.StdoutLimit, cancel)
 	stderr := newDrain(maxStderr)
-	diag := diagnosis{operation: request.Operation, source: request.SourcePath}
+	diag := diagnosis{operation: request.Operation, source: safeDiagnosticPath(request.SourcePath)}
 	result, runError := subprocess.Run(ctx, subprocess.Request{
 		Command:     executableArgs(client.executable, request.Arguments),
 		Directory:   client.directory,
@@ -84,6 +85,15 @@ func (client *Client) Run(ctx context.Context, request Request) ([]byte, error) 
 		return nil, err
 	}
 	return stdout.buf, nil
+}
+
+func safeDiagnosticPath(path string) string {
+	for _, character := range path {
+		if character < 0x20 || character == 0x7f || character == ' ' {
+			return strconv.Quote(path)
+		}
+	}
+	return path
 }
 
 // diagnosis carries the two context strings that may appear in sanitized

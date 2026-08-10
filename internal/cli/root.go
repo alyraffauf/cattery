@@ -16,6 +16,7 @@ type Dependencies struct {
 	Diff       DiffService
 	Add        AddService
 	Forget     ForgetService
+	Secrets    SecretsService
 	Apply      ApplyService
 }
 
@@ -27,7 +28,7 @@ type Application struct {
 }
 
 // NewApplication builds one opaque application over the dependencies and
-// runtime: seven operational commands, persistent repository and verbose
+// runtime: operational commands, persistent repository and verbose
 // flags, injected streams, no root Version, no completion or suggestions,
 // and no OnInitialize hook. Construction touches no backend.
 func NewApplication(dependencies Dependencies, runtime Runtime) *Application {
@@ -57,6 +58,7 @@ func NewApplication(dependencies Dependencies, runtime Runtime) *Application {
 		newDiffCommand(dependencies.Diff, runtime, options),
 		newAddCommand(dependencies.Add, runtime, options),
 		newForgetCommand(dependencies.Forget, runtime, options),
+		newSecretsCommand(dependencies.Secrets, runtime, options),
 		newApplyCommand(dependencies.Apply, runtime, options),
 	)
 	return &Application{root: root}

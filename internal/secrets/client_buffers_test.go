@@ -11,6 +11,15 @@ import (
 	"github.com/alyraffauf/cattery/internal/testfixture/sops"
 )
 
+func TestSafeDiagnosticPathQuotesLineBreakingNames(t *testing.T) {
+	if got := safeDiagnosticPath("app/token"); got != "app/token" {
+		t.Fatalf("ordinary path = %q", got)
+	}
+	if got := safeDiagnosticPath("app/line\nbreak"); got != `"app/line\nbreak"` {
+		t.Fatalf("unsafe path = %q", got)
+	}
+}
+
 func testLargeStderr(t *testing.T) {
 	executable := sops.Build(t)
 	repository := t.TempDir()

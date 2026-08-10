@@ -9,6 +9,7 @@ import (
 	"github.com/alyraffauf/cattery/internal/application/initialize"
 	"github.com/alyraffauf/cattery/internal/application/inspect"
 	applicationrepository "github.com/alyraffauf/cattery/internal/application/repository"
+	"github.com/alyraffauf/cattery/internal/application/secretlifecycle"
 	"github.com/alyraffauf/cattery/internal/application/validate"
 	"github.com/alyraffauf/cattery/internal/cli"
 	"github.com/alyraffauf/cattery/internal/deployment"
@@ -24,6 +25,7 @@ type Applications struct {
 	Apply      *apply.Service
 	Add        *add.Service
 	Forget     *forget.Service
+	Secrets    *secretlifecycle.Service
 }
 
 // ApplicationsInput carries the adapters, home, platform, protected
@@ -84,7 +86,15 @@ func BuildApplications(input ApplicationsInput) Applications {
 		Apply:      buildApply(input, shared),
 		Add:        buildAdd(input, shared),
 		Forget:     buildForget(input, shared),
+		Secrets:    buildSecrets(input, shared),
 	}
+}
+
+func buildSecrets(input ApplicationsInput, shared shared) *secretlifecycle.Service {
+	return secretlifecycle.NewService(secretlifecycle.Dependencies{
+		RepositorySource: repositorySourceOf(shared.resolver, repositoryIdentity),
+		Secrets:          input.Adapters.SOPS, Writer: input.Adapters.Replacer, Baselines: shared.baselines,
+	})
 }
 
 // buildForget wires source removal and baseline retirement without granting

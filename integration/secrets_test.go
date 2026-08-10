@@ -23,9 +23,57 @@ func TestExecutableSecrets(t *testing.T) {
 		{"dependency failure", testSecretsDependency},
 		{"hash key recovery", testSecretsKey},
 		{"real age round trip", testSecretsRealRoundTrip},
+		{"secret lifecycle rotation", testSecretsLifecycleRotation},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
+	}
+}
+
+func testSecretsLifecycleRotation(t *testing.T) {
+	env := newExecEnv(t)
+	env.initRepository(t)
+	original := []byte(`{"data":"b2xk","sops":{"version":"3.9.0"}}`)
+	rotated := []byte(`{"data":"ZmFrZS1jaXBoZXI=","sops":{"version":"3.9.0"}}`)
+	basePath := filepath.Join(env.repo, "_secrets", "base-token")
+	platformPath := filepath.Join(env.repo, "_linux", "_secrets", "linux-token")
+	writeFile(t, basePath, original)
+	writeFile(t, platformPath, original)
+	writeFile(t, filepath.Join(env.home, "base-token"), []byte("unchanged base target"))
+	writeFile(t, filepath.Join(env.home, "linux-token"), []byte("unchanged platform target"))
+	env = fakeEnv(t, env)
+
+	listed := env.secretRun(t, nil, "secrets", "list")
+	if listed.Code != 0 || !strings.Contains(listed.Stdout, "_secrets/base-token") ||
+		!strings.Contains(listed.Stdout, "_linux/_secrets/linux-token") {
+		t.Fatalf("list: %+v", listed)
+	}
+	preview := env.secretRun(t, nil, "secrets", "reencrypt")
+	if preview.Code != 2 {
+		t.Fatalf("preview: %+v", preview)
+	}
+	requireFileBytes(t, basePath, original)
+	requireFileBytes(t, platformPath, original)
+
+	applied := env.secretRun(t, nil, "secrets", "reencrypt", "--yes")
+	if applied.Code != 0 {
+		t.Fatalf("reencrypt: %+v", applied)
+	}
+	requireFileBytes(t, basePath, rotated)
+	requireFileBytes(t, platformPath, rotated)
+	verified := env.secretRun(t, nil, "secrets", "verify")
+	if verified.Code != 0 || strings.Count(verified.Stdout, " verified ") != 2 {
+		t.Fatalf("verify: %+v", verified)
+	}
+	requireFileBytes(t, filepath.Join(env.home, "base-token"), []byte("unchanged base target"))
+	requireFileBytes(t, filepath.Join(env.home, "linux-token"), []byte("unchanged platform target"))
+}
+
+func requireFileBytes(t *testing.T, path string, want []byte) {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(got, want) {
+		t.Fatalf("file %s = %q, %v; want %q", path, got, err, want)
 	}
 }
 
@@ -162,6 +210,13 @@ func testSecretsDependency(t *testing.T) {
 	result := env.secretRun(t, nil, "apply")
 	if result.Code != 4 {
 		t.Fatalf("code = %d, want 4 for a missing sops dependency", result.Code)
+	}
+	verified := env.secretRun(t, nil, "secrets", "verify")
+	if verified.Code != 4 || !strings.Contains(verified.Stdout, "failed") {
+		t.Fatalf("verify = %+v, want a rendered dependency failure", verified)
+	}
+	if string(readTargetFile(t, env.home, "token")) != "plaintext" {
+		t.Fatal("verification changed the target")
 	}
 }
 
