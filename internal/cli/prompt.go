@@ -9,6 +9,7 @@ import (
 
 	"github.com/alyraffauf/cattery/internal/application/apply"
 	"github.com/alyraffauf/cattery/internal/failure"
+	"golang.org/x/term"
 )
 
 // PromptInput carries the streams, terminal predicate, and optional safe
@@ -31,12 +32,17 @@ type DecisionPrompt struct {
 	diff       func(context.Context, string) (apply.SafeDifference, bool)
 }
 
-// NewDecisionPrompt builds the interactive resolver over the given input.
+// NewDecisionPrompt builds the interactive resolver over the given input,
+// defaulting the terminal predicate to the x/term binding.
 func NewDecisionPrompt(input PromptInput) *DecisionPrompt {
+	isTerminal := input.IsTerminal
+	if isTerminal == nil {
+		isTerminal = term.IsTerminal
+	}
 	return &DecisionPrompt{
 		stdin:      input.Stdin,
 		stderr:     input.Stderr,
-		isTerminal: input.IsTerminal,
+		isTerminal: isTerminal,
 		diff:       input.Diff,
 	}
 }

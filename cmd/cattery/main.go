@@ -70,7 +70,8 @@ func forwardSignals(ctx context.Context, cancel context.CancelCauseFunc, signals
 	}
 }
 
-// stateHomeOf derives the XDG state directory for cattery.
+// stateHomeOf derives the XDG state base directory; the state store
+// appends its own cattery directory beneath it.
 func stateHomeOf(environment []string) string {
 	base := envValue(environment, "XDG_STATE_HOME")
 	if base == "" {
@@ -80,7 +81,7 @@ func stateHomeOf(environment []string) string {
 		}
 		base = filepath.Join(home, ".local", "state")
 	}
-	return filepath.Join(base, "cattery")
+	return base
 }
 
 // envValue returns the value of one environment entry.
