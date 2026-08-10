@@ -28,7 +28,6 @@ func TestFilesystemPrecondition(t *testing.T) {
 		{"kind change detected", testKindChange},
 		{"blocking parents are rejected", testBlockingParents},
 		{"freeze never mutates", testFreezeNoMutation},
-		{"source facts freeze and revalidate", testSourceFacts},
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)

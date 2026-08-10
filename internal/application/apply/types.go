@@ -128,19 +128,13 @@ type RepositoryInput struct {
 }
 
 // Request is the frozen input of one apply: the raw repository fields, the
-// raw group arguments in command-line order, and the policy flags with
-// separate presence bits. An omitted --dry-run, --non-interactive, or
-// --no-hooks leaves its Set bit false so the service never mistakes it for
-// an explicit false request.
+// raw group arguments in command-line order, and the policy flags.
 type Request struct {
-	Repository        RepositoryInput
-	Groups            []string
-	DryRun            bool
-	DryRunSet         bool
-	NonInteractive    bool
-	NonInteractiveSet bool
-	NoHooks           bool
-	NoHooksSet        bool
+	Repository     RepositoryInput
+	Groups         []string
+	DryRun         bool
+	NonInteractive bool
+	NoHooks        bool
 }
 
 // DecisionChoice is the application-owned choice vocabulary one prompt may
@@ -301,7 +295,6 @@ const (
 type ItemResult struct {
 	TargetPath string
 	Status     ItemStatus
-	Secret     bool
 	Kind       ActionKind
 }
 

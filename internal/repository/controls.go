@@ -66,37 +66,3 @@ func ClassifyPlatformLayer(name string) Control {
 	}
 	return ControlNone
 }
-
-// IsScopeControl reports whether name is one of the recognized scope-root
-// controls. Unknown underscore entries, metadata, and ordinary names are not
-// scope controls.
-func IsScopeControl(name string) bool {
-	switch ClassifyRoot(name) {
-	case ControlDarwin, ControlLinux, ControlSecrets, ControlHooks, ControlRoutes:
-		return true
-	}
-	return false
-}
-
-// String renders control as a stable lowercase label for diagnostics.
-func (control Control) String() string {
-	switch control {
-	case ControlNone:
-		return "none"
-	case ControlDarwin:
-		return "darwin"
-	case ControlLinux:
-		return "linux"
-	case ControlSecrets:
-		return "secrets"
-	case ControlHooks:
-		return "hooks"
-	case ControlRoutes:
-		return "routes"
-	case ControlIgnoredUnderscore:
-		return "ignored-underscore"
-	case ControlMetadata:
-		return "metadata"
-	}
-	return "unknown"
-}

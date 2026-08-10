@@ -27,7 +27,7 @@ func testRenderAddItems(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	result := add.Result{Items: []add.ItemResult{
 		{Target: "a.conf", Source: "a.conf", Status: add.StatusCompleted},
-		{Target: "token", Source: "apps/token", Status: add.StatusCompleted, Secret: true},
+		{Target: "token", Source: "apps/token", Status: add.StatusCompleted},
 	}, Summary: add.Summary{Completed: 2}}
 	if err := renderAdd(stdout, result); err != nil {
 		t.Fatalf("render: %v", err)

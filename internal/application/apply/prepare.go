@@ -3,7 +3,6 @@ package apply
 import (
 	"context"
 
-	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/reconcile"
 )
@@ -118,7 +117,7 @@ func prepareOne(candidate Candidate, records []ItemResult, scope prepareScope) (
 	if decided && choice == ChoiceSkip {
 		return false, kind, "", false, append(records, plannedRecord(candidate, kind)), nil
 	}
-	if needsDecision(candidate) && !decided && !scope.dryRun {
+	if candidateNeedsDecision(candidate) && !decided && !scope.dryRun {
 		return false, kind, "", false, records, failure.New(failure.InvalidInput, "apply: unresolved decision for "+candidate.record.TargetPath, nil)
 	}
 	if scope.dryRun {
@@ -137,11 +136,6 @@ func confirmedReplace(candidate Candidate, decided bool, choice DecisionChoice) 
 	return candidate.record.Entry == reconcile.PlanEntryAlias && candidate.record.FileState != nil && candidate.record.FileState.Active()
 }
 
-// needsDecision reports whether one candidate required an explicit choice.
-func needsDecision(candidate Candidate) bool {
-	return candidateNeedsDecision(candidate)
-}
-
 func candidateNeedsDecision(candidate Candidate) bool {
 	return candidate.file.Convergence == reconcile.ConvergenceDecisionRequired || candidate.alias.Convergence == reconcile.ConvergenceDecisionRequired
 }
@@ -151,7 +145,6 @@ func plannedRecord(candidate Candidate, kind ActionKind) ItemResult {
 	return ItemResult{
 		TargetPath: candidate.record.TargetPath,
 		Status:     StatusPlanned,
-		Secret:     candidate.record.File.Kind == deployment.FileSecret,
 		Kind:       kind,
 	}
 }

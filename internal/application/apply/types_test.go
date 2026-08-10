@@ -23,7 +23,6 @@ func TestApplyContract(t *testing.T) {
 		name string
 		run  func(*testing.T)
 	}{
-		{"zero request keeps policy presence false", testContractPresenceBits},
 		{"decision requests validate and copy", testContractDecisionRequest},
 		{"safe differences copy lines", testContractSafeDifference},
 		{"action plans copy defensively", testContractActionPlan},
@@ -33,27 +32,6 @@ func TestApplyContract(t *testing.T) {
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
-	}
-}
-
-func testContractPresenceBits(t *testing.T) {
-	var request Request
-	if request.DryRunSet || request.NonInteractiveSet || request.NoHooksSet {
-		t.Fatal("zero Request must leave every policy presence false")
-	}
-	if request.Repository != (RepositoryInput{}) {
-		t.Fatalf("zero Request.Repository = %+v, want the zero repository input", request.Repository)
-	}
-	if request.Groups != nil {
-		t.Fatalf("zero Request.Groups = %v, want nil", request.Groups)
-	}
-	explicit := Request{Repository: RepositoryInput{RawExplicit: "repo", ExplicitSet: true},
-		DryRun: true, DryRunSet: true, NonInteractive: false, NonInteractiveSet: true, NoHooks: true, NoHooksSet: true}
-	if !explicit.DryRunSet || !explicit.NonInteractiveSet || !explicit.NoHooksSet {
-		t.Fatal("explicit presence bits must be preserved")
-	}
-	if !explicit.Repository.ExplicitSet || explicit.Repository.RawExplicit != "repo" {
-		t.Fatal("repository presence and value must be preserved")
 	}
 }
 
@@ -124,7 +102,7 @@ func testContractActionPlan(t *testing.T) {
 
 func testContractPartialSummaries(t *testing.T) {
 	result := Result{Items: []ItemResult{
-		{TargetPath: "a", Status: StatusCompleted, Secret: true, Kind: ActionKindReplaceFile},
+		{TargetPath: "a", Status: StatusCompleted, Kind: ActionKindReplaceFile},
 		{TargetPath: "b", Status: StatusPartial, Kind: ActionKindWriteSource},
 		{TargetPath: "c", Status: StatusPlanned, Kind: ActionKindRealizeAlias},
 	}, Summary: Summary{Planned: 1, Completed: 1, Partial: 1}}

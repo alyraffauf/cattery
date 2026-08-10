@@ -74,8 +74,8 @@ func testDryRunFlagsSecret(t *testing.T) {
 	item.Kind = deployment.FileSecret
 	plan := mustPlan(t, []ItemPlanInput{planItem("readme"), item})
 	result := DryRun(plan)
-	if result.Items[0].Target != "creds" || !result.Items[0].Secret {
-		t.Fatal("dry run did not flag the secret item")
+	if result.Items[0].Target != "creds" {
+		t.Fatal("dry run did not include the secret item")
 	}
 }
 

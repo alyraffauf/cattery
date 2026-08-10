@@ -1,10 +1,6 @@
 package add
 
-import (
-	"sort"
-
-	"github.com/alyraffauf/cattery/internal/deployment"
-)
+import "sort"
 
 // BuildPlan freezes the preflighted items into a BatchPlan. Items are sorted
 // by target path for display while execution proceeds in that same order
@@ -75,6 +71,5 @@ func itemRecord(item ItemPlan, status ItemStatus) ItemResult {
 		Target: item.TargetRelativePath(),
 		Source: item.SourceRepositoryPath(),
 		Status: status,
-		Secret: item.Kind() == deployment.FileSecret,
 	}
 }

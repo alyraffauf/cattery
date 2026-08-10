@@ -253,7 +253,6 @@ type ItemResult struct {
 	Target string
 	Source string
 	Status ItemStatus
-	Secret bool
 }
 
 // Summary counts the per-target outcome records of one add.

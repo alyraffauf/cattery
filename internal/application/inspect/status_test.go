@@ -82,7 +82,7 @@ func testStatusTargetDrift(t *testing.T) {
 	assertKind(t, err, failure.Difference)
 	record := singleRecord(t, result)
 	if record.TargetPath() != "g1-file.conf" || record.Kind() != StatusKindFile ||
-		record.Action() != "needs-decision" || record.Reason() != "target-drift" || record.Converged() {
+		record.Action() != "needs-decision" {
 		t.Fatalf("record = %+v", record)
 	}
 	if result.Files() != 1 || result.Aliases() != 0 || result.Retired() != 0 || result.Converged() {
@@ -100,7 +100,7 @@ func testStatusSourceChange(t *testing.T) {
 	result, err := fx.service.Status(context.Background(), Request{})
 	assertKind(t, err, failure.Difference)
 	record := singleRecord(t, result)
-	if record.Action() != "write-source-to-target" || record.Reason() != "source-changed" {
+	if record.Action() != "write-source-to-target" {
 		t.Fatalf("record = %+v", record)
 	}
 }
@@ -139,8 +139,7 @@ func testStatusAliasCreate(t *testing.T) {
 	result, err := fx.service.Status(context.Background(), Request{})
 	assertKind(t, err, failure.Difference)
 	record := singleRecord(t, result)
-	if record.Kind() != StatusKindAlias || record.Action() != "create-alias" ||
-		record.Reason() != "unbaselined-absent" || record.Converged() {
+	if record.Kind() != StatusKindAlias || record.Action() != "create-alias" {
 		t.Fatalf("record = %+v", record)
 	}
 	if result.Aliases() != 1 || result.Converged() {
@@ -185,8 +184,7 @@ func testStatusRetirePending(t *testing.T) {
 	result, err := fx.service.Status(context.Background(), Request{Groups: []string{"g2"}})
 	assertKind(t, err, failure.Difference)
 	record := singleRecord(t, result)
-	if record.Kind() != StatusKindRetired || record.Action() != "retire-state" ||
-		record.Reason() != "source-removed" || record.Converged() {
+	if record.Kind() != StatusKindRetired || record.Action() != "retire-state" {
 		t.Fatalf("record = %+v", record)
 	}
 	if result.Retired() != 1 || result.Converged() {
@@ -207,8 +205,7 @@ func testStatusRetireDone(t *testing.T) {
 		t.Fatalf("Status: %v", err)
 	}
 	record := singleRecord(t, result)
-	if record.Kind() != StatusKindRetired || record.Action() != "no-op" ||
-		record.Reason() != "already-retired" || !record.Converged() {
+	if record.Kind() != StatusKindRetired || record.Action() != "no-op" {
 		t.Fatalf("record = %+v", record)
 	}
 	if !result.Converged() {

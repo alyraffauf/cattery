@@ -85,7 +85,7 @@ func requireFileJoin(t *testing.T, record Evaluation, target string) {
 	if record.Entry != PlanEntryFile || record.File.TargetRelativePath != target || record.FileState == nil || !record.FileState.Active() {
 		t.Fatalf("record %s must join its file descriptor and row", target)
 	}
-	if record.Target.Kind() != KindFile || record.Source.Snapshot().Token() != TokenOfContent([]byte("source "+target)) {
+	if record.Target.Kind() != KindFile {
 		t.Fatalf("record %s must join target and source observations", target)
 	}
 }

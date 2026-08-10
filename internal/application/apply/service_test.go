@@ -74,7 +74,7 @@ func testServiceNoop(t *testing.T) {
 
 func testServiceDryRun(t *testing.T) {
 	pair := serviceFixture(t)
-	result, err := pair.service.Apply(context.Background(), Request{DryRun: true, DryRunSet: true})
+	result, err := pair.service.Apply(context.Background(), Request{DryRun: true})
 	if err == nil || !kindIs(err, failure.Difference) {
 		t.Fatalf("apply: %v, want a difference failure for a pending dry run", err)
 	}
@@ -134,7 +134,7 @@ func testServiceDecisionFailure(t *testing.T) {
 
 func testServicePrepareRefusal(t *testing.T) {
 	pair := serviceFixture(t)
-	_, err := pair.service.Apply(context.Background(), Request{NonInteractive: true, NonInteractiveSet: true})
+	_, err := pair.service.Apply(context.Background(), Request{NonInteractive: true})
 	if err == nil || !kindIs(err, failure.InvalidInput) {
 		t.Fatalf("refusal error = %v, want invalid input", err)
 	}

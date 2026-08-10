@@ -21,9 +21,7 @@ import (
 type Tag int
 
 const (
-	// TagNone marks equal content on both sides; only metadata such as a
-	// mode correction may remain to report.
-	TagNone Tag = iota
+	_ Tag = iota
 	// TagText marks a printable unified diff computed from both sides.
 	TagText
 	// TagBinary marks a binary or oversized ordinary file; the record
@@ -58,12 +56,9 @@ func ParseTag(name string) Tag {
 	case "secret":
 		return TagSecret
 	default:
-		return TagNone
+		return Tag(0)
 	}
 }
-
-// Valid reports whether tag is one of the supported constants.
-func (t Tag) Valid() bool { return t >= TagNone && t <= TagSecret }
 
 // SafeRecordInput carries the renderable fields of one safe record.
 type SafeRecordInput struct {
@@ -151,7 +146,7 @@ func textEligible(data []byte) bool {
 
 // Build derives the safe record for one file evaluation. The target bytes
 // must be the exact bytes captured beside the target snapshot; the record
-// never retains them. Equal content yields TagNone, printable text at most
+// never retains them. Equal content yields the zero tag, printable text at most
 // maxTextBytes per side yields a TagText unified diff with escaped labels,
 // and every other content difference yields TagBinary or TagSecret facts.
 func Build(evaluation reconcile.Evaluation, targetBytes []byte) (SafeRecord, error) {

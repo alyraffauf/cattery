@@ -275,7 +275,7 @@ func testExecuteSecret(t *testing.T) {
 // target with mode 0600, and the keyed baseline fingerprints.
 func assertSecretResult(t *testing.T, outcome secretOutcome) {
 	t.Helper()
-	if len(outcome.results) != 1 || outcome.results[0].Status != StatusCompleted || !outcome.results[0].Secret {
+	if len(outcome.results) != 1 || outcome.results[0].Status != StatusCompleted {
 		t.Fatalf("results = %+v, want a completed secret record", outcome.results)
 	}
 	if string(targetContent(t, outcome.home, "target")) != "plaintext" {

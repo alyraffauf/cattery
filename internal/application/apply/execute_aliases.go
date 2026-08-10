@@ -131,7 +131,6 @@ func aliasRecord(job aliasJob, status ItemStatus) ItemResult {
 	return ItemResult{
 		TargetPath: job.action.TargetPath,
 		Status:     status,
-		Secret:     false,
 		Kind:       job.action.Kind,
 	}
 }
