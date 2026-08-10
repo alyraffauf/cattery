@@ -60,15 +60,53 @@ run_basic_commands() {
     local home="$TEMP_ROOT/home"
     local state="$TEMP_ROOT/state"
     mkdir -p "$repo" "$home" "$state"
-    XDG_STATE_HOME="$state" "$binary" init "$repo"
-    XDG_STATE_HOME="$state" "$binary" validate --repo "$repo"
+    printf 'original\n' > "$repo/.bashrc"
+    run_command "$binary" "$home" "$state" init "$repo"
+    run_command "$binary" "$home" "$state" validate --repo "$repo"
+    run_command "$binary" "$home" "$state" apply --repo "$repo" --non-interactive
+    cmp "$repo/.bashrc" "$home/.bashrc" || die "ordinary apply did not materialize the source"
+    printf 'adopted\n' > "$home/.bashrc"
+    run_command "$binary" "$home" "$state" add --repo "$repo" "$home/.bashrc"
+    cmp "$repo/.bashrc" "$home/.bashrc" || die "ordinary add did not adopt target bytes"
+}
+
+run_command() {
+    local binary=$1
+    local home=$2
+    local state=$3
+    shift 3
+    HOME="$home" XDG_STATE_HOME="$state" "$binary" "$@"
+}
+
+run_secret_round_trip() {
+    local binary=$1
+    local home=$2
+    local state=$3
+    local repo=$4
+    mkdir -p "$home" "$state" "$repo"
+    command -v age-keygen >/dev/null 2>&1 || die "age-keygen is required for the secret smoke"
+    command -v sops >/dev/null 2>&1 || die "sops is required for the secret smoke"
+    local key_file="$TEMP_ROOT/age-key.txt"
+    age-keygen -o "$key_file" >/dev/null
+    local recipient
+    recipient=$(awk '/public key:/ { print $4 }' "$key_file")
+    printf 'creation_rules:\n  - age: %s\n' "$recipient" > "$repo/.sops.yaml"
+    mkdir -p "$home/.config/cattery"
+    local secret_path="$home/.config/cattery/secret"
+    printf 'release-smoke-secret\n' > "$secret_path"
+    SOPS_AGE_KEY_FILE="$key_file" HOME="$home" XDG_STATE_HOME="$state" "$binary" add --repo "$repo" --secret "$secret_path"
+    rm -f "$secret_path"
+    SOPS_AGE_KEY_FILE="$key_file" HOME="$home" XDG_STATE_HOME="$state" "$binary" apply --repo "$repo" --non-interactive
+    [[ $(cat "$secret_path") == 'release-smoke-secret' ]] || die "secret round trip did not restore plaintext"
 }
 
 main() {
     verify_manifest
     local os arch archive name binary
-    for archive in "$DIST"/cattery_*.tar.gz; do
-        [[ -f $archive ]] || die "no release archives found"
+    for target in "linux amd64" "linux arm64" "darwin amd64" "darwin arm64"; do
+        read -r os arch <<< "$target"
+        archive=$(printf '%s\n' "$DIST"/cattery_*_"$os"_"$arch".tar.gz)
+        [[ -f $archive ]] || die "missing archive for $os/$arch"
         verify_archive "$archive"
     done
     read -r os arch <<< "$(host_target)"
@@ -76,6 +114,7 @@ main() {
     name=$(basename "$archive" .tar.gz)
     binary="$TEMP_ROOT/$name/cattery"
     run_basic_commands "$binary"
+    run_secret_round_trip "$binary" "$TEMP_ROOT/home-secret" "$TEMP_ROOT/state-secret" "$TEMP_ROOT/repository-secret"
     printf 'smoke passed for %s\n' "$name"
 }
 

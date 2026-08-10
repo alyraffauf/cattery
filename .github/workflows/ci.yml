@@ -84,6 +84,30 @@ jobs:
       - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
       - run: nix develop -c just test-sops
 
+  race:
+    name: race
+    runs-on: ubuntu-22.04
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # cachix/install-nix-action v31.11.0
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
+      - run: nix develop -c just test-race
+
+  dependency-audit:
+    name: dependency-audit
+    runs-on: ubuntu-22.04
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # cachix/install-nix-action v31.11.0
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342
+      - run: nix develop -c just deps-check
+
   documentation:
     name: documentation
     runs-on: ubuntu-22.04
