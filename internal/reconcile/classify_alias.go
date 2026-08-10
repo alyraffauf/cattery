@@ -1,9 +1,6 @@
 package reconcile
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/pathsafe"
 )
@@ -121,39 +118,11 @@ func activeAliasRow(record Evaluation) bool {
 // for canonical, or the empty string when the paths cannot describe a valid
 // alias, so a real link can never match an invalid declaration.
 func payloadFor(canonical, alias string) string {
-	payload, err := relativePayload(canonical, alias)
+	payload, err := pathsafe.RelativeAliasPayload(canonical, alias)
 	if err != nil {
 		return ""
 	}
 	return payload
-}
-
-// relativePayload computes the exact relative symlink payload from the alias
-// destination's parent directory to the canonical target, mirroring the
-// route-activation derivation without importing it.
-func relativePayload(canonical, alias string) (string, error) {
-	canonicalSegments, err := pathsafe.Segments(canonical)
-	if err != nil {
-		return "", err
-	}
-	aliasSegments, err := pathsafe.Segments(alias)
-	if err != nil {
-		return "", err
-	}
-	parent := aliasSegments[:len(aliasSegments)-1]
-	common := 0
-	for common < len(canonicalSegments) && common < len(parent) && canonicalSegments[common] == parent[common] {
-		common++
-	}
-	remaining := canonicalSegments[common:]
-	if len(remaining) == 0 {
-		return "", fmt.Errorf("reconcile: alias %q descends into canonical %q", alias, canonical)
-	}
-	up := len(parent) - common
-	if up == 0 {
-		return strings.Join(remaining, "/"), nil
-	}
-	return strings.Repeat("../", up) + strings.Join(remaining, "/"), nil
 }
 
 // aliasWithPath attaches the evaluation target path to a bare outcome.

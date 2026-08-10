@@ -2,10 +2,8 @@ package routes
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
-	"github.com/alyraffauf/cattery/internal/pathsafe"
 )
 
 // Activate resolves the route declarations active for one platform against
@@ -86,47 +84,4 @@ func canonicalSet(canonical []string) map[string]bool {
 		managed[path] = true
 	}
 	return managed
-}
-
-// AliasPayload computes the exact relative symlink payload for the alias at
-// destination pointing at canonical: the payload is
-// relative from the alias destination's parent directory, never absolute,
-// and never needs to climb above the home root. Both paths must be valid
-// HOME-relative paths.
-//
-// AliasPayload rejects only the case where the canonical segments that remain
-// after the common prefix with the alias's parent directory are empty — i.e.
-// when canonical is the alias parent or one of its ancestors, which would
-// leave no target to point at. A self-referential single-segment alias where
-// canonical == alias is not rejected here; that case is caught upstream by
-// Activate (which errors when destination == canonical).
-func AliasPayload(canonical, alias string) (string, error) {
-	canonicalSegments, err := pathsafe.Segments(canonical)
-	if err != nil {
-		return "", err
-	}
-	aliasSegments, err := pathsafe.Segments(alias)
-	if err != nil {
-		return "", err
-	}
-	parent := aliasSegments[:len(aliasSegments)-1]
-	common := commonPrefix(canonicalSegments, parent)
-	remaining := canonicalSegments[common:]
-	if len(remaining) == 0 {
-		return "", fmt.Errorf("routes: alias %q descends into canonical %q", alias, canonical)
-	}
-	up := len(parent) - common
-	if up == 0 {
-		return strings.Join(remaining, "/"), nil
-	}
-	return strings.Repeat("../", up) + strings.Join(remaining, "/"), nil
-}
-
-func commonPrefix(first, second []string) int {
-	length := min(len(first), len(second))
-	common := 0
-	for common < length && first[common] == second[common] {
-		common++
-	}
-	return common
 }
