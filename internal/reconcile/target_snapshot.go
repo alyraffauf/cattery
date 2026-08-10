@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/alyraffauf/cattery/internal/deployment"
+	"github.com/alyraffauf/cattery/internal/filesystem"
 	"github.com/alyraffauf/cattery/internal/pathsafe"
 )
 
@@ -72,7 +73,7 @@ func captureEntry(destination Destination, parent pathsafe.Identity) (TargetSnap
 		return TargetSnapshot{}, err
 	}
 	snapshot := TargetSnapshot{
-		destination: destination, parent: parent, kind: KindOfIdentity(identity),
+		destination: destination, parent: parent, kind: filesystem.KindOfIdentity(identity),
 		identity: identity, mode: identity.Mode().Perm(),
 	}
 	switch snapshot.kind {
@@ -102,7 +103,7 @@ func captureFileFacts(path string, snapshot TargetSnapshot) (TargetSnapshot, err
 	if !pathsafe.SameIdentity(snapshot.identity, live) || live.Mode().Perm() != snapshot.mode {
 		return TargetSnapshot{}, fmt.Errorf("reconcile: target changed while reading %s", path)
 	}
-	snapshot.token = TokenOfContent(content)
+	snapshot.token = filesystem.TokenOfContent(content)
 	snapshot.digest = deployment.Ordinary(content)
 	return snapshot, nil
 }
@@ -150,14 +151,5 @@ func validateOpenedFile(snapshot TargetSnapshot, info os.FileInfo) error {
 
 // KindOfIdentity classifies an existing identity without touching the path.
 func KindOfIdentity(identity pathsafe.Identity) EntryKind {
-	mode := identity.Mode()
-	switch {
-	case mode.IsDir():
-		return KindDirectory
-	case mode&os.ModeSymlink != 0:
-		return KindSymlink
-	case mode.IsRegular():
-		return KindFile
-	}
-	return KindSpecial
+	return filesystem.KindOfIdentity(identity)
 }
