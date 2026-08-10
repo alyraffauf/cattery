@@ -26,7 +26,7 @@ func TestApplyPreparation(t *testing.T) {
 
 // driftFixture evaluates one drifting target per name and returns the
 // service and candidates.
-func driftFixture(t *testing.T, targets ...string) (*Service, Candidates) {
+func driftFixture(t *testing.T, targets ...string) evalPair {
 	t.Helper()
 	repo := t.TempDir()
 	home := t.TempDir()
@@ -40,27 +40,30 @@ func driftFixture(t *testing.T, targets ...string) (*Service, Candidates) {
 	if err != nil {
 		t.Fatalf("evaluate: %v", err)
 	}
-	return service, candidates
+	return evalPair{service: service, candidates: candidates}
 }
 
-// resolveAll collects the decisions of every pending candidate.
-func resolveAll(t *testing.T, service *Service, candidates Candidates, choices ...DecisionChoice) CollectedDecisions {
+// resolveChoice collects the decision of the pending candidate for the
+// given choice.
+func resolveChoice(t *testing.T, pair evalPair, choice DecisionChoice) CollectedDecisions {
 	t.Helper()
-	resolver := &resolverFake{}
-	for _, choice := range choices {
-		resolver.responses = append(resolver.responses, DecisionResponse{Choice: choice})
-	}
-	service.resolver = resolver
-	collected, err := service.CollectDecisions(context.Background(), candidates)
+	pair.service.resolver = &resolverFake{responses: []DecisionResponse{{Choice: choice}}}
+	collected, err := pair.service.CollectDecisions(context.Background(), pair.candidates)
 	if err != nil {
 		t.Fatalf("collect: %v", err)
 	}
 	return collected
 }
 
+// evalPair bundles one evaluated service and its candidates.
+type evalPair struct {
+	service    *Service
+	candidates Candidates
+}
+
 func testPrepareDryRun(t *testing.T) {
-	service, candidates := driftFixture(t, "a.conf")
-	plan, err := service.Prepare(context.Background(), Request{DryRun: true, DryRunSet: true}, candidates, CollectedDecisions{})
+	pair := driftFixture(t, "a.conf")
+	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{DryRun: true, DryRunSet: true}, Candidates: pair.candidates})
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -77,12 +80,12 @@ func testPrepareDryRun(t *testing.T) {
 }
 
 func testPrepareNoninteractive(t *testing.T) {
-	service, candidates := driftFixture(t, "a.conf")
-	_, err := service.Prepare(context.Background(), Request{NonInteractive: true, NonInteractiveSet: true}, candidates, CollectedDecisions{})
+	pair := driftFixture(t, "a.conf")
+	_, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{NonInteractive: true, NonInteractiveSet: true}, Candidates: pair.candidates})
 	if err == nil || !kindIs(err, failure.InvalidInput) {
 		t.Fatalf("noninteractive refusal error = %v, want an invalid input failure", err)
 	}
-	plan, err := service.Prepare(context.Background(), Request{DryRun: true, NonInteractive: true, NonInteractiveSet: true}, candidates, CollectedDecisions{})
+	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{DryRun: true, NonInteractive: true, NonInteractiveSet: true}, Candidates: pair.candidates})
 	if err != nil {
 		t.Fatalf("dry-run must not refuse pending decisions: %v", err)
 	}
@@ -92,9 +95,9 @@ func testPrepareNoninteractive(t *testing.T) {
 }
 
 func testPrepareSkip(t *testing.T) {
-	service, candidates := driftFixture(t, "a.conf")
-	decisions := resolveAll(t, service, candidates, ChoiceSkip)
-	plan, err := service.Prepare(context.Background(), Request{}, candidates, decisions)
+	pair := driftFixture(t, "a.conf")
+	decisions := resolveChoice(t, pair, ChoiceSkip)
+	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{}, Candidates: pair.candidates, Decisions: decisions})
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -117,7 +120,7 @@ func testPrepareNoop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("evaluate: %v", err)
 	}
-	plan, err := service.Prepare(context.Background(), Request{}, candidates, CollectedDecisions{})
+	plan, err := service.Prepare(context.Background(), PrepareInput{Request: Request{}, Candidates: candidates})
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -127,9 +130,17 @@ func testPrepareNoop(t *testing.T) {
 }
 
 func testPrepareHooks(t *testing.T) {
-	service, candidates := driftFixture(t, "a.conf")
-	decisions := resolveAll(t, service, candidates, ChoiceOverwrite)
-	plan, err := service.Prepare(context.Background(), Request{}, candidates, decisions)
+	pair := driftFixture(t, "a.conf")
+	decisions := resolveChoice(t, pair, ChoiceOverwrite)
+	assertPreparedAction(t, pair, decisions)
+	assertHooksSuppressed(t, pair, decisions)
+}
+
+// assertPreparedAction requires one write-source action and hooks for an
+// executing plan.
+func assertPreparedAction(t *testing.T, pair evalPair, decisions CollectedDecisions) {
+	t.Helper()
+	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{}, Candidates: pair.candidates, Decisions: decisions})
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -140,14 +151,19 @@ func testPrepareHooks(t *testing.T) {
 	if len(actions) != 1 || actions[0].Kind != ActionKindWriteSource || actions[0].TargetPath != "a.conf" {
 		t.Fatalf("actions = %+v, want one write-source action", actions)
 	}
-	plan, err = service.Prepare(context.Background(), Request{NoHooks: true, NoHooksSet: true}, candidates, decisions)
+}
+
+// assertHooksSuppressed requires --no-hooks and dry-run to suppress hooks.
+func assertHooksSuppressed(t *testing.T, pair evalPair, decisions CollectedDecisions) {
+	t.Helper()
+	plan, err := pair.service.Prepare(context.Background(), PrepareInput{Request: Request{NoHooks: true, NoHooksSet: true}, Candidates: pair.candidates, Decisions: decisions})
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
 	if plan.WithHooks() {
 		t.Fatal("--no-hooks must suppress hooks")
 	}
-	plan, err = service.Prepare(context.Background(), Request{DryRun: true, DryRunSet: true}, candidates, CollectedDecisions{})
+	plan, err = pair.service.Prepare(context.Background(), PrepareInput{Request: Request{DryRun: true, DryRunSet: true}, Candidates: pair.candidates})
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}

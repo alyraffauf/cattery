@@ -43,29 +43,37 @@ func (p PreparedPlan) Summary() Summary {
 	return summary
 }
 
+// PrepareInput bundles the request, candidates, and decisions of one apply
+// preparation.
+type PrepareInput struct {
+	Request    Request
+	Candidates Candidates
+	Decisions  CollectedDecisions
+}
+
 // Prepare combines the resolved candidates and decisions into one immutable
 // action plan with dry-run records and stable per-target kinds (PLAN.md
 // Section 11.5). No hook or managed mutation occurs, and refusal paths
 // register nothing.
-func (service *Service) Prepare(ctx context.Context, request Request, candidates Candidates, decisions CollectedDecisions) (PreparedPlan, error) {
+func (service *Service) Prepare(ctx context.Context, input PrepareInput) (PreparedPlan, error) {
 	if err := ctx.Err(); err != nil {
 		return PreparedPlan{}, err
 	}
-	pending, err := decisionSpecs(candidates)
+	pending, err := decisionSpecs(input.Candidates)
 	if err != nil {
 		return PreparedPlan{}, err
 	}
-	if len(pending) > 0 && !request.DryRun && request.NonInteractive {
+	if len(pending) > 0 && !input.Request.DryRun && input.Request.NonInteractive {
 		return PreparedPlan{}, failure.New(failure.InvalidInput, "apply: non-interactive apply requires no pending decisions", nil)
 	}
-	actions, records, err := prepareActions(candidates, decisionChoices(decisions), request.DryRun)
+	actions, records, err := prepareActions(input.Candidates, decisionChoices(input.Decisions), input.Request.DryRun)
 	if err != nil {
 		return PreparedPlan{}, err
 	}
 	return PreparedPlan{
 		actions:   NewActionPlan(actions),
 		records:   records,
-		withHooks: !request.DryRun && !request.NoHooks && len(actions) > 0,
+		withHooks: !input.Request.DryRun && !input.Request.NoHooks && len(actions) > 0,
 	}, nil
 }
 
@@ -82,30 +90,48 @@ func decisionChoices(decisions CollectedDecisions) map[string]DecisionChoice {
 func prepareActions(candidates Candidates, choices map[string]DecisionChoice, dryRun bool) ([]PlanAction, []ItemResult, error) {
 	actions := make([]PlanAction, 0)
 	records := make([]ItemResult, 0)
+	scope := prepareScope{choices: choices, dryRun: dryRun}
 	for _, candidate := range candidates.All() {
-		action, source, err := underlyingAction(candidate)
+		execute, kind, source, kept, err := prepareOne(candidate, records, scope)
 		if err != nil {
 			return nil, nil, err
 		}
-		kind, has := mapKind(action)
-		if !has {
-			continue
+		records = kept
+		if execute {
+			actions = append(actions, PlanAction{TargetPath: candidate.record.TargetPath, Kind: kind, SourcePath: source})
 		}
-		choice, decided := choices[candidate.record.TargetPath]
-		if decided && choice == ChoiceSkip {
-			records = append(records, plannedRecord(candidate, kind))
-			continue
-		}
-		if needsDecision(candidate) && !decided && !dryRun {
-			return nil, nil, failure.New(failure.InvalidInput, "apply: unresolved decision for "+candidate.record.TargetPath, nil)
-		}
-		if dryRun {
-			records = append(records, plannedRecord(candidate, kind))
-			continue
-		}
-		actions = append(actions, PlanAction{TargetPath: candidate.record.TargetPath, Kind: kind, SourcePath: source})
 	}
 	return actions, records, nil
+}
+
+// prepareScope bundles the per-preparation decision map and dry-run policy.
+type prepareScope struct {
+	choices map[string]DecisionChoice
+	dryRun  bool
+}
+
+// prepareOne resolves one candidate into a skipped or dry-run record, or
+// reports that its pending action executes.
+func prepareOne(candidate Candidate, records []ItemResult, scope prepareScope) (bool, ActionKind, string, []ItemResult, error) {
+	action, source, err := underlyingAction(candidate)
+	if err != nil {
+		return false, "", "", records, err
+	}
+	kind, has := mapKind(action)
+	if !has {
+		return false, "", "", records, nil
+	}
+	choice, decided := scope.choices[candidate.record.TargetPath]
+	if decided && choice == ChoiceSkip {
+		return false, kind, "", append(records, plannedRecord(candidate, kind)), nil
+	}
+	if needsDecision(candidate) && !decided && !scope.dryRun {
+		return false, kind, "", records, failure.New(failure.InvalidInput, "apply: unresolved decision for "+candidate.record.TargetPath, nil)
+	}
+	if scope.dryRun {
+		return false, kind, "", append(records, plannedRecord(candidate, kind)), nil
+	}
+	return true, kind, source, records, nil
 }
 
 // needsDecision reports whether one candidate required an explicit choice.
