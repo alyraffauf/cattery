@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +20,8 @@ type Dependencies struct {
 // Application is the opaque single-use Cobra root. The embedded command is
 // unexported so bootstrap and main cannot inspect or mutate Cobra state.
 type Application struct {
-	root *cobra.Command
+	root     *cobra.Command
+	executed bool
 }
 
 // NewApplication builds one opaque application over the dependencies and
@@ -57,8 +59,13 @@ func NewApplication(dependencies Dependencies, runtime Runtime) *Application {
 	return &Application{root: root}
 }
 
-// Execute runs the application once over the given arguments.
+// Execute runs the application exactly once over the given arguments; a
+// second use is rejected.
 func (a *Application) Execute(args []string) error {
+	if a.executed {
+		return failure.New(failure.Operational, "cli: application already executed", nil)
+	}
+	a.executed = true
 	a.root.SetArgs(args)
 	return a.root.Execute()
 }
