@@ -56,7 +56,7 @@ type eligibilityCase struct {
 	want   []DecisionChoice
 }
 
-// decisionEligibilityCases enumerates the Section 9.4 prompt rule: every
+// decisionEligibilityCases enumerates the prompt rule: every
 // decision offers overwrite, skip, and abort; diff rides only on ordinary
 // byte-comparing file rows; automatic and non-decision pairs offer nothing.
 var decisionEligibilityCases = []eligibilityCase{

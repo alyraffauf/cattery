@@ -26,7 +26,7 @@ type PersistedGroups struct {
 }
 
 // CompiledOnly validates explicit group arguments against the current compiled
-// groups (Section 11.2). No arguments select root scope plus every current
+// groups. No arguments select root scope plus every current
 // group; unknown and duplicate arguments are errors.
 func CompiledOnly(current []string, arguments []string) (Selection, error) {
 	if len(arguments) == 0 {
@@ -42,7 +42,7 @@ func CompiledOnly(current []string, arguments []string) (Selection, error) {
 }
 
 // CompiledAndPersisted expands and validates a group selection against the
-// current groups and the persisted rows (Section 8.5). No arguments select
+// current groups and the persisted rows. No arguments select
 // root scope plus every current and active state-only group; an explicit name
 // may exist in the current plan or any active/retired state row. Unknown and
 // duplicate arguments are errors.

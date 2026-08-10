@@ -10,7 +10,7 @@ import (
 // status so this package never depends on CLI or exit-code concepts.
 type Kind string
 
-// The five presentation-neutral categories from Section 12.6.
+// The five presentation-neutral categories.
 const (
 	InvalidInput Kind = "InvalidInput"
 	Operational  Kind = "Operational"
@@ -78,7 +78,7 @@ func HasKind(err error) (Kind, bool) {
 // maps these to process termination statuses; no numeric value lives here.
 type Signal string
 
-// The two cancellation causes from Section 14.4.
+// The two cancellation causes.
 const (
 	Interrupt Signal = "Interrupt"
 	Terminate Signal = "Terminate"

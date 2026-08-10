@@ -88,7 +88,7 @@ func (result StatusResult) Converged() bool { return result.converged }
 // Status evaluates one request and translates the evaluation into sorted
 // semantic status/retired records, counts, and convergence. A Difference
 // failure accompanies the partial result whenever drift remains, so
-// renderers print the records and the exit mapper applies Section 11.8.
+// renderers print the records and the exit mapper applies the appropriate status.
 func (service *Service) Status(ctx context.Context, request Request) (StatusResult, error) {
 	evaluation, err := service.evaluate(ctx, request)
 	if err != nil {

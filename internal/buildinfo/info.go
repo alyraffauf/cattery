@@ -6,7 +6,7 @@ import (
 )
 
 // Version, Commit, and BuildTimestamp are the three linker-populated package
-// variables permitted by Section 12.1. They describe a development build until
+// variables used for build metadata. They describe a development build until
 // a release overrides them with -ldflags -X.
 var (
 	Version        = "dev"

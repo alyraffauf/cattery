@@ -21,7 +21,7 @@ type writeOutcome struct {
 }
 
 // writeOrdinary atomically writes one ordinary source from freshly validated
-// target bytes. The source mode follows Section 7.1: 0644 plus exec bits when
+// target bytes. The source mode is 0644 plus exec bits when
 // the source is new, or the preserved read/write bits plus exec bits when it
 // already exists.
 func (service *Service) writeOrdinary(ctx context.Context, identity RepositoryIdentity, item ItemPlan) (writeOutcome, error) {
@@ -41,7 +41,7 @@ func (service *Service) writeOrdinary(ctx context.Context, identity RepositoryId
 	return writeOutcome{published: target, target: target, result: result}, nil
 }
 
-// sourceMode applies Section 7.1 to the frozen source: a new source takes
+// sourceMode applies the mode policy to the frozen source: a new source takes
 // 0644 plus exec bits; an existing source preserves its read/write bits.
 func sourceMode(target filesystem.TargetFacts, exec fs.FileMode) fs.FileMode {
 	if target.Kind() == filesystem.KindAbsent {

@@ -51,7 +51,7 @@ func (database *Database) Path() string {
 }
 
 // Open prepares the private state directory and database file, opens SQLite with
-// a single connection, and applies the Section 8.5 PRAGMAs. It performs no
+// a single connection, and applies the required PRAGMAs. It performs no
 // locking and no schema migration.
 func (database *Database) Open() error {
 	if err := prepareStateDirectory(filepath.Dir(database.path)); err != nil {

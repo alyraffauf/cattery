@@ -25,9 +25,8 @@ type FileClassification struct {
 // ClassifyFile purely classifies one complete file evaluation against its
 // persisted baseline: the five core matrix rows, the unbaselined safety rows,
 // independent executable-bit
-// reconciliation per Section 7.1, and unexpected target types per Section
-// 7.3. A retired row with a current producer reconciles against its retained
-// baseline (Section 9.5 reactivation). Records without a file producer
+// reconciliation, and unexpected target types. A retired row with a current
+// producer reconciles against its retained baseline (reactivation). Records without a file producer
 // belong to the alias and retirement classifiers and return the zero
 // classification.
 func ClassifyFile(record Evaluation, semantics FileSemantics) FileClassification {
@@ -73,7 +72,7 @@ func classifyUnbaselined(record Evaluation, semantics FileSemantics) FileClassif
 // For a secret source, raw storage equality with the baseline source proves
 // the source unchanged without any semantic digest; raw change is a semantic
 // source change only when the keyed plaintext digest also differs, so a
-// SOPS re-encryption with unchanged plaintext stays converged (Section 8.3).
+// SOPS re-encryption with unchanged plaintext stays converged.
 func classifyBaselined(record Evaluation, row *FileState, semantics FileSemantics) FileClassification {
 	sourceChanged := semantics.Source != row.BaselineSource()
 	if row.SourceKind() == deployment.FileSecret {

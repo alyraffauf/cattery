@@ -6,7 +6,7 @@ import (
 	"github.com/alyraffauf/cattery/internal/deployment"
 )
 
-// ordinaryNewFileMode is the default for a new ordinary target (Section 7.1);
+// ordinaryNewFileMode is the default for a new ordinary target;
 // source executable bits are OR-combined onto it.
 const ordinaryNewFileMode fs.FileMode = 0o644
 

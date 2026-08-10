@@ -11,7 +11,7 @@ import (
 	"github.com/alyraffauf/cattery/internal/subprocess"
 )
 
-// ExecuteInput carries the Section 10.4 runtime values of one hook phase.
+// ExecuteInput carries the runtime values of one hook phase.
 // Empty stream fields inherit the caller's process streams.
 type ExecuteInput struct {
 	RepositoryRoot string
@@ -27,7 +27,7 @@ type ExecuteInput struct {
 }
 
 // Execute runs the ordered hooks of one phase synchronously, each in its own
-// process group with inherited streams and the Section 10.4 environment.
+// process group with inherited streams and the configured environment.
 // Before hooks stop at the first failure; after hooks run every hook and
 // return the joined failures. Cancellation returns the context error without
 // starting further hooks. Dry-run and no-hooks suppress execution entirely.

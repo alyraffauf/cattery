@@ -37,10 +37,9 @@ type fileCase struct {
 }
 
 // fileClassificationCases enumerates the classification Cartesian product:
-// the five core baselined rows of Section 9.2, secret storage semantics of
-// Section 8.3, the unbaselined safety rows of Section 9.3, independent mode
-// reconciliation of Sections 4.5 and 7.1, unexpected target types of Section
-// 7.3, and retained-baseline reactivation of Section 9.5.
+// the five core baselined rows, secret storage semantics, the unbaselined
+// safety rows, independent mode reconciliation, unexpected target types, and
+// retained-baseline reactivation.
 var fileClassificationCases = []fileCase{
 	{name: "no-op", kind: KindFile, source: sourceA, target: sourceA, mode: 0o644,
 		baseline: stateAt(sourceA, sourceA, 0),
