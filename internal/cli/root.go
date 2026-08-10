@@ -12,7 +12,6 @@ import (
 type Dependencies struct {
 	Initialize InitializeService
 	Validate   ValidateService
-	Version    VersionService
 	Status     StatusService
 	Diff       DiffService
 	Add        AddService
@@ -52,7 +51,7 @@ func NewApplication(dependencies Dependencies, runtime Runtime) *Application {
 	root.AddCommand(
 		newInitCommand(dependencies.Initialize, runtime),
 		newValidateCommand(dependencies.Validate, runtime, options),
-		newVersionCommand(dependencies.Version, runtime),
+		newVersionCommand(runtime),
 		newStatusCommand(dependencies.Status, runtime, options),
 		newDiffCommand(dependencies.Diff, runtime, options),
 		newAddCommand(dependencies.Add, runtime, options),

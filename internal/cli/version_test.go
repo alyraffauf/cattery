@@ -2,10 +2,11 @@ package cli
 
 import (
 	"bytes"
+	"runtime"
 	"strings"
 	"testing"
 
-	"github.com/alyraffauf/cattery/internal/application/version"
+	"github.com/alyraffauf/cattery/internal/buildinfo"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +18,7 @@ func TestVersionCommand(t *testing.T) {
 		{"development defaults", testVersionDevelopment},
 		{"release values", testVersionRelease},
 		{"single line with newline", testVersionSingleLine},
-		{"one call", testVersionOneCall},
+		{"repeatable invocation", testVersionRepeatable},
 		{"writer error", testVersionWriterError},
 		{"no backend access", testVersionNoBackend},
 	}
@@ -26,58 +27,52 @@ func TestVersionCommand(t *testing.T) {
 	}
 }
 
-// versionServiceFake returns a fixed result.
-type versionServiceFake struct {
-	result version.Result
-	calls  int
-}
-
-func (f *versionServiceFake) Version() version.Result {
-	f.calls++
-	return f.result
-}
-
-// versionFixture builds one version command over a recording service.
-func versionFixture(t *testing.T, service *versionServiceFake) (*cobra.Command, *bytes.Buffer) {
+// versionFixture builds one version command over isolated output.
+func versionFixture(t *testing.T) (*cobra.Command, *bytes.Buffer) {
 	t.Helper()
 	stdout := &bytes.Buffer{}
 	runtime := NewRuntime(RuntimeInput{Streams: Streams{Stdout: stdout}})
-	return newVersionCommand(service, runtime), stdout
+	return newVersionCommand(runtime), stdout
+}
+
+func setBuildInfo(t *testing.T, version, commit, timestamp string) {
+	t.Helper()
+	previousVersion, previousCommit, previousTimestamp := buildinfo.Version, buildinfo.Commit, buildinfo.BuildTimestamp
+	buildinfo.Version, buildinfo.Commit, buildinfo.BuildTimestamp = version, commit, timestamp
+	t.Cleanup(func() {
+		buildinfo.Version, buildinfo.Commit, buildinfo.BuildTimestamp = previousVersion, previousCommit, previousTimestamp
+	})
 }
 
 func testVersionDevelopment(t *testing.T) {
-	service := &versionServiceFake{result: version.Result{
-		Version: "dev", Commit: "unknown", Timestamp: "unknown",
-		GoVersion: "go1.26.5", OperatingSystem: "linux", Architecture: "amd64",
-	}}
-	command, stdout := versionFixture(t, service)
+	setBuildInfo(t, "dev", "unknown", "unknown")
+	command, stdout := versionFixture(t)
 	if err := command.Execute(); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	want := "cattery dev commit=unknown built=unknown go=go1.26.5 target=linux/amd64\n"
+	want := "cattery dev commit=unknown built=unknown go=" + runtime.Version() +
+		" target=" + runtime.GOOS + "/" + runtime.GOARCH + "\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
 }
 
 func testVersionRelease(t *testing.T) {
-	service := &versionServiceFake{result: version.Result{
-		Version: "v1.0.0", Commit: "0123456789abcdef", Timestamp: "2026-08-09T00:00:00Z",
-		GoVersion: "go1.26.5", OperatingSystem: "darwin", Architecture: "arm64",
-	}}
-	command, stdout := versionFixture(t, service)
+	setBuildInfo(t, "v1.0.0", "0123456789abcdef", "2026-08-09T00:00:00Z")
+	command, stdout := versionFixture(t)
 	if err := command.Execute(); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	want := "cattery v1.0.0 commit=0123456789abcdef built=2026-08-09T00:00:00Z go=go1.26.5 target=darwin/arm64\n"
+	want := "cattery v1.0.0 commit=0123456789abcdef built=2026-08-09T00:00:00Z go=" + runtime.Version() +
+		" target=" + runtime.GOOS + "/" + runtime.GOARCH + "\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
 }
 
 func testVersionSingleLine(t *testing.T) {
-	service := &versionServiceFake{result: version.Result{Version: "dev", Commit: "unknown", Timestamp: "unknown"}}
-	command, stdout := versionFixture(t, service)
+	setBuildInfo(t, "dev", "unknown", "unknown")
+	command, stdout := versionFixture(t)
 	if err := command.Execute(); err != nil {
 		t.Fatalf("run: %v", err)
 	}
@@ -87,36 +82,33 @@ func testVersionSingleLine(t *testing.T) {
 	}
 }
 
-func testVersionOneCall(t *testing.T) {
-	service := &versionServiceFake{result: version.Result{Version: "dev", Commit: "unknown", Timestamp: "unknown"}}
-	command, _ := versionFixture(t, service)
+func testVersionRepeatable(t *testing.T) {
+	setBuildInfo(t, "dev", "unknown", "unknown")
+	command, stdout := versionFixture(t)
 	if err := command.Execute(); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	if service.calls != 1 {
-		t.Fatalf("calls = %d, want one", service.calls)
+	if !strings.HasSuffix(stdout.String(), "\n") {
+		t.Fatal("output must be newline-terminated")
 	}
 }
 
 func testVersionWriterError(t *testing.T) {
-	service := &versionServiceFake{result: version.Result{Version: "dev", Commit: "unknown", Timestamp: "unknown"}}
+	setBuildInfo(t, "dev", "unknown", "unknown")
 	runtime := NewRuntime(RuntimeInput{Streams: Streams{Stdout: failingWriter{}}})
-	command := newVersionCommand(service, runtime)
+	command := newVersionCommand(runtime)
 	if err := command.Execute(); err == nil {
 		t.Fatal("a writer failure must surface")
 	}
 }
 
 func testVersionNoBackend(t *testing.T) {
-	service := &versionServiceFake{result: version.Result{Version: "dev", Commit: "unknown", Timestamp: "unknown"}}
-	command, _ := versionFixture(t, service)
+	setBuildInfo(t, "dev", "unknown", "unknown")
+	command, _ := versionFixture(t)
 	if err := command.Execute(); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if err := command.Execute(); err != nil {
 		t.Fatalf("second run: %v", err)
-	}
-	if service.calls != 2 {
-		t.Fatalf("calls = %d, want two independent invocations", service.calls)
 	}
 }

@@ -27,7 +27,6 @@ func TestCobraRoot(t *testing.T) {
 type rootFakes struct {
 	initialize *initServiceFake
 	validate   *validateServiceFake
-	version    *versionServiceFake
 	status     *statusServiceFake
 	diff       *diffServiceFake
 	add        *addServiceFake
@@ -40,7 +39,6 @@ func rootFixture(t *testing.T) (*Application, *rootFakes, *bytes.Buffer, *bytes.
 	fakes := &rootFakes{
 		initialize: &initServiceFake{},
 		validate:   &validateServiceFake{},
-		version:    &versionServiceFake{},
 		status:     &statusServiceFake{},
 		diff:       &diffServiceFake{},
 		add:        &addServiceFake{},
@@ -54,7 +52,6 @@ func rootFixture(t *testing.T) (*Application, *rootFakes, *bytes.Buffer, *bytes.
 	application := NewApplication(Dependencies{
 		Initialize: fakes.initialize,
 		Validate:   fakes.validate,
-		Version:    fakes.version,
 		Status:     fakes.status,
 		Diff:       fakes.diff,
 		Add:        fakes.add,
@@ -66,7 +63,7 @@ func rootFixture(t *testing.T) (*Application, *rootFakes, *bytes.Buffer, *bytes.
 // zeroCalls reports whether no service was invoked.
 func zeroCalls(fakes *rootFakes) bool {
 	return len(fakes.initialize.requests) == 0 && len(fakes.validate.requests) == 0 &&
-		fakes.version.calls == 0 && len(fakes.status.requests) == 0 && len(fakes.diff.requests) == 0 &&
+		len(fakes.status.requests) == 0 && len(fakes.diff.requests) == 0 &&
 		len(fakes.add.requests) == 0 && len(fakes.apply.requests) == 0
 }
 

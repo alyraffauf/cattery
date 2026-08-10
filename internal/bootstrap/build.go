@@ -52,7 +52,6 @@ func Build(input BuildInput) *cli.Application {
 	return cli.NewApplication(cli.Dependencies{
 		Initialize: services.Initialize,
 		Validate:   services.Validate,
-		Version:    services.Version,
 		Status:     services.Inspect,
 		Diff:       services.Inspect,
 		Add:        services.Add,
