@@ -29,6 +29,7 @@ type Service struct {
 	retirements    RetirementStore
 	hooks          HookExecutor
 	probe          DependencyProbe
+	resolver       DecisionResolver
 	protectedTrees []string
 	platform       deployment.Layer
 }
@@ -50,6 +51,7 @@ func NewService(dependencies Dependencies) *Service {
 		retirements:    dependencies.Retirements,
 		hooks:          dependencies.Hooks,
 		probe:          dependencies.Probe,
+		resolver:       dependencies.Resolver,
 		protectedTrees: dependencies.ProtectedTrees,
 		platform:       platform,
 	}
@@ -247,7 +249,6 @@ func (sets *groupSets) remember(name string, active bool) {
 	}
 }
 
-// sortedKeys returns the map keys in bytewise order.
 func sortedKeys(names map[string]bool) []string {
 	keys := make([]string, 0, len(names))
 	for name := range names {
