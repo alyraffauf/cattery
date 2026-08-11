@@ -26,10 +26,10 @@ type PromptInput struct {
 // re-prompting on invalid input. It imports only the
 // apply DTOs and failure categories; no Cobra command or backend adapter.
 type DecisionPrompt struct {
-	stdin      io.Reader
 	stderr     io.Writer
 	isTerminal func(fd int) bool
 	diff       func(context.Context, string) (apply.SafeDifference, bool)
+	scanner    *bufio.Scanner
 }
 
 // NewDecisionPrompt builds the interactive resolver over the given input,
@@ -40,10 +40,10 @@ func NewDecisionPrompt(input PromptInput) *DecisionPrompt {
 		isTerminal = term.IsTerminal
 	}
 	return &DecisionPrompt{
-		stdin:      input.Stdin,
 		stderr:     input.Stderr,
 		isTerminal: isTerminal,
 		diff:       input.Diff,
+		scanner:    bufio.NewScanner(input.Stdin),
 	}
 }
 
@@ -62,13 +62,15 @@ func (p *DecisionPrompt) resolve(ctx context.Context, request apply.DecisionRequ
 	if p.isTerminal == nil || !p.isTerminal(0) {
 		return apply.DecisionResponse{}, failure.New(failure.Difference, "cli: decisions require an interactive terminal", nil)
 	}
-	scanner := bufio.NewScanner(p.stdin)
 	path := "$HOME/" + displayPath(request.TargetPath())
+	if err := p.renderContext(ctx, path, request, difference); err != nil {
+		return apply.DecisionResponse{}, err
+	}
 	for {
 		if err := p.renderPrompt(path, request.Choices()); err != nil {
 			return apply.DecisionResponse{}, err
 		}
-		answer, err := readAnswer(scanner)
+		answer, err := readAnswer(p.scanner)
 		if err != nil {
 			return apply.DecisionResponse{}, failure.New(failure.InvalidInput, "cli: EOF before a valid answer", err)
 		}
@@ -86,17 +88,8 @@ func (p *DecisionPrompt) resolve(ctx context.Context, request apply.DecisionRequ
 
 // renderPrompt writes the choice line of one request to stderr.
 func (p *DecisionPrompt) renderPrompt(path string, choices []apply.DecisionChoice) error {
-	_, err := fmt.Fprintf(p.stderr, "%s: %s [%s] ", path, strings.Join(choiceNames(choices), " "), choices[0])
+	_, err := fmt.Fprintf(p.stderr, "%s: choose [r]epository, [s]kip, or [a]bort: ", path)
 	return err
-}
-
-// choiceNames projects the allowed choices into stable lowercase words.
-func choiceNames(choices []apply.DecisionChoice) []string {
-	names := make([]string, 0, len(choices))
-	for _, choice := range choices {
-		names = append(names, string(choice))
-	}
-	return names
 }
 
 // readAnswer reads one trimmed answer line.
@@ -121,23 +114,77 @@ type promptAnswer struct {
 
 func (p *DecisionPrompt) answer(input promptAnswer) (apply.DecisionResponse, bool, error) {
 	if input.answer == "" {
-		return apply.DecisionResponse{Choice: input.request.Choices()[0]}, true, nil
+		_, err := fmt.Fprintln(p.stderr, "choose r, s, or a")
+		return apply.DecisionResponse{}, false, err
 	}
-	choice := apply.DecisionChoice(input.answer)
+	choice := shortChoice(input.answer)
 	for _, allowed := range input.request.Choices() {
 		if choice != allowed {
 			continue
 		}
-		if choice != apply.ChoiceDiff {
-			return apply.DecisionResponse{Choice: choice}, true, nil
-		}
-		if err := p.renderDifference(input.context, input.request.TargetPath(), input.difference); err != nil {
-			return apply.DecisionResponse{}, false, err
-		}
-		return apply.DecisionResponse{}, false, nil
+		return apply.DecisionResponse{Choice: choice}, true, nil
 	}
 	_, err := fmt.Fprintf(p.stderr, "invalid answer %q\n", input.answer)
 	return apply.DecisionResponse{}, false, err
+}
+
+func shortChoice(answer string) apply.DecisionChoice {
+	switch strings.ToLower(answer) {
+	case "r", "repository", "overwrite":
+		return apply.ChoiceOverwrite
+	case "s", "skip":
+		return apply.ChoiceSkip
+	case "a", "abort":
+		return apply.ChoiceAbort
+	}
+	return apply.DecisionChoice(answer)
+}
+
+func (p *DecisionPrompt) renderContext(ctx context.Context, path string, request apply.DecisionRequest, difference apply.DifferenceProvider) error {
+	if _, err := fmt.Fprintf(p.stderr, "Conflict at %s: %s.\n", path, request.Reason()); err != nil {
+		return err
+	}
+	switch request.Kind() {
+	case "secret":
+		_, err := fmt.Fprintln(p.stderr, "Encrypted secret content differs; plaintext is not shown.")
+		return err
+	case "alias":
+		if request.ExpectedLink() != "" {
+			if _, err := fmt.Fprintf(p.stderr, "Expected link: %s\n", request.ExpectedLink()); err != nil {
+				return err
+			}
+		}
+		if request.CurrentLink() != "" {
+			_, err := fmt.Fprintf(p.stderr, "Current link: %s\n", request.CurrentLink())
+			return err
+		}
+		return nil
+	default:
+		return p.renderDifference(ctx, request.TargetPath(), difference)
+	}
+}
+
+// Confirm presents the final review for an interactive resolution session.
+func (p *DecisionPrompt) Confirm(ctx context.Context, resolutions []apply.Resolution) (bool, error) {
+	if p.isTerminal == nil || !p.isTerminal(0) {
+		return false, failure.New(failure.Difference, "cli: confirmation requires an interactive terminal", nil)
+	}
+	if _, err := fmt.Fprintln(p.stderr, "Resolution summary:"); err != nil {
+		return false, err
+	}
+	for _, resolution := range resolutions {
+		if _, err := fmt.Fprintf(p.stderr, "  %s: $HOME/%s\n", resolution.Choice, displayPath(resolution.Request.TargetPath())); err != nil {
+			return false, err
+		}
+	}
+	if _, err := fmt.Fprint(p.stderr, "Proceed? [y/N] "); err != nil {
+		return false, err
+	}
+	answer, err := readAnswer(p.scanner)
+	if err != nil {
+		return false, failure.New(failure.Difference, "cli: confirmation cancelled", err)
+	}
+	return strings.EqualFold(answer, "y") || strings.EqualFold(answer, "yes"), nil
 }
 
 // renderDifference displays the safe difference of one target on stderr.

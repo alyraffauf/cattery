@@ -93,7 +93,7 @@ func testAliasWrong(t *testing.T) {
 	if err := os.Symlink("elsewhere", filepath.Join(env.home, "bin", "tool")); err != nil {
 		t.Fatal(err)
 	}
-	result := env.runPty(t, []string{"overwrite"}, "apply")
+	result := env.runPty(t, []string{"overwrite", "y"}, "apply")
 	if result.Code != 0 {
 		t.Fatalf("apply: code=%d stderr=%q", result.Code, result.Stderr)
 	}
@@ -111,7 +111,7 @@ func testAliasOccupied(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeFile(t, filepath.Join(env.home, "bin", "tool"), []byte("intruder"))
-	result := env.runPty(t, []string{"overwrite"}, "apply")
+	result := env.runPty(t, []string{"overwrite", "y"}, "apply")
 	if result.Code != 0 {
 		t.Fatalf("apply: code=%d stderr=%q", result.Code, result.Stderr)
 	}

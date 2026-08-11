@@ -36,6 +36,7 @@ type Dependencies struct {
 	Hooks            HookExecutor
 	Probe            DependencyProbe
 	Resolver         DecisionResolver
+	Confirmation     Confirmation
 	ProtectedTrees   []string
 	Platform         string
 }
@@ -105,6 +106,18 @@ type DecisionResolver interface {
 	Resolve(context.Context, DecisionRequest) (DecisionResponse, error)
 }
 
+// Confirmation approves an interactive resolution session after every
+// per-target choice has been collected and before any hook or write runs.
+type Confirmation interface {
+	Confirm(context.Context, []Resolution) (bool, error)
+}
+
+// Resolution is one safe, CLI-facing final-review row.
+type Resolution struct {
+	Request DecisionRequest
+	Choice  DecisionChoice
+}
+
 // DifferenceProvider renders one safe difference for the current apply
 // candidate. It returns false when the target cannot produce a difference.
 type DifferenceProvider func(context.Context, string) (SafeDifference, bool)
@@ -131,6 +144,7 @@ type Request struct {
 	NonInteractive bool
 	NoHooks        bool
 	SkipSecrets    bool
+	Force          bool
 }
 
 // DecisionChoice is the application-owned choice vocabulary one prompt may
@@ -144,22 +158,28 @@ const (
 	ChoiceSkip DecisionChoice = "skip"
 	// ChoiceAbort stops the whole apply.
 	ChoiceAbort DecisionChoice = "abort"
-	// ChoiceDiff shows the safe source/target difference first.
-	ChoiceDiff DecisionChoice = "diff"
 )
 
 // DecisionRequest is the frozen prompt request the CLI resolves: the
 // HOME-relative target path and the allowed choices projected from the
 // reconcile decision spec. Only application-owned types appear.
 type DecisionRequest struct {
-	targetPath string
-	choices    []DecisionChoice
+	targetPath   string
+	choices      []DecisionChoice
+	kind         string
+	reason       string
+	expectedLink string
+	currentLink  string
 }
 
 // DecisionRequestInput carries the projection fields of one prompt request.
 type DecisionRequestInput struct {
-	TargetPath string
-	Choices    []DecisionChoice
+	TargetPath   string
+	Choices      []DecisionChoice
+	Kind         string
+	Reason       string
+	ExpectedLink string
+	CurrentLink  string
 }
 
 // NewDecisionRequest validates candidate field-by-field and freezes it. The
@@ -176,12 +196,12 @@ func NewDecisionRequest(candidate DecisionRequestInput) (DecisionRequest, error)
 			return DecisionRequest{}, fmt.Errorf("apply: decision request for %q has invalid choice %q", candidate.TargetPath, choice)
 		}
 	}
-	return DecisionRequest{targetPath: candidate.TargetPath, choices: append([]DecisionChoice(nil), candidate.Choices...)}, nil
+	return DecisionRequest{targetPath: candidate.TargetPath, choices: append([]DecisionChoice(nil), candidate.Choices...), kind: candidate.Kind, reason: candidate.Reason, expectedLink: candidate.ExpectedLink, currentLink: candidate.CurrentLink}, nil
 }
 
 func validChoice(choice DecisionChoice) bool {
 	switch choice {
-	case ChoiceOverwrite, ChoiceSkip, ChoiceAbort, ChoiceDiff:
+	case ChoiceOverwrite, ChoiceSkip, ChoiceAbort:
 		return true
 	}
 	return false
@@ -194,6 +214,11 @@ func (r DecisionRequest) TargetPath() string { return r.targetPath }
 func (r DecisionRequest) Choices() []DecisionChoice {
 	return append([]DecisionChoice(nil), r.choices...)
 }
+
+func (r DecisionRequest) Kind() string         { return r.kind }
+func (r DecisionRequest) Reason() string       { return r.reason }
+func (r DecisionRequest) ExpectedLink() string { return r.expectedLink }
+func (r DecisionRequest) CurrentLink() string  { return r.currentLink }
 
 // DecisionResponse is the frozen prompt response the CLI returns.
 type DecisionResponse struct {

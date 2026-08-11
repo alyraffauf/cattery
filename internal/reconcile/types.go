@@ -95,10 +95,9 @@ const (
 	ChoiceOverwrite DecisionChoice = iota
 	ChoiceSkip
 	ChoiceAbort
-	ChoiceDiff
 )
 
-func (c DecisionChoice) Valid() bool { return c >= ChoiceOverwrite && c <= ChoiceDiff }
+func (c DecisionChoice) Valid() bool { return c >= ChoiceOverwrite && c <= ChoiceAbort }
 
 // DecisionSpec is one immutable, ordered resolution request: the target path,
 // the action and reason that produced it, and the choices the user may pick.

@@ -23,8 +23,11 @@ func (service *Service) Apply(ctx context.Context, request Request) (Result, err
 	if err := service.Preflight(ctx, candidates); err != nil {
 		return Result{}, err
 	}
-	decisions, err := service.CollectDecisions(ctx, candidates)
+	decisions, err := service.collectDecisions(ctx, request, candidates)
 	if err != nil {
+		return Result{}, err
+	}
+	if err := service.confirmDecisions(ctx, request, decisions); err != nil {
 		return Result{}, err
 	}
 	plan, err := service.Prepare(ctx, PrepareInput{Request: request, Candidates: candidates, Decisions: decisions})
@@ -35,6 +38,24 @@ func (service *Service) Apply(ctx context.Context, request Request) (Result, err
 		return service.dryOutcome(plan)
 	}
 	return service.execute(ctx, executeInput{request: request, plan: plan, candidates: candidates})
+}
+
+func (service *Service) confirmDecisions(ctx context.Context, request Request, decisions CollectedDecisions) error {
+	if request.Force || len(decisions.All()) == 0 || service.confirmation == nil {
+		return nil
+	}
+	resolutions := make([]Resolution, 0, len(decisions.All()))
+	for _, decision := range decisions.All() {
+		resolutions = append(resolutions, Resolution{Request: decision.request, Choice: decision.response.Choice})
+	}
+	confirmed, err := service.confirmation.Confirm(ctx, resolutions)
+	if err != nil {
+		return err
+	}
+	if !confirmed {
+		return failure.New(failure.Difference, "apply: resolution review declined", nil)
+	}
+	return nil
 }
 
 // dryOutcome freezes the dry-run result, reporting pending changes as a

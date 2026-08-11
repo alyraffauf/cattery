@@ -153,6 +153,7 @@ func buildApply(input ApplicationsInput, shared shared) *apply.Service {
 		Hooks:            hookAdapter{},
 		Probe:            &probeAdapter{},
 		Resolver:         shared.prompt,
+		Confirmation:     shared.prompt,
 		ProtectedTrees:   input.Protected,
 		Platform:         string(input.Platform),
 	})

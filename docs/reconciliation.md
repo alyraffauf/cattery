@@ -38,15 +38,13 @@ choose between silently replacing local work and abandoning the repository.
 
 Before any write, interactive `apply` gathers every decision it needs:
 
-```text
-[d]iff
-[o]verwrite target from repository
-[s]kip
-[a]bort
-```
-
-`diff` shows a unified diff for ordinary files and then asks again. Secrets
-never expose plaintext in a diff. `overwrite` authorizes that one target;
+Ordinary files show a safe unified diff automatically. Secrets only report that
+encrypted content differs and never expose plaintext. Choose `r` (or
+`repository`) to authorize that target, `s`/`skip` to leave it, or `a`/`abort`
+to stop. After all choices, `apply` shows a resolution summary and requires
+`y` before hooks or writes begin. `apply --force` selects repository for every
+selected conflict without disabling validation or write safeguards. To adopt
+local content into the repository, use `cattery add` instead.
 `skip` leaves it unresolved while other safe work can continue; `abort` stops
 before hooks or writes begin.
 

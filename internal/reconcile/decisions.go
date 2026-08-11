@@ -20,31 +20,12 @@ func decisionReason(reason Reason) bool {
 	return false
 }
 
-// diffEligible reports whether a decision may compare source and target
-// bytes: only the ordinary file drift rows do. Secrets never expose a diff
-// prompt, and an unexpected-type symlink target has no bytes to compare.
-func diffEligible(reason Reason, kind deployment.FileKind) bool {
-	if kind != deployment.FileOrdinary {
-		return false
-	}
-	switch reason {
-	case ReasonTargetDrift, ReasonConflict, ReasonUnbaselinedDiffer:
-		return true
-	}
-	return false
-}
-
-// AllowedChoices returns the ordered choices one decision prompt may offer
-// for the action/reason pair and source kind: every decision offers
-// overwrite, skip, and abort, and a diff choice precedes them only for an
-// ordinary file decision that compares exact bytes. A pair that does not
-// require a decision yields no choices.
+// AllowedChoices returns the ordered choices one decision prompt may offer.
+// Safe file differences are rendered automatically by the CLI, so every
+// decision uses the same repository, skip, and abort vocabulary.
 func AllowedChoices(action Action, reason Reason, kind deployment.FileKind) []DecisionChoice {
 	if action != ActionNeedsDecision || !decisionReason(reason) {
 		return nil
-	}
-	if diffEligible(reason, kind) {
-		return []DecisionChoice{ChoiceDiff, ChoiceOverwrite, ChoiceSkip, ChoiceAbort}
 	}
 	return []DecisionChoice{ChoiceOverwrite, ChoiceSkip, ChoiceAbort}
 }

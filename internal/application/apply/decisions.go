@@ -3,6 +3,7 @@ package apply
 import (
 	"context"
 
+	"github.com/alyraffauf/cattery/internal/deployment"
 	"github.com/alyraffauf/cattery/internal/failure"
 	"github.com/alyraffauf/cattery/internal/reconcile"
 )
@@ -31,10 +32,12 @@ func (c CollectedDecisions) Specs() []reconcile.DecisionSpec {
 
 // CollectDecisions resolves every candidate that requires an explicit
 // decision, in bytewise target-path order, and validates each response
-// before any hook or mutation. An abort answer stops
-// the whole apply; a diff answer re-requests the adapter, which shows the
-// safe difference and asks again.
+// before any hook or mutation. An abort answer stops the whole apply.
 func (service *Service) CollectDecisions(ctx context.Context, candidates Candidates) (CollectedDecisions, error) {
+	return service.collectDecisions(ctx, Request{}, candidates)
+}
+
+func (service *Service) collectDecisions(ctx context.Context, applyRequest Request, candidates Candidates) (CollectedDecisions, error) {
 	if err := ctx.Err(); err != nil {
 		return CollectedDecisions{}, err
 	}
@@ -45,6 +48,14 @@ func (service *Service) CollectDecisions(ctx context.Context, candidates Candida
 	ordered := reconcile.OrderedDecisionSpecs(specs)
 	decisions := make([]ResolvedDecision, 0, len(ordered))
 	for _, spec := range ordered {
+		if applyRequest.Force {
+			request, err := service.decisionRequest(spec, candidates)
+			if err != nil {
+				return CollectedDecisions{}, err
+			}
+			decisions = append(decisions, ResolvedDecision{request: request, response: DecisionResponse{Choice: ChoiceOverwrite}})
+			continue
+		}
 		decision, err := service.collectOne(ctx, spec, candidates)
 		if err != nil {
 			return CollectedDecisions{}, err
@@ -57,14 +68,11 @@ func (service *Service) CollectDecisions(ctx context.Context, candidates Candida
 // collectOne projects one spec into a request, resolves it, and validates
 // the response before any hook or mutation.
 func (service *Service) collectOne(ctx context.Context, spec reconcile.DecisionSpec, candidates Candidates) (ResolvedDecision, error) {
-	request, err := NewDecisionRequest(DecisionRequestInput{
-		TargetPath: spec.TargetPath(),
-		Choices:    projectChoices(spec.AllChoices()),
-	})
+	request, err := service.decisionRequest(spec, candidates)
 	if err != nil {
 		return ResolvedDecision{}, failure.New(failure.InvalidInput, "apply: project decision request", err)
 	}
-	response, err := service.resolveRepeatedly(ctx, request, service.differenceProvider(candidates))
+	response, err := service.resolveOnce(decisionResolution{context: ctx, request: request, difference: service.differenceProvider(candidates)})
 	if err != nil {
 		return ResolvedDecision{}, err
 	}
@@ -72,6 +80,59 @@ func (service *Service) collectOne(ctx context.Context, spec reconcile.DecisionS
 		return ResolvedDecision{}, failure.New(failure.Difference, "apply: aborted by user", nil)
 	}
 	return ResolvedDecision{request: request, response: response}, nil
+}
+
+func (service *Service) decisionRequest(spec reconcile.DecisionSpec, candidates Candidates) (DecisionRequest, error) {
+	candidate := candidateFor(spec.TargetPath(), candidates)
+	input := DecisionRequestInput{TargetPath: spec.TargetPath(), Choices: projectChoices(spec.AllChoices()), Kind: decisionKind(candidate), Reason: decisionReason(spec.Reason())}
+	if candidate.record.Entry == reconcile.PlanEntryAlias {
+		input.ExpectedLink = candidate.record.Alias.CanonicalTargetRelativePath
+		input.CurrentLink = candidate.record.Target.Payload()
+	}
+	request, err := NewDecisionRequest(input)
+	if err != nil {
+		return DecisionRequest{}, failure.New(failure.InvalidInput, "apply: project decision request", err)
+	}
+	return request, nil
+}
+
+func candidateFor(target string, candidates Candidates) Candidate {
+	for _, candidate := range candidates.All() {
+		if candidate.record.TargetPath == target {
+			return candidate
+		}
+	}
+	return Candidate{}
+}
+
+func decisionKind(candidate Candidate) string {
+	if candidate.record.Entry == reconcile.PlanEntryAlias {
+		return "alias"
+	}
+	if candidate.record.File.Kind == deployment.FileSecret {
+		return "secret"
+	}
+	return "file"
+}
+
+func decisionReason(reason reconcile.Reason) string {
+	switch reason {
+	case reconcile.ReasonConflict:
+		return "both the repository and local target changed"
+	case reconcile.ReasonTargetDrift:
+		return "the local target differs from its recorded baseline"
+	case reconcile.ReasonUnbaselinedDiffer:
+		return "the target differs and has no recorded baseline"
+	case reconcile.ReasonUnexpectedTargetType:
+		return "the target has an unsupported type"
+	case reconcile.ReasonAliasWrong:
+		return "the link points somewhere else"
+	case reconcile.ReasonAliasOccupied:
+		return "the alias path is occupied"
+	case reconcile.ReasonRepresentationDrift:
+		return "the target representation differs from the repository"
+	}
+	return "the target requires a decision"
 }
 
 // decisionSpecs collects the frozen specs of every candidate that requires
@@ -130,28 +191,8 @@ func projectChoice(choice reconcile.DecisionChoice) DecisionChoice {
 		return ChoiceSkip
 	case reconcile.ChoiceAbort:
 		return ChoiceAbort
-	case reconcile.ChoiceDiff:
-		return ChoiceDiff
 	}
 	return ""
-}
-
-// resolveRepeatedly asks the resolver until it returns a final choice,
-// re-requesting when it answers diff so the adapter can show the safe
-// difference and ask again.
-func (service *Service) resolveRepeatedly(ctx context.Context, request DecisionRequest, difference DifferenceProvider) (DecisionResponse, error) {
-	for {
-		if err := ctx.Err(); err != nil {
-			return DecisionResponse{}, err
-		}
-		response, err := service.resolveOnce(decisionResolution{context: ctx, request: request, difference: difference})
-		if err != nil {
-			return DecisionResponse{}, err
-		}
-		if response.Choice != ChoiceDiff {
-			return response, nil
-		}
-	}
 }
 
 // resolveOnce asks the resolver once and validates its response against the

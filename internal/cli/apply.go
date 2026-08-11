@@ -38,6 +38,7 @@ func newApplyCommand(service ApplyService, runtime Runtime, options *Options) *c
 	command.Flags().Bool("non-interactive", false, "refuse unresolved decisions")
 	command.Flags().Bool("no-hooks", false, "skip trusted hooks")
 	command.Flags().Bool("skip-secrets", false, "skip encrypted secret targets")
+	command.Flags().Bool("force", false, "use repository versions for all selected conflicts")
 	return command
 }
 
@@ -57,6 +58,7 @@ func applyRequest(command *cobra.Command, input applyInput) apply.Request {
 	nonInteractive, _ := command.Flags().GetBool("non-interactive")
 	noHooks, _ := command.Flags().GetBool("no-hooks")
 	skipSecrets, _ := command.Flags().GetBool("skip-secrets")
+	force, _ := command.Flags().GetBool("force")
 	return apply.Request{
 		Repository:     applyRepository(options, input.runtime),
 		Groups:         append([]string(nil), input.groups...),
@@ -64,6 +66,7 @@ func applyRequest(command *cobra.Command, input applyInput) apply.Request {
 		NonInteractive: nonInteractive,
 		NoHooks:        noHooks,
 		SkipSecrets:    skipSecrets,
+		Force:          force,
 	}
 }
 

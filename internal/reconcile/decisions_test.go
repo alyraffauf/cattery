@@ -13,8 +13,7 @@ const (
 )
 
 var (
-	overwriteSkipAbort     = []DecisionChoice{ChoiceOverwrite, ChoiceSkip, ChoiceAbort}
-	diffOverwriteSkipAbort = []DecisionChoice{ChoiceDiff, ChoiceOverwrite, ChoiceSkip, ChoiceAbort}
+	overwriteSkipAbort = []DecisionChoice{ChoiceOverwrite, ChoiceSkip, ChoiceAbort}
 )
 
 // TestDecisionSpecification pins the decision-spec contract:
@@ -60,9 +59,9 @@ type eligibilityCase struct {
 // decision offers overwrite, skip, and abort; diff rides only on ordinary
 // byte-comparing file rows; automatic and non-decision pairs offer nothing.
 var decisionEligibilityCases = []eligibilityCase{
-	{name: "ordinary drift", action: ActionNeedsDecision, reason: ReasonTargetDrift, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
-	{name: "ordinary conflict", action: ActionNeedsDecision, reason: ReasonConflict, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
-	{name: "ordinary unbaselined differ", action: ActionNeedsDecision, reason: ReasonUnbaselinedDiffer, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
+	{name: "ordinary drift", action: ActionNeedsDecision, reason: ReasonTargetDrift, kind: deployment.FileOrdinary, want: overwriteSkipAbort},
+	{name: "ordinary conflict", action: ActionNeedsDecision, reason: ReasonConflict, kind: deployment.FileOrdinary, want: overwriteSkipAbort},
+	{name: "ordinary unbaselined differ", action: ActionNeedsDecision, reason: ReasonUnbaselinedDiffer, kind: deployment.FileOrdinary, want: overwriteSkipAbort},
 	{name: "secret drift", action: ActionNeedsDecision, reason: ReasonTargetDrift, kind: deployment.FileSecret, want: overwriteSkipAbort},
 	{name: "secret conflict", action: ActionNeedsDecision, reason: ReasonConflict, kind: deployment.FileSecret, want: overwriteSkipAbort},
 	{name: "secret unbaselined differ", action: ActionNeedsDecision, reason: ReasonUnbaselinedDiffer, kind: deployment.FileSecret, want: overwriteSkipAbort},
@@ -92,10 +91,10 @@ type specCase struct {
 // classification: only DecisionRequired outcomes produce a spec, carrying
 // exactly the allowed choices of their action, reason, and source kind.
 var decisionSpecCases = []specCase{
-	{name: "file drift", path: decisionPath, action: ActionNeedsDecision, reason: ReasonTargetDrift, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
+	{name: "file drift", path: decisionPath, action: ActionNeedsDecision, reason: ReasonTargetDrift, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: overwriteSkipAbort},
 	{name: "file drift secret", path: decisionPath, action: ActionNeedsDecision, reason: ReasonTargetDrift, convergence: ConvergenceDecisionRequired, kind: deployment.FileSecret, want: overwriteSkipAbort},
-	{name: "file conflict", path: decisionPath, action: ActionNeedsDecision, reason: ReasonConflict, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
-	{name: "file unbaselined differ", path: decisionPath, action: ActionNeedsDecision, reason: ReasonUnbaselinedDiffer, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: diffOverwriteSkipAbort},
+	{name: "file conflict", path: decisionPath, action: ActionNeedsDecision, reason: ReasonConflict, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: overwriteSkipAbort},
+	{name: "file unbaselined differ", path: decisionPath, action: ActionNeedsDecision, reason: ReasonUnbaselinedDiffer, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: overwriteSkipAbort},
 	{name: "file unexpected type", path: decisionPath, action: ActionNeedsDecision, reason: ReasonUnexpectedTargetType, convergence: ConvergenceDecisionRequired, kind: deployment.FileOrdinary, want: overwriteSkipAbort},
 	{name: "file converged rejected", path: decisionPath, action: ActionNoOp, reason: ReasonNoChange, convergence: ConvergenceConverged, kind: deployment.FileOrdinary, wantErr: true},
 	{name: "file pending rejected", path: decisionPath, action: ActionWriteSourceToTarget, reason: ReasonSourceChanged, convergence: ConvergencePending, kind: deployment.FileOrdinary, wantErr: true},
@@ -118,13 +117,10 @@ type invalidCase struct {
 // invalidDecisionCases enumerates validation: a spec is rejected unless its
 // choices are exactly the allowed set for its action, reason, and kind.
 var invalidDecisionCases = []invalidCase{
-	{name: "diff on secret", spec: specOf(ReasonTargetDrift, diffOverwriteSkipAbort), kind: deployment.FileSecret, wantErr: true},
 	{name: "duplicate overwrite", spec: specOf(ReasonTargetDrift, []DecisionChoice{ChoiceOverwrite, ChoiceOverwrite, ChoiceSkip, ChoiceAbort}), kind: deployment.FileOrdinary, wantErr: true},
-	{name: "missing abort", spec: specOf(ReasonTargetDrift, []DecisionChoice{ChoiceDiff, ChoiceOverwrite, ChoiceSkip}), kind: deployment.FileOrdinary, wantErr: true},
-	{name: "diff on alias reason", spec: specOf(ReasonAliasWrong, diffOverwriteSkipAbort), kind: deployment.FileOrdinary, wantErr: true},
-	{name: "diff on unexpected type", spec: specOf(ReasonUnexpectedTargetType, diffOverwriteSkipAbort), kind: deployment.FileOrdinary, wantErr: true},
+	{name: "missing abort", spec: specOf(ReasonTargetDrift, []DecisionChoice{ChoiceOverwrite, ChoiceSkip}), kind: deployment.FileOrdinary, wantErr: true},
 	{name: "choices on automatic row", spec: specOf(ReasonNoChange, overwriteSkipAbort), kind: deployment.FileOrdinary, wantErr: true},
-	{name: "valid ordinary drift", spec: specOf(ReasonTargetDrift, diffOverwriteSkipAbort), kind: deployment.FileOrdinary},
+	{name: "valid ordinary drift", spec: specOf(ReasonTargetDrift, overwriteSkipAbort), kind: deployment.FileOrdinary},
 	{name: "valid secret drift", spec: specOf(ReasonTargetDrift, overwriteSkipAbort), kind: deployment.FileSecret},
 	{name: "valid alias wrong", spec: specOf(ReasonAliasWrong, overwriteSkipAbort), kind: deployment.FileSecret},
 }
@@ -149,7 +145,7 @@ func specOf(reason Reason, choices []DecisionChoice) DecisionSpec {
 
 // orderSpec builds one ordinary drift spec at path.
 func orderSpec(path string) DecisionSpec {
-	return mustDecisionSpec(DecisionSpecInput{TargetPath: path, Action: ActionNeedsDecision, Reason: ReasonTargetDrift, Choices: diffOverwriteSkipAbort})
+	return mustDecisionSpec(DecisionSpecInput{TargetPath: path, Action: ActionNeedsDecision, Reason: ReasonTargetDrift, Choices: overwriteSkipAbort})
 }
 
 // checkDecisionSpec produces one spec from its row and compares the result.

@@ -18,10 +18,11 @@ func TestDecisionPrompt(t *testing.T) {
 		{"each choice", testPromptChoices},
 		{"invalid input reprompts", testPromptInvalid},
 		{"secret restriction", testPromptSecret},
-		{"diff displays and reprompts", testPromptDiff},
+		{"diff displays automatically", testPromptDiff},
 		{"non-terminal refusal", testPromptNonTTY},
 		{"eof handling", testPromptEOF},
-		{"empty defaults", testPromptDefault},
+		{"empty is not destructive", testPromptDefault},
+		{"final confirmation", testPromptConfirmation},
 		{"writer errors", testPromptWriterError},
 	}
 	for _, scenario := range scenarios {
@@ -50,7 +51,7 @@ func promptFixture(t *testing.T, answers []string, diff func(context.Context, st
 func driftRequest() apply.DecisionRequest {
 	request, err := apply.NewDecisionRequest(apply.DecisionRequestInput{
 		TargetPath: "a.conf",
-		Choices:    []apply.DecisionChoice{apply.ChoiceDiff, apply.ChoiceOverwrite, apply.ChoiceSkip, apply.ChoiceAbort},
+		Choices:    []apply.DecisionChoice{apply.ChoiceOverwrite, apply.ChoiceSkip, apply.ChoiceAbort},
 	})
 	if err != nil {
 		panic(err)
@@ -120,7 +121,7 @@ func testPromptDiff(t *testing.T) {
 	provider := func(ctx context.Context, target string) (apply.SafeDifference, bool) {
 		return apply.SafeDifference{Lines: []string{"-old", "+new"}}, true
 	}
-	prompt, stderr := promptFixture(t, []string{"diff", "overwrite"}, provider)
+	prompt, stderr := promptFixture(t, []string{"r"}, provider)
 	response, err := prompt.Resolve(context.Background(), driftRequest())
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -155,12 +156,20 @@ func testPromptEOF(t *testing.T) {
 
 func testPromptDefault(t *testing.T) {
 	prompt, _ := promptFixture(t, []string{""}, nil)
-	response, err := prompt.Resolve(context.Background(), driftRequest())
-	if err != nil {
-		t.Fatalf("resolve: %v", err)
+	_, err := prompt.Resolve(context.Background(), driftRequest())
+	if err == nil || !kindIs(err, failure.InvalidInput) {
+		t.Fatalf("blank input must not choose a destructive default: %v", err)
 	}
-	if response.Choice != apply.ChoiceDiff {
-		t.Fatalf("empty answer must default to the first choice, got %v", response.Choice)
+}
+
+func testPromptConfirmation(t *testing.T) {
+	prompt, stderr := promptFixture(t, []string{"y"}, nil)
+	confirmed, err := prompt.Confirm(context.Background(), []apply.Resolution{{Request: driftRequest(), Choice: apply.ChoiceSkip}})
+	if err != nil || !confirmed {
+		t.Fatalf("confirmation = %t, %v", confirmed, err)
+	}
+	if !strings.Contains(stderr.String(), "skip: $HOME/a.conf") {
+		t.Fatalf("summary = %q", stderr.String())
 	}
 }
 

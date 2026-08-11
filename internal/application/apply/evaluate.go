@@ -11,17 +11,18 @@ import (
 
 // Service evaluates an apply request before decisions, hooks, or mutations.
 type Service struct {
-	evaluator   *evaluation.Service
-	state       StateReader
-	secrets     *secrets.Client
-	client      SecretClient
-	replacer    AtomicReplacer
-	baselines   BaselineStore
-	transitions TransitionStore
-	retirements RetirementStore
-	hooks       HookExecutor
-	probe       DependencyProbe
-	resolver    DecisionResolver
+	evaluator    *evaluation.Service
+	state        StateReader
+	secrets      *secrets.Client
+	client       SecretClient
+	replacer     AtomicReplacer
+	baselines    BaselineStore
+	transitions  TransitionStore
+	retirements  RetirementStore
+	hooks        HookExecutor
+	probe        DependencyProbe
+	resolver     DecisionResolver
+	confirmation Confirmation
 }
 
 // NewService constructs the apply service over its injected ports.
@@ -37,16 +38,17 @@ func NewService(dependencies Dependencies) *Service {
 			CommandLabel:                 "apply",
 			IncludeUnmanagedTargetDigest: true,
 		}),
-		state:       dependencies.State,
-		secrets:     dependencies.Secrets,
-		client:      dependencies.Client,
-		replacer:    dependencies.Replacer,
-		baselines:   dependencies.Baselines,
-		transitions: dependencies.Transitions,
-		retirements: dependencies.Retirements,
-		hooks:       dependencies.Hooks,
-		probe:       dependencies.Probe,
-		resolver:    dependencies.Resolver,
+		state:        dependencies.State,
+		secrets:      dependencies.Secrets,
+		client:       dependencies.Client,
+		replacer:     dependencies.Replacer,
+		baselines:    dependencies.Baselines,
+		transitions:  dependencies.Transitions,
+		retirements:  dependencies.Retirements,
+		hooks:        dependencies.Hooks,
+		probe:        dependencies.Probe,
+		resolver:     dependencies.Resolver,
+		confirmation: dependencies.Confirmation,
 	}
 }
 

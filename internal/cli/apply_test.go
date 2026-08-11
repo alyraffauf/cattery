@@ -18,6 +18,7 @@ func TestApplyCommand(t *testing.T) {
 		{"flags and args mapped", testApplyFlags},
 		{"one call", testApplyOneCall},
 		{"dry run flag", testApplyDryRun},
+		{"force flag", testApplyForce},
 		{"partial error joins", testApplyPartial},
 		{"writer failure", testApplyWriterError},
 	}
@@ -92,6 +93,18 @@ func testApplyDryRun(t *testing.T) {
 	request := service.requests[0]
 	if !request.DryRun {
 		t.Fatalf("dry run = %v, want the flag value", request.DryRun)
+	}
+}
+
+func testApplyForce(t *testing.T) {
+	service := &applyServiceFake{result: applyResult()}
+	command, _ := applyFixture(t, service, Options{})
+	command.SetArgs([]string{"--force", "apps"})
+	if err := command.Execute(); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if !service.requests[0].Force {
+		t.Fatalf("force = false, want true")
 	}
 }
 

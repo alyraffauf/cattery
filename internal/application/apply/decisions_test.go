@@ -17,7 +17,7 @@ func TestApplyDecisionCollection(t *testing.T) {
 		{"abort stops the apply", testDecisionAbort},
 		{"skip is collected", testDecisionSkip},
 		{"overwrite is collected", testDecisionOverwrite},
-		{"diff re-requests", testDecisionDiff},
+		{"force chooses repository without resolver", testDecisionForce},
 		{"diff provider receives the candidate", testDecisionDifferenceProvider},
 		{"invalid response", testDecisionInvalid},
 		{"resolver errors propagate", testDecisionResolverError},
@@ -25,6 +25,19 @@ func TestApplyDecisionCollection(t *testing.T) {
 	}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, scenario.run)
+	}
+}
+
+func testDecisionForce(t *testing.T) {
+	service, candidates := decisionFixture(t, "a.conf")
+	resolver := &resolverFake{err: fmt.Errorf("resolver must not run")}
+	service.resolver = resolver
+	collected, err := service.collectDecisions(context.Background(), Request{Force: true}, candidates)
+	if err != nil {
+		t.Fatalf("collect: %v", err)
+	}
+	if len(resolver.requests) != 0 || collected.All()[0].response.Choice != ChoiceOverwrite {
+		t.Fatalf("force must synthesize one repository choice without prompting: %+v", collected.All())
 	}
 }
 
@@ -114,22 +127,6 @@ func testDecisionOverwrite(t *testing.T) {
 	}
 	if collected.All()[0].response.Choice != ChoiceOverwrite {
 		t.Fatalf("decision = %+v, want overwrite", collected.All()[0])
-	}
-}
-
-func testDecisionDiff(t *testing.T) {
-	resolver := &resolverFake{responses: []DecisionResponse{{Choice: ChoiceDiff}, {Choice: ChoiceSkip}}}
-	service, candidates := decisionFixture(t, "a.conf")
-	service.resolver = resolver
-	collected, err := service.CollectDecisions(context.Background(), candidates)
-	if err != nil {
-		t.Fatalf("collect: %v", err)
-	}
-	if len(resolver.requests) != 2 {
-		t.Fatalf("diff answer must re-request, requests = %v", resolver.requests)
-	}
-	if collected.All()[0].response.Choice != ChoiceSkip {
-		t.Fatalf("final decision = %+v, want skip", collected.All()[0])
 	}
 }
 

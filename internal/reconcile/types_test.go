@@ -72,7 +72,7 @@ func testSmallEnumValidity(t *testing.T) {
 			t.Fatalf("known convergence %d must be valid", convergence)
 		}
 	}
-	choices := []DecisionChoice{ChoiceOverwrite, ChoiceSkip, ChoiceAbort, ChoiceDiff}
+	choices := []DecisionChoice{ChoiceOverwrite, ChoiceSkip, ChoiceAbort}
 	for _, choice := range choices {
 		if !choice.Valid() {
 			t.Fatalf("known choice %d must be valid", choice)
@@ -112,7 +112,7 @@ func testContentToken(t *testing.T) {
 }
 
 func testDecisionSpecCopy(t *testing.T) {
-	choices := []DecisionChoice{ChoiceOverwrite, ChoiceSkip, ChoiceAbort, ChoiceDiff}
+	choices := []DecisionChoice{ChoiceOverwrite, ChoiceSkip, ChoiceAbort}
 	spec, err := NewDecisionSpec(DecisionSpecInput{
 		TargetPath: ".config/app/config", Action: ActionNeedsDecision,
 		Reason: ReasonTargetDrift, Choices: choices,
@@ -120,8 +120,8 @@ func testDecisionSpecCopy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewDecisionSpec: %v", err)
 	}
-	choices[0] = ChoiceDiff
-	if len(spec.AllChoices()) != 4 || spec.AllChoices()[0] != ChoiceOverwrite {
+	choices[0] = ChoiceAbort
+	if len(spec.AllChoices()) != 3 || spec.AllChoices()[0] != ChoiceOverwrite {
 		t.Fatal("spec must copy its choice slice defensively")
 	}
 	returned := spec.AllChoices()

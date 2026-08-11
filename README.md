@@ -77,7 +77,7 @@ configuration directory—in `_routes.toml`.
 | `cattery version` | Print build information. |
 
 Global options are `--repo PATH` and `--verbose`. `apply` supports `--dry-run`,
-`--non-interactive`, `--no-hooks`, and `--skip-secrets`; `add` supports `--group`, `--platform`,
+`--non-interactive`, `--no-hooks`, `--skip-secrets`, and `--force`; `add` supports `--group`, `--platform`,
 `--secret`, and `--dry-run`; `forget` supports `--dry-run` and requires `--yes`
 to remove repository sources. Secret lifecycle commands accept repeatable
 `--source REPOSITORY_PATH` selectors; `secrets reencrypt` previews by default
@@ -93,7 +93,13 @@ and requires `--yes` to replace encrypted sources.
   your files.
 - If the local state database is lost, equal files are adopted again and
   different files require a decision.
+- Interactive conflicts show a safe preview automatically. Enter `r` (or
+  `repository`) to use the repository version, `s`/`skip` to leave that item,
+  or `a`/`abort` to stop. A final `y` confirmation is required before writes.
+- `apply --force` chooses the repository version for every selected conflict.
+  It does not bypass target validation, SOPS, atomic writes, or other safety checks.
 - A non-interactive session stops before any change that would need a prompt.
+  Use `cattery add` to explicitly adopt local content into the repository.
 
 ## Secrets and hooks
 

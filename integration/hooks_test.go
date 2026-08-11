@@ -103,7 +103,7 @@ func testHooksResultEnv(t *testing.T) {
 	env.source(t, ".config/app", "v1")
 	installHooks(t, env)
 	writeFile(t, filepath.Join(env.home, ".config", "app"), []byte("drifted"))
-	result := env.runPty(t, []string{"skip"}, "apply")
+	result := env.runPty(t, []string{"skip", "y"}, "apply")
 	if result.Code != 2 {
 		t.Fatalf("code = %d, want 2 after a skip", result.Code)
 	}
