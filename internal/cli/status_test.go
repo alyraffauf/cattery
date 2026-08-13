@@ -86,7 +86,7 @@ func testStatusOneCall(t *testing.T) {
 	if len(service.requests) != 1 {
 		t.Fatalf("calls = %d, want one", len(service.requests))
 	}
-	want := "$HOME/a.conf file write-source\nsummary files=1 aliases=0 retired=0 converged=false\n"
+	want := "Changes needed — 1 change\n\n  Update   ~/a.conf\n\nNo files were changed.\nNext: run `cattery apply` to make these changes.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -99,7 +99,7 @@ func testStatusDifference(t *testing.T) {
 	if err == nil || !kindIs(err, failure.Difference) {
 		t.Fatalf("error = %v, want a difference failure", err)
 	}
-	if !bytes.Contains(stdout.Bytes(), []byte("$HOME/a.conf")) {
+	if !bytes.Contains(stdout.Bytes(), []byte("~/a.conf")) {
 		t.Fatalf("stdout = %q, want the records rendered before the difference", stdout.String())
 	}
 }

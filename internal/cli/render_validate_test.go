@@ -28,8 +28,8 @@ func testRenderTwoLines(t *testing.T) {
 	}}); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	if stdout.String() != "linux files=2 secrets=1 aliases=0 groups=3\n" {
-		t.Fatalf("stdout = %q, want one count line", stdout.String())
+	if stdout.String() != "Repository is valid.\n\n  linux\n    Files: 2  Secrets: 1  Links: 0  Groups: 3\n" {
+		t.Fatalf("stdout = %q, want the validation summary", stdout.String())
 	}
 }
 
@@ -42,7 +42,7 @@ func testRenderOrder(t *testing.T) {
 		t.Fatalf("render: %v", err)
 	}
 	got := stdout.String()
-	want := "linux files=1 secrets=0 aliases=0 groups=0\ndarwin files=2 secrets=0 aliases=0 groups=0\n"
+	want := "Repository is valid.\n\n  linux\n    Files: 1  Secrets: 0  Links: 0  Groups: 0\n\n  darwin\n    Files: 2  Secrets: 0  Links: 0  Groups: 0\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want the given sorted order", got)
 	}

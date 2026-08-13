@@ -37,8 +37,7 @@ func testRenderStatusRecords(t *testing.T) {
 	if err := renderStatus(stdout, result); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	want := "$HOME/a.conf file write-source\n$HOME/bin/tool alias realize-alias\n" +
-		"summary files=1 aliases=1 retired=0 converged=false\n"
+	want := "Changes needed — 2 changes\n\n  Update   ~/a.conf\n\n  Link     ~/bin/tool\n\nNo files were changed.\nNext: run `cattery apply` to make these changes.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -52,7 +51,7 @@ func testRenderStatusRetired(t *testing.T) {
 	if err := renderStatus(stdout, result); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	want := "$HOME/gone.conf retired retire-file\nsummary files=0 aliases=0 retired=1 converged=true\n"
+	want := "\nEverything is up to date.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -75,12 +74,8 @@ func testRenderStatusSummary(t *testing.T) {
 	if err := renderStatus(stdout, result); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	want := "$HOME/a file write-source\n$HOME/b file write-source\n" +
-		"$HOME/c alias realize-alias\n$HOME/d alias realize-alias\n$HOME/e alias realize-alias\n" +
-		"$HOME/f retired retire-file\n$HOME/g retired retire-file\n$HOME/h retired retire-file\n" +
-		"$HOME/i retired retire-file\nsummary files=2 aliases=3 retired=4 converged=true\n"
-	if stdout.String() != want {
-		t.Fatalf("stdout = %q, want the records and summary", stdout.String())
+	if stdout.String() != "\nEverything is up to date.\n" {
+		t.Fatalf("stdout = %q, want the converged outcome", stdout.String())
 	}
 }
 

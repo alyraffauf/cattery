@@ -28,10 +28,10 @@ func testRenderApplyDryRun(t *testing.T) {
 	result := apply.Result{Items: []apply.ItemResult{
 		{TargetPath: "a.conf", Status: apply.StatusPlanned, Kind: apply.ActionKindWriteSource},
 	}, Summary: apply.Summary{Planned: 1}}
-	if err := renderApply(stdout, result); err != nil {
+	if err := renderApply(stdout, result, true); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	want := "$HOME/a.conf planned write-source\nsummary planned=1 completed=0 partial=0\n"
+	want := "Ready to apply — 1 change\n\n  Update   ~/a.conf\n           This change has not been applied.\n\nNo files were changed.\nNext: run `cattery apply` to make these changes.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -43,11 +43,10 @@ func testRenderApplyPartial(t *testing.T) {
 		{TargetPath: "a.conf", Status: apply.StatusCompleted, Kind: apply.ActionKindWriteSource},
 		{TargetPath: "b.conf", Status: apply.StatusPartial, Kind: apply.ActionKindRealizeAlias},
 	}, Summary: apply.Summary{Completed: 1, Partial: 1}}
-	if err := renderApply(stdout, result); err != nil {
+	if err := renderApply(stdout, result, false); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	want := "$HOME/a.conf completed write-source\n$HOME/b.conf partial realize-alias\n" +
-		"summary planned=0 completed=1 partial=1\n"
+	want := "Applied with unresolved items — 1 change\n\n  Update   ~/a.conf\n\n  Skipped  ~/b.conf\n           This item was not changed.\n\n1 change applied; 1 item need attention.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -56,11 +55,11 @@ func testRenderApplyPartial(t *testing.T) {
 func testRenderApplySummary(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	result := apply.Result{Summary: apply.Summary{Planned: 3, Completed: 2, Partial: 1}}
-	if err := renderApply(stdout, result); err != nil {
+	if err := renderApply(stdout, result, false); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	if stdout.String() != "summary planned=3 completed=2 partial=1\n" {
-		t.Fatalf("stdout = %q, want the summary line", stdout.String())
+	if stdout.String() != "\nNothing to apply.\n" {
+		t.Fatalf("stdout = %q, want the empty outcome", stdout.String())
 	}
 }
 
@@ -69,7 +68,7 @@ func testRenderApplyEscaping(t *testing.T) {
 	result := apply.Result{Items: []apply.ItemResult{
 		{TargetPath: "dir/bad\nname", Status: apply.StatusCompleted, Kind: apply.ActionKindWriteSource},
 	}}
-	if err := renderApply(stdout, result); err != nil {
+	if err := renderApply(stdout, result, false); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	if bytes.Contains(stdout.Bytes(), []byte("\nname")) {
@@ -78,7 +77,7 @@ func testRenderApplyEscaping(t *testing.T) {
 }
 
 func testRenderApplyWriter(t *testing.T) {
-	if err := renderApply(failingWriter{}, apply.Result{}); err == nil {
+	if err := renderApply(failingWriter{}, apply.Result{}, false); err == nil {
 		t.Fatal("a writer failure must surface")
 	}
 }

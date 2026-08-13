@@ -80,8 +80,8 @@ func testInitArgument(t *testing.T) {
 	if len(service.requests) != 1 || service.requests[0].Path != "/repo" {
 		t.Fatalf("requests = %+v, want one /repo request", service.requests)
 	}
-	if stdout.String() != "initialized /repo\n" {
-		t.Fatalf("stdout = %q, want the initialized line", stdout.String())
+	if stdout.String() != "Repository initialized\n\n  Repository: /repo\n\nNext: run `cattery status` to review changes.\n" {
+		t.Fatalf("stdout = %q, want the initialization guidance", stdout.String())
 	}
 }
 

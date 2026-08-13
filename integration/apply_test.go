@@ -100,8 +100,8 @@ func testExecApplyFirst(t *testing.T) {
 	if env.target(t, ".config/app") != "content" {
 		t.Fatal("the target must carry the source bytes")
 	}
-	if !strings.Contains(result.Stdout, "completed") {
-		t.Fatalf("stdout = %q, want the completed verb", result.Stdout)
+	if !strings.Contains(result.Stdout, "Applied") {
+		t.Fatalf("stdout = %q, want the completed outcome", result.Stdout)
 	}
 }
 
@@ -164,8 +164,8 @@ func testExecApplyDryRun(t *testing.T) {
 	if env.targetExists(t, ".config/app") {
 		t.Fatal("a dry run must not write targets")
 	}
-	if !strings.Contains(result.Stdout, "planned") {
-		t.Fatalf("stdout = %q, want the planned verb", result.Stdout)
+	if !strings.Contains(result.Stdout, "Ready to apply") {
+		t.Fatalf("stdout = %q, want the preview outcome", result.Stdout)
 	}
 }
 

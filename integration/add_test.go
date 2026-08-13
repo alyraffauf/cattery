@@ -40,8 +40,8 @@ func testExecAddOrdinary(t *testing.T) {
 	if string(content) != "content" {
 		t.Fatal("the repository must carry the exact target bytes")
 	}
-	if !strings.Contains(result.Stdout, "completed") {
-		t.Fatalf("stdout = %q, want the completed verb", result.Stdout)
+	if !strings.Contains(result.Stdout, "Added") {
+		t.Fatalf("stdout = %q, want the completed outcome", result.Stdout)
 	}
 }
 
@@ -76,8 +76,8 @@ func testExecAddOrder(t *testing.T) {
 			t.Fatalf("source %s: %v", name, err)
 		}
 	}
-	if !strings.Contains(result.Stdout, "completed") {
-		t.Fatalf("stdout = %q, want the completed verbs", result.Stdout)
+	if !strings.Contains(result.Stdout, "Added") {
+		t.Fatalf("stdout = %q, want the completed outcome", result.Stdout)
 	}
 }
 
@@ -105,8 +105,8 @@ func testExecAddDryRun(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(env.repo, "a.conf")); !os.IsNotExist(err) {
 		t.Fatal("a dry run must not write the source")
 	}
-	if !strings.Contains(result.Stdout, "planned") {
-		t.Fatalf("stdout = %q, want the planned verb", result.Stdout)
+	if !strings.Contains(result.Stdout, "Ready to add") {
+		t.Fatalf("stdout = %q, want the preview outcome", result.Stdout)
 	}
 }
 

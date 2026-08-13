@@ -19,6 +19,7 @@ func TestCLIExecute(t *testing.T) {
 		{"usage failure is one", testExecuteUsage},
 		{"operational failure is one", testExecuteOperational},
 		{"difference is two", testExecuteDifference},
+		{"difference guidance is actionable", testDifferenceGuidance},
 		{"hook is three", testExecuteHook},
 		{"dependency is four", testExecuteDependency},
 		{"signal outranks joined", testExecuteSignal},
@@ -73,6 +74,13 @@ func testExecuteDifference(t *testing.T) {
 	status := Execute(context.Background(), application, []string{"status"})
 	if status != 2 {
 		t.Fatalf("status = %d, want 2", status)
+	}
+}
+
+func testDifferenceGuidance(t *testing.T) {
+	message := userFacingError(failure.New(failure.Difference, "status: not converged", nil))
+	if !strings.Contains(message, "Changes are pending.") || !strings.Contains(message, "cattery apply") {
+		t.Fatalf("message = %q, want actionable difference guidance", message)
 	}
 }
 

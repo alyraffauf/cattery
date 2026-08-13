@@ -55,10 +55,7 @@ func testRenderDiffTags(t *testing.T) {
 	if err := renderDiff(stdout, result); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	want := "$HOME/a.conf file write-source\n" +
-		"$HOME/b.conf file binary size=0/0\n" +
-		"$HOME/c.conf file secret\n" +
-		"summary files=3 aliases=0 retired=0 converged=false\n"
+	want := "Changes to review — 3 changes\n\n  Update   ~/a.conf\n\n  Update   ~/b.conf\n           Binary content differs (0 bytes in repository, 0 bytes locally).\n\n  Update   ~/c.conf\n           Encrypted secret content differs; its plaintext is not shown.\n\nNext: run `cattery apply` to make these changes.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -73,8 +70,7 @@ func testRenderDiffText(t *testing.T) {
 	if err := renderDiff(stdout, diffResult(record)); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	want := "$HOME/a.conf file write-source\nrepo/a.conf\n-old\n+new\n" +
-		"summary files=1 aliases=0 retired=0 converged=false\n"
+	want := "Changes to review — 1 change\n\n  Update   ~/a.conf\n\n-old\n+new\n\nNext: run `cattery apply` to make these changes.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -89,7 +85,7 @@ func testRenderDiffBinary(t *testing.T) {
 	if err := renderDiff(stdout, diffResult(record)); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	if !bytes.Contains(stdout.Bytes(), []byte("binary size=3/5")) {
+	if !bytes.Contains(stdout.Bytes(), []byte("Binary content differs (3 bytes in repository, 5 bytes locally).")) {
 		t.Fatalf("stdout = %q, want the binary sizes", stdout.String())
 	}
 }
@@ -117,9 +113,7 @@ func testRenderDiffAliases(t *testing.T) {
 	if err := renderDiff(stdout, result); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	want := "$HOME/bin/tool alias realize-alias\n" +
-		"$HOME/gone.conf retired retire-file\n" +
-		"summary files=0 aliases=1 retired=1 converged=false\n"
+	want := "Changes to review — 2 changes\n\n  Link     ~/bin/tool\n\n  Forget   ~/gone.conf\n           Its repository source is gone; the file in your home directory is left untouched.\n\nNext: run `cattery apply` to make these changes.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}

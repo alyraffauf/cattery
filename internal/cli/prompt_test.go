@@ -101,7 +101,7 @@ func testPromptInvalid(t *testing.T) {
 	if response.Choice != apply.ChoiceOverwrite {
 		t.Fatalf("response = %v, want overwrite after reprompt", response.Choice)
 	}
-	if !strings.Contains(stderr.String(), "invalid answer") {
+	if !strings.Contains(stderr.String(), "I did not understand") {
 		t.Fatalf("stderr = %q, want the invalid answer notice", stderr.String())
 	}
 }
@@ -168,7 +168,7 @@ func testPromptConfirmation(t *testing.T) {
 	if err != nil || !confirmed {
 		t.Fatalf("confirmation = %t, %v", confirmed, err)
 	}
-	if !strings.Contains(stderr.String(), "skip: $HOME/a.conf") {
+	if !strings.Contains(stderr.String(), "Skip     ~/a.conf") {
 		t.Fatalf("summary = %q", stderr.String())
 	}
 }
