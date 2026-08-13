@@ -46,7 +46,7 @@ func TestSecretsRenderingIsSafeAndPreservesDifference(t *testing.T) {
 	if !kindIs(err, failure.Difference) {
 		t.Fatalf("error = %v", err)
 	}
-	want := "Secret operation complete — 1 source\n\n  Ready    ~/.config/app/token\n           Source: apps/_secrets/token (apps, linux)\n\nSecret plaintext is never shown.\n"
+	want := "Ready to re-encrypt — 1 source\n\n  Ready    ~/.config/app/token\n           Source: apps/_secrets/token (apps, linux)\n\nSecret plaintext is never shown.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q", stdout.String())
 	}

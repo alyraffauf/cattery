@@ -104,10 +104,7 @@ func renderSecrets(writer io.Writer, result secretlifecycle.Result, inventory bo
 		_, err := fmt.Fprintln(writer, "No encrypted sources found.")
 		return err
 	}
-	title := "Encrypted sources"
-	if !inventory {
-		title = "Secret operation complete"
-	}
+	title := secretsTitle(result.Items, inventory)
 	if _, err := fmt.Fprintf(writer, "%s — %d %s\n", title, len(result.Items), pluralize(len(result.Items), "source")); err != nil {
 		return err
 	}
@@ -123,10 +120,7 @@ func renderSecrets(writer io.Writer, result secretlifecycle.Result, inventory bo
 			}
 			continue
 		}
-		action := "Updated"
-		if item.Status == "planned" {
-			action = "Ready"
-		}
+		action := secretAction(item.Status)
 		if _, err := fmt.Fprintf(writer, "\n  %-8s ~/%s\n           Source: %s (%s, %s)\n",
 			action, displayPath(item.Target), displayPath(item.Source), displayPath(group), item.Layer); err != nil {
 			return err
@@ -134,4 +128,45 @@ func renderSecrets(writer io.Writer, result secretlifecycle.Result, inventory bo
 	}
 	_, err := fmt.Fprintln(writer, "\nSecret plaintext is never shown.")
 	return err
+}
+
+func secretsTitle(items []secretlifecycle.Item, inventory bool) string {
+	if inventory {
+		return "Encrypted sources"
+	}
+	statuses := make(map[string]bool, len(items))
+	for _, item := range items {
+		statuses[item.Status] = true
+	}
+	if statuses["failed"] {
+		return "Secret operation incomplete"
+	}
+	if len(statuses) != 1 {
+		return "Secret operation complete"
+	}
+	if statuses["verified"] {
+		return "Secrets verified"
+	}
+	if statuses["planned"] {
+		return "Ready to re-encrypt"
+	}
+	if statuses["reencrypted"] {
+		return "Secrets re-encrypted"
+	}
+	return "Secret operation complete"
+}
+
+func secretAction(status string) string {
+	switch status {
+	case "verified":
+		return "Verified"
+	case "planned":
+		return "Ready"
+	case "reencrypted":
+		return "Re-encrypted"
+	case "failed":
+		return "Failed"
+	default:
+		return "Updated"
+	}
 }
