@@ -30,8 +30,8 @@ func newForgetCommand(service ForgetService, runtime Runtime, options *Options) 
 			return err
 		},
 	}
-	command.Flags().Bool("dry-run", false, "show the sources that would be removed")
-	command.Flags().Bool("yes", false, "remove repository sources without a prompt")
+	command.Flags().Bool("dry-run", false, "preview repository sources that would stop being managed")
+	command.Flags().Bool("yes", false, "stop managing repository sources without a prompt")
 	return command
 }
 
@@ -45,10 +45,18 @@ func forgetRepository(options Options, command *cobra.Command, runtime Runtime) 
 }
 
 func renderForget(writer interface{ Write([]byte) (int, error) }, result forget.Result) error {
+	if len(result.Items) == 0 {
+		_, err := fmt.Fprintln(writer, "Nothing is managed in that directory.")
+		return err
+	}
+	if _, err := fmt.Fprintf(writer, "Ready to stop managing — %d %s\n", len(result.Items), pluralize(len(result.Items), "file")); err != nil {
+		return err
+	}
 	for _, item := range result.Items {
-		if _, err := fmt.Fprintf(writer, "$HOME/%s %s %s\n", displayPath(item.Target), item.Status, displayPath(item.Source)); err != nil {
+		if _, err := fmt.Fprintf(writer, "\n  Forget   ~/%s\n           Repository source: %s\n", displayPath(item.Target), displayPath(item.Source)); err != nil {
 			return err
 		}
 	}
-	return nil
+	_, err := fmt.Fprintln(writer, "\nFiles in your home directory are left untouched.")
+	return err
 }

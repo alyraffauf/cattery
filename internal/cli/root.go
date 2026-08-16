@@ -29,13 +29,14 @@ type Application struct {
 
 // NewApplication builds one opaque application over the dependencies and
 // runtime: operational commands, persistent repository and verbose
-// flags, injected streams, no root Version, no completion or suggestions,
-// and no OnInitialize hook. Construction touches no backend.
+// flags, injected streams, no root Version or completion command, and no
+// OnInitialize hook. Construction touches no backend.
 func NewApplication(dependencies Dependencies, runtime Runtime) *Application {
 	options := &Options{}
 	root := &cobra.Command{
 		Use:           "cattery",
-		Short:         "Declarative dotfile deployment",
+		Short:         "Safely manage dotfiles from one repository",
+		Long:          "Safely manage dotfiles from one repository.\n\nStart here:\n  cattery init PATH      Register a repository\n  cattery status         Review pending changes\n  cattery apply          Apply reviewed changes",
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		PersistentPreRunE: func(command *cobra.Command, args []string) error {
@@ -44,12 +45,27 @@ func NewApplication(dependencies Dependencies, runtime Runtime) *Application {
 		},
 	}
 	root.PersistentFlags().StringVarP(&options.Repository, "repo", "r", "", "repository path")
-	root.PersistentFlags().BoolVarP(&options.Verbose, "verbose", "v", false, "verbose diagnostics")
+	root.PersistentFlags().BoolVarP(&options.Verbose, "verbose", "v", false, "show diagnostic details")
 	root.CompletionOptions.DisableDefaultCmd = true
-	root.DisableSuggestions = true
 	root.SetIn(runtime.Stdin())
 	root.SetOut(runtime.Stdout())
 	root.SetErr(runtime.Stderr())
+	root.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces}}
+{{end}}
+Usage:
+  {{.UseLine}}
+
+{{if .HasAvailableSubCommands}}Commands:
+{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}  {{rpad .Name .NamePadding }} {{.Short}}
+{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+Options:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
+{{end}}{{if .HasAvailableInheritedFlags}}
+Global options:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}
+{{end}}
+Run "{{.CommandPath}} [command] --help" for command details.
+`)
 	root.AddCommand(
 		newInitCommand(dependencies.Initialize, runtime),
 		newValidateCommand(dependencies.Validate, runtime, options),

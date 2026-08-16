@@ -23,7 +23,7 @@ func TestForgetCommandMapsFlagsAndRendersPlan(t *testing.T) {
 	if request.Directory != ".config/nvim" || !request.DryRun || request.Yes {
 		t.Fatalf("request = %#v", request)
 	}
-	if got := stdout.String(); got != "$HOME/.config/nvim/init.lua planned nvim/.config/nvim/init.lua\n" {
+	if got := stdout.String(); got != "Ready to stop managing — 1 file\n\n  Forget   ~/.config/nvim/init.lua\n           Repository source: nvim/.config/nvim/init.lua\n\nFiles in your home directory are left untouched.\n" {
 		t.Fatalf("stdout = %q", got)
 	}
 }

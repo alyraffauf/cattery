@@ -84,7 +84,7 @@ func newSecretsLeaf(spec secretsLeafSpec) *cobra.Command {
 	}
 	command.Flags().StringArray("source", nil, "select an exact repository-relative encrypted source")
 	if spec.mutation {
-		command.Flags().Bool("dry-run", false, "preview without replacing encrypted sources")
+		command.Flags().Bool("dry-run", false, "preview changes without replacing encrypted sources")
 		command.Flags().Bool("yes", false, "replace encrypted sources")
 	}
 	return command
@@ -100,22 +100,73 @@ func secretsRepository(options Options, command *cobra.Command, runtime Runtime)
 }
 
 func renderSecrets(writer io.Writer, result secretlifecycle.Result, inventory bool) error {
+	if len(result.Items) == 0 {
+		_, err := fmt.Fprintln(writer, "No encrypted sources found.")
+		return err
+	}
+	title := secretsTitle(result.Items, inventory)
+	if _, err := fmt.Fprintf(writer, "%s — %d %s\n", title, len(result.Items), pluralize(len(result.Items), "source")); err != nil {
+		return err
+	}
 	for _, item := range result.Items {
 		group := item.Group
 		if group == "" {
 			group = "root"
 		}
 		if inventory {
-			if _, err := fmt.Fprintf(writer, "%s -> $HOME/%s group=%s layer=%s kind=%s\n",
-				displayPath(item.Source), displayPath(item.Target), displayPath(group), item.Layer, item.Kind); err != nil {
+			if _, err := fmt.Fprintf(writer, "\n  Secret   ~/%s\n           Source: %s (%s, %s)\n",
+				displayPath(item.Target), displayPath(item.Source), displayPath(group), item.Layer); err != nil {
 				return err
 			}
 			continue
 		}
-		if _, err := fmt.Fprintf(writer, "%s %s $HOME/%s group=%s layer=%s kind=%s\n",
-			displayPath(item.Source), item.Status, displayPath(item.Target), displayPath(group), item.Layer, item.Kind); err != nil {
+		action := secretAction(item.Status)
+		if _, err := fmt.Fprintf(writer, "\n  %-8s ~/%s\n           Source: %s (%s, %s)\n",
+			action, displayPath(item.Target), displayPath(item.Source), displayPath(group), item.Layer); err != nil {
 			return err
 		}
 	}
-	return nil
+	_, err := fmt.Fprintln(writer, "\nSecret plaintext is never shown.")
+	return err
+}
+
+func secretsTitle(items []secretlifecycle.Item, inventory bool) string {
+	if inventory {
+		return "Encrypted sources"
+	}
+	statuses := make(map[string]bool, len(items))
+	for _, item := range items {
+		statuses[item.Status] = true
+	}
+	if statuses["failed"] {
+		return "Secret operation incomplete"
+	}
+	if len(statuses) != 1 {
+		return "Secret operation complete"
+	}
+	if statuses["verified"] {
+		return "Secrets verified"
+	}
+	if statuses["planned"] {
+		return "Ready to re-encrypt"
+	}
+	if statuses["reencrypted"] {
+		return "Secrets re-encrypted"
+	}
+	return "Secret operation complete"
+}
+
+func secretAction(status string) string {
+	switch status {
+	case "verified":
+		return "Verified"
+	case "planned":
+		return "Ready"
+	case "reencrypted":
+		return "Re-encrypted"
+	case "failed":
+		return "Failed"
+	default:
+		return "Updated"
+	}
 }

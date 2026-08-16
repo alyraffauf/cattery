@@ -62,7 +62,7 @@ func testSecretsLifecycleRotation(t *testing.T) {
 	requireFileBytes(t, basePath, rotated)
 	requireFileBytes(t, platformPath, rotated)
 	verified := env.secretRun(t, nil, "secrets", "verify")
-	if verified.Code != 0 || strings.Count(verified.Stdout, " verified ") != 2 {
+	if verified.Code != 0 || strings.Count(verified.Stdout, "Verified") != 2 {
 		t.Fatalf("verify: %+v", verified)
 	}
 	requireFileBytes(t, filepath.Join(env.home, "base-token"), []byte("unchanged base target"))
@@ -213,7 +213,7 @@ func testSecretsDependency(t *testing.T) {
 		t.Fatalf("code = %d, want 4 for a missing sops dependency", result.Code)
 	}
 	verified := env.secretRun(t, nil, "secrets", "verify")
-	if verified.Code != 4 || !strings.Contains(verified.Stdout, "failed") {
+	if verified.Code != 4 || !strings.Contains(verified.Stdout, "Failed") {
 		t.Fatalf("verify = %+v, want a rendered dependency failure", verified)
 	}
 	if string(readTargetFile(t, env.home, "token")) != "plaintext" {

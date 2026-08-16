@@ -133,7 +133,7 @@ func testAddPartial(t *testing.T) {
 	if err == nil || !kindIs(err, failure.Operational) {
 		t.Fatalf("error = %v, want an operational failure", err)
 	}
-	if !bytes.Contains(stdout.Bytes(), []byte("$HOME/a.conf")) {
+	if !bytes.Contains(stdout.Bytes(), []byte("~/a.conf")) {
 		t.Fatalf("stdout = %q, want the partial records rendered", stdout.String())
 	}
 }

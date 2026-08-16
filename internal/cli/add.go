@@ -37,7 +37,7 @@ func newAddCommand(service AddService, runtime Runtime, options *Options) *cobra
 	command.Flags().String("group", "", "repository group")
 	command.Flags().String("platform", "", "platform layer")
 	command.Flags().Bool("secret", false, "adopt as a SOPS secret")
-	command.Flags().Bool("dry-run", false, "show the plan without writing")
+	command.Flags().Bool("dry-run", false, "preview changes without modifying files")
 	return command
 }
 

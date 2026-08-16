@@ -77,7 +77,7 @@ func testApplyOneCall(t *testing.T) {
 	if len(service.requests) != 1 {
 		t.Fatalf("calls = %d, want one", len(service.requests))
 	}
-	want := "$HOME/a.conf completed write-source\nsummary planned=0 completed=1 partial=0\n"
+	want := "Applied — 1 change\n\n  Update   ~/a.conf\n\n1 change applied.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -115,7 +115,7 @@ func testApplyPartial(t *testing.T) {
 	if err == nil || !kindIs(err, failure.Operational) {
 		t.Fatalf("error = %v, want an operational failure", err)
 	}
-	if !bytes.Contains(stdout.Bytes(), []byte("$HOME/a.conf")) {
+	if !bytes.Contains(stdout.Bytes(), []byte("~/a.conf")) {
 		t.Fatalf("stdout = %q, want the partial records rendered", stdout.String())
 	}
 }

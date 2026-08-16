@@ -88,7 +88,7 @@ func (p *DecisionPrompt) resolve(ctx context.Context, request apply.DecisionRequ
 
 // renderPrompt writes the choice line of one request to stderr.
 func (p *DecisionPrompt) renderPrompt(path string, choices []apply.DecisionChoice) error {
-	_, err := fmt.Fprintf(p.stderr, "%s: choose [r]epository, [s]kip, or [a]bort: ", path)
+	_, err := fmt.Fprintf(p.stderr, "\n  [R] Replace the local file with the repository version\n  [S] Skip this file and keep the local version\n  [A] Abort without changing anything\n\nChoice for %s: ", path)
 	return err
 }
 
@@ -114,7 +114,7 @@ type promptAnswer struct {
 
 func (p *DecisionPrompt) answer(input promptAnswer) (apply.DecisionResponse, bool, error) {
 	if input.answer == "" {
-		_, err := fmt.Fprintln(p.stderr, "choose r, s, or a")
+		_, err := fmt.Fprintln(p.stderr, "Choose r, s, or a.")
 		return apply.DecisionResponse{}, false, err
 	}
 	choice := shortChoice(input.answer)
@@ -124,7 +124,7 @@ func (p *DecisionPrompt) answer(input promptAnswer) (apply.DecisionResponse, boo
 		}
 		return apply.DecisionResponse{Choice: choice}, true, nil
 	}
-	_, err := fmt.Fprintf(p.stderr, "invalid answer %q\n", input.answer)
+	_, err := fmt.Fprintf(p.stderr, "I did not understand %q. Choose r, s, or a.\n", input.answer)
 	return apply.DecisionResponse{}, false, err
 }
 
@@ -141,12 +141,12 @@ func shortChoice(answer string) apply.DecisionChoice {
 }
 
 func (p *DecisionPrompt) renderContext(ctx context.Context, path string, request apply.DecisionRequest, difference apply.DifferenceProvider) error {
-	if _, err := fmt.Fprintf(p.stderr, "Conflict at %s: %s.\n", path, request.Reason()); err != nil {
+	if _, err := fmt.Fprintf(p.stderr, "Conflict — %s\n\nCattery cannot safely determine whether the local version should be replaced.\n", path); err != nil {
 		return err
 	}
 	switch request.Kind() {
 	case "secret":
-		_, err := fmt.Fprintln(p.stderr, "Encrypted secret content differs; plaintext is not shown.")
+		_, err := fmt.Fprintln(p.stderr, "Encrypted secret content differs; its plaintext is not shown.")
 		return err
 	case "alias":
 		if request.ExpectedLink() != "" {
@@ -169,15 +169,15 @@ func (p *DecisionPrompt) Confirm(ctx context.Context, resolutions []apply.Resolu
 	if p.isTerminal == nil || !p.isTerminal(0) {
 		return false, failure.New(failure.Difference, "cli: confirmation requires an interactive terminal", nil)
 	}
-	if _, err := fmt.Fprintln(p.stderr, "Resolution summary:"); err != nil {
+	if _, err := fmt.Fprintln(p.stderr, "Review selected changes:"); err != nil {
 		return false, err
 	}
 	for _, resolution := range resolutions {
-		if _, err := fmt.Fprintf(p.stderr, "  %s: $HOME/%s\n", resolution.Choice, displayPath(resolution.Request.TargetPath())); err != nil {
+		if _, err := fmt.Fprintf(p.stderr, "  %-8s ~/%s\n", resolutionAction(resolution.Choice), displayPath(resolution.Request.TargetPath())); err != nil {
 			return false, err
 		}
 	}
-	if _, err := fmt.Fprint(p.stderr, "Proceed? [y/N] "); err != nil {
+	if _, err := fmt.Fprint(p.stderr, "\nApply these changes? [y/N] "); err != nil {
 		return false, err
 	}
 	answer, err := readAnswer(p.scanner)
@@ -190,14 +190,25 @@ func (p *DecisionPrompt) Confirm(ctx context.Context, resolutions []apply.Resolu
 // renderDifference displays the safe difference of one target on stderr.
 func (p *DecisionPrompt) renderDifference(ctx context.Context, target string, difference apply.DifferenceProvider) error {
 	if difference == nil {
-		_, err := fmt.Fprintf(p.stderr, "no difference available for %s\n", target)
+		_, err := fmt.Fprintf(p.stderr, "A safe difference is not available for %s.\n", target)
 		return err
 	}
 	safeDifference, ok := difference(ctx, target)
 	if !ok {
-		_, err := fmt.Fprintf(p.stderr, "no difference available for %s\n", target)
+		_, err := fmt.Fprintf(p.stderr, "A safe difference is not available for %s.\n", target)
 		return err
 	}
 	_, err := fmt.Fprintf(p.stderr, "--- %s ---\n%s", target, strings.Join(safeDifference.LinesCopy(), "\n"))
 	return err
+}
+
+func resolutionAction(choice apply.DecisionChoice) string {
+	switch choice {
+	case apply.ChoiceOverwrite:
+		return "Replace"
+	case apply.ChoiceSkip:
+		return "Skip"
+	default:
+		return "Abort"
+	}
 }

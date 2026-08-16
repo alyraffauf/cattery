@@ -83,7 +83,7 @@ func testDiffDifference(t *testing.T) {
 	if err == nil || !kindIs(err, failure.Difference) {
 		t.Fatalf("error = %v, want a difference failure", err)
 	}
-	if !bytes.Contains(stdout.Bytes(), []byte("$HOME/a.conf")) {
+	if !bytes.Contains(stdout.Bytes(), []byte("~/a.conf")) {
 		t.Fatalf("stdout = %q, want the records rendered before the difference", stdout.String())
 	}
 }

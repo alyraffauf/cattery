@@ -28,17 +28,17 @@ func newApplyCommand(service ApplyService, runtime Runtime, options *Options) *c
 			if err != nil && !kindIs(err, failure.Difference) && len(result.Items) == 0 {
 				return err
 			}
-			if renderErr := renderApply(runtime.Stdout(), result); renderErr != nil {
+			if renderErr := renderApply(runtime.Stdout(), result, request.DryRun); renderErr != nil {
 				return renderErr
 			}
 			return err
 		},
 	}
-	command.Flags().Bool("dry-run", false, "show the plan without writing")
-	command.Flags().Bool("non-interactive", false, "refuse unresolved decisions")
-	command.Flags().Bool("no-hooks", false, "skip trusted hooks")
-	command.Flags().Bool("skip-secrets", false, "skip encrypted secret targets")
-	command.Flags().Bool("force", false, "use repository versions for all selected conflicts")
+	command.Flags().Bool("dry-run", false, "preview changes without modifying files")
+	command.Flags().Bool("non-interactive", false, "stop if a decision is required")
+	command.Flags().Bool("no-hooks", false, "do not run trusted hooks")
+	command.Flags().Bool("skip-secrets", false, "do not apply encrypted secret targets")
+	command.Flags().Bool("force", false, "replace conflicting local files with repository versions")
 	return command
 }
 

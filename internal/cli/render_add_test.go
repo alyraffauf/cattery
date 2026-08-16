@@ -32,8 +32,7 @@ func testRenderAddItems(t *testing.T) {
 	if err := renderAdd(stdout, result); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	want := "$HOME/a.conf completed a.conf\n$HOME/token completed apps/token\n" +
-		"summary planned=0 completed=2 partial=0\n"
+	want := "Added — 2 changes\n\n  Added    ~/a.conf\n           from a.conf\n\n  Added    ~/token\n           from apps/token\n\n2 changes added.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -49,8 +48,8 @@ func testRenderAddSummary(t *testing.T) {
 	if err := renderAdd(stdout, result); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	if !bytes.Contains(stdout.Bytes(), []byte("summary planned=1 completed=1 partial=1")) {
-		t.Fatalf("stdout = %q, want the tallied summary", stdout.String())
+	if !bytes.Contains(stdout.Bytes(), []byte("Ready to add — 1 change")) || !bytes.Contains(stdout.Bytes(), []byte("Skipped  ~/c")) {
+		t.Fatalf("stdout = %q, want the human-readable plan", stdout.String())
 	}
 }
 
@@ -62,8 +61,8 @@ func testRenderAddDryRun(t *testing.T) {
 	if err := renderAdd(stdout, result); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	if !bytes.Contains(stdout.Bytes(), []byte("$HOME/a.conf planned a.conf")) {
-		t.Fatalf("stdout = %q, want the planned verb", stdout.String())
+	if !bytes.Contains(stdout.Bytes(), []byte("Add      ~/a.conf")) {
+		t.Fatalf("stdout = %q, want the planned action", stdout.String())
 	}
 }
 

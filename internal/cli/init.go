@@ -31,7 +31,7 @@ func newInitCommand(service InitializeService, runtime Runtime) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, err = fmt.Fprintf(runtime.Stdout(), "initialized %s\n", result.Repository.RootPath)
+			_, err = fmt.Fprintf(runtime.Stdout(), "Repository initialized\n\n  Repository: %s\n\nNext: run `cattery status` to review changes.\n", result.Repository.RootPath)
 			return err
 		},
 	}

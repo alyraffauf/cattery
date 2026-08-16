@@ -107,7 +107,7 @@ func testValidateOneCall(t *testing.T) {
 	if len(service.requests) != 1 {
 		t.Fatalf("calls = %d, want one", len(service.requests))
 	}
-	want := "darwin files=1 secrets=2 aliases=3 groups=4\nlinux files=5 secrets=6 aliases=7 groups=8\n"
+	want := "Repository is valid.\n\n  darwin\n    Files: 1  Secrets: 2  Links: 3  Groups: 4\n\n  linux\n    Files: 5  Secrets: 6  Links: 7  Groups: 8\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want the two count lines", stdout.String())
 	}

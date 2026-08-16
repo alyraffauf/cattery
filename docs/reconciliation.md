@@ -39,9 +39,10 @@ choose between silently replacing local work and abandoning the repository.
 Before any write, interactive `apply` gathers every decision it needs:
 
 Ordinary files show a safe unified diff automatically. Secrets only report that
-encrypted content differs and never expose plaintext. Choose `r` (or
-`repository`) to authorize that target, `s`/`skip` to leave it, or `a`/`abort`
-to stop. After all choices, `apply` shows a resolution summary and requires
+encrypted content differs and never expose plaintext. Choose `r` to replace the
+local file with the repository version, `s`/`skip` to keep the local file, or
+`a`/`abort` to stop without changing anything. After all choices, `apply` shows
+a review of the selected changes and requires
 `y` before hooks or writes begin. `apply --force` selects repository for every
 selected conflict without disabling validation or write safeguards. To adopt
 local content into the repository, use `cattery add` instead.

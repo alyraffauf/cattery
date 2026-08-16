@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/alyraffauf/cattery/internal/failure"
 )
@@ -27,8 +28,20 @@ func Execute(ctx context.Context, application *Application, args []string) int {
 	if err == nil {
 		return ExitSuccess
 	}
-	_, _ = fmt.Fprintf(application.root.ErrOrStderr(), "%s\n", err)
+	if !kindIs(err, failure.Difference) || strings.Contains(err.Error(), "interactive terminal") {
+		_, _ = fmt.Fprintf(application.root.ErrOrStderr(), "%s\n", userFacingError(err))
+	}
 	return exitStatus(err)
+}
+
+func userFacingError(err error) string {
+	if !kindIs(err, failure.Difference) {
+		return err.Error()
+	}
+	if strings.Contains(err.Error(), "interactive terminal") {
+		return "Cannot continue without a decision in a non-interactive session. Re-run interactively, review with `cattery diff`, or use `--force` only when replacement is intended."
+	}
+	return "Changes are pending. Review them with `cattery status` or `cattery diff`, then run `cattery apply`."
 }
 
 // exitStatus maps one error to its exit status: an interruption outranks

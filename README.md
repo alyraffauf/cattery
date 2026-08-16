@@ -39,6 +39,10 @@ modified file. See [repository layout](docs/repository-layout.md) for the full
 layout and [reconciliation](docs/reconciliation.md) for exactly how decisions
 work.
 
+Cattery's output leads with the outcome, lists the affected paths, and ends
+with the safest next command. Read [CLI output](docs/cli-output.md) for the
+full vocabulary and prompt behavior.
+
 ## Repository layout
 
 Root files and dot-directories map directly into `$HOME`. Other top-level
